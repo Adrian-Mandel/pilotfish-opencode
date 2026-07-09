@@ -104,7 +104,7 @@ Do not modify anything outside the markers.
 1. `jq empty ~/.claude/settings.json` exits 0.
 2. `ls ~/.claude/agents/` shows all six files.
 3. The markers appear exactly once in `~/.claude/CLAUDE.md`: `grep -c "pilotfish:begin" ~/.claude/CLAUDE.md` prints `1`.
-4. Tell the user to **restart their Claude Code session**: the agents directory is scanned at session start, and the `model` setting applies on restart. After restart, `/agents` should list the six roles and `/model` should show the new default.
+4. Tell the user to **restart their Claude Code session**: the agents directory is scanned at session start, and the `model` setting applies on restart. After restart, `/model` should show the new default, and asking Claude "which subagent types are available?" should list the six roles (scout, Explore, mech-executor, executor, verifier, security-executor). On Claude Code before 2.1.198 you can also run `/agents` to see them; that wizard was removed in 2.1.198.
 5. Summarize what changed, what was skipped, and where the backups are.
 
 ## Uninstall
