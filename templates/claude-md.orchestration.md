@@ -22,4 +22,10 @@ Delegation rules:
 - Non-trivial changes get a fresh-context `verifier` pass before you report them done; prefer that over self-review.
 - Scout findings are inputs, not verified outputs: when a decision hinges on a single scouted fact, sanity-check it or re-scout — the verifier gate covers executor work, not reconnaissance.
 - Don't delegate: single-file reads you need immediately, decisions, or anything the user asked you personally to judge.
+
+Running agents in parallel:
+
+- **Every writing agent in a parallel batch gets its own worktree** (`isolation: "worktree"`; assumes a git checkout) and is told not to touch the main checkout; read-only roles (`scout` / `Explore`) can share safely. Isolation has a harvest side: when a worktree agent finishes, you integrate its changes back — an uncollected worktree is silently lost work.
+- **A yielded agent is not a finished agent.** When an agent reports a detached launch (PID + log path), arm a background wait on that PID and resume the agent when it exits — a detached launch is a handoff, not a result.
+- **Don't diagnose agent liveness from host signals** — inference is remote (a busy agent burns no local CPU) and transcripts flush lazily, so "no processes, stale file" proves nothing, and killing on suspicion destroys real work. Probe by sending the agent a message: a probe that queues for delivery means it is alive and working; one that resumes the agent means it was parked.
 <!-- pilotfish:end -->
