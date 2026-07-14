@@ -1,16 +1,30 @@
 # Releasing
 
-Maintainer checklist — the three version stamps must move together:
+Pilotfish for OpenCode starts a new experimental version line at `0.0.1`.
 
-1. Bump `VERSION`.
-2. Update the version comment in `templates/claude-md.orchestration.md` (`<!-- pilotfish vX.Y.Z -->`), and mirror the block into your own `~/.claude/CLAUDE.md`.
-3. Add the `CHANGELOG.md` entry (what changed, why — users see this during update).
-4. Commit, then tag and publish:
+## Checklist
+
+1. Update `VERSION`.
+2. Add a matching entry at the top of `CHANGELOG.md`.
+3. Confirm the installer reads the version from `VERSION`; do not add independent version stamps to prompts.
+4. Validate JSON syntax for `templates/opencode.base.jsonc` and both preset fragments.
+5. Resolve the base plus each preset with the current supported OpenCode release.
+6. Inspect all seven agents with `opencode debug agent <name>`.
+7. Confirm the required model IDs and variants still appear in `opencode models --verbose`.
+8. Exercise fresh install, repeated install, update with customization, and uninstall restoration.
+9. Follow `docs/upstream-sync.md`, review through current `upstream/main`, and update `UPSTREAM_VERSION`.
+10. Verify active documentation contains no Claude installation paths or removed files.
+11. Review the release diff, commit, tag, and publish.
 
 ```bash
 git tag vX.Y.Z
-git push && git push --tags
-gh release create vX.Y.Z --title "vX.Y.Z" --notes-from-tag  # or paste the changelog entry
+git push
+git push --tags
+gh release create vX.Y.Z --title "vX.Y.Z" --notes-from-tag
 ```
 
-> **注意 / Note:** If `templates/agents/*.md` changed, keep them byte-identical with `~/.claude/agents/` before committing — the e2e assumption is that templates are the single source of truth.
+## Compatibility Notes
+
+Record the tested OpenCode version in every release entry. If a provider changes a model ID or variant, update the affected preset and treat that as a user-visible compatibility change.
+
+Prompt files under `templates/pilotfish/prompts/` and agent definitions in `templates/opencode.base.jsonc` are the sources of truth. Do not validate releases against a maintainer's installed files without first checking for local customization.

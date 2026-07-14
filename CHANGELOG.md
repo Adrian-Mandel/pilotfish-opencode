@@ -1,6 +1,44 @@
 # Changelog
 
-All notable changes to pilotfish. The installed version is stamped inside the policy block in `~/.claude/CLAUDE.md` (`<!-- pilotfish vX.Y.Z -->`); installs older than v1.1.0 carry no stamp.
+All notable changes to Pilotfish for OpenCode. Installed versions are recorded in `~/.config/opencode/pilotfish/install-state.json`.
+
+## v0.0.1 - Unreleased
+
+Tested with OpenCode `1.17.18`.
+
+Initial experimental OpenCode port.
+
+### Added
+
+- Opt-in `pilotfish` primary agent with six role-based workers.
+- ChatGPT and AntiGravity model presets with per-role variants.
+- OpenCode permission enforcement for the delegation graph, read-only reconnaissance, leaf workers, and verifier edit denial.
+- Fresh-context `CONFIRMED` or `REFUTED` verification contract.
+- Approval-gated global installer with model checks, collision detection, backups, resolved-config validation, idempotent updates, and key-level uninstall restoration.
+- Non-blocking warning for untested primary model configurations.
+- Semantic upstream-sync ledger, baselined at original Pilotfish `v1.1.4`.
+- Dependency-aware scheduling adapted from upstream `v1.1.4` without relying on experimental background agents.
+
+### Changed
+
+- Replaced Claude Code settings, agent frontmatter, and global `CLAUDE.md` policy with native OpenCode agent configuration and prompt files.
+- Rewrote research and design documentation around verified OpenCode behavior.
+- Restarted versioning at `0.0.1` for the new experimental fork.
+
+### Removed
+
+- Claude-specific aliases, fallback claims, worktree instructions, detached-agent behavior, and subscription economics.
+- Traditional Chinese documentation, which described the obsolete Claude installation.
+
+### Known limitations
+
+- No native automatic model fallback chain.
+- No stable Task-level worktree isolation or automatic result harvesting; writing workers are serialized.
+- Background-subagent and worktree APIs are experimental and are not release dependencies.
+
+## Original Claude Code History
+
+The entries below are retained from the upstream Pilotfish project for historical attribution. They do not describe the OpenCode fork's active behavior.
 
 ## v1.1.3 — 2026-07-12
 

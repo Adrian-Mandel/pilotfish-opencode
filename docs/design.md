@@ -1,88 +1,118 @@
-# pilotfish — Design Rationale
+# Pilotfish for OpenCode: Design Rationale
 
 ## Purpose
 
-This document explains *why* pilotfish is shaped the way it is: three layers, role-based policy, aliases everywhere, effort tiers, and a verification gate. The empirical grounding (official docs, measured community numbers, subscription economics) lives in the [research report](./research.zh-TW.md); this is the argument from those facts to this design.
+Pilotfish routes coding work by role so a capable primary model can spend its context on planning and judgment while less expensive workers handle volume. This document explains how that idea maps onto OpenCode without turning Pilotfish into a runtime orchestrator.
 
-## The three layers
+## Configuration, Not Runtime
 
-The core observation is that "who orchestrates", "who executes what", and "how delegation behaves" change at different rates and should therefore live in different places:
+Original Pilotfish is three kinds of configuration layered over Claude Code. It does not launch models or create worktrees itself. This port preserves that boundary:
 
-| Layer | File | Changes when | Mechanism |
-|---|---|---|---|
-| Machine | `~/.claude/settings.json` | Your plan/access changes | `model: "best"` + `fallbackModel` |
-| Roles | `~/.claude/agents/*.md` | A model tier is re-pointed | One `model:` line of frontmatter per role |
-| Policy | `~/.claude/CLAUDE.md` | Your working style changes | Prose rules written against role names |
-
-CLAUDE.md cannot set the main-session model (that is a settings/`/model` concern), which turns out to be a feature: it forces the clean split where settings decide *who* orchestrates and CLAUDE.md decides *how* it delegates.
-
-## Role-based policy, model-free prose
-
-The single most important rule in pilotfish: **the policy text never names a model.** It says "delegate mechanical work to `mech-executor`", not "delegate to Sonnet". Model bindings exist in exactly one place — the frontmatter of each agent file.
-
-This is what makes the fallback story degenerate into no-ops:
-
-```mermaid
-flowchart LR
-    P["Policy (CLAUDE.md)<br>roles only"] --> R["Roles (agents/*.md)<br>model: alias"] --> A["Aliases (Claude Code)<br>track recommended versions"] --> M["Models<br>come and go"]
+```text
+Pilotfish defines roles, models, permissions, and policy.
+OpenCode creates sessions, calls providers, and executes tools.
 ```
 
-The June 2026 export-control suspension was a live test of this: accounts on aliases degraded gracefully — a notice banner, new sessions continuing on Opus — while users who had pinned the full `claude-fable-5` model ID got hard 404 errors. That is the fallback story working: `best` re-resolves, every role keeps its binding, and the policy text is already model-agnostic. The July 2026 subscription-to-credits boundary is expected to behave the same way per the documented resolution rule, though Anthropic has not published the exact boundary UX — worst case is one manual `/model` switch or enabling usage credits. The same holds for the next deprecation cycle (Opus 4.8 → 4.9, Sonnet 5 → next): aliases track the recommended version by design.
+No Pilotfish plugin, daemon, custom Task tool, or model gateway is installed.
 
-Three distinct failure modes get three distinct mechanisms — they are often conflated but shouldn't be:
+## Three Concerns
 
-| Failure | Mechanism | Layer |
+| Concern | OpenCode mechanism | Changes when |
 |---|---|---|
-| Lost *access* to the frontier model | `best` alias | settings |
-| Model *overloaded / erroring* | `fallbackModel` chain | settings |
-| Model *deprecated* | aliases in role frontmatter | agents |
+| Who orchestrates | Opt-in `pilotfish` primary agent | The preferred primary model changes |
+| Who performs each role | Six subagent definitions with model and variant | A preset or role assignment changes |
+| How delegation behaves | Model-neutral prompt files | Workflow policy changes |
 
-## Why these six roles
+The global config stores the agent graph. Plain prompt files store behavior. Source preset fragments store only model and variant overlays.
 
-The role set is the smallest one that covers the delegation patterns that actually recur, mapped to the cheapest tier that reliably handles each:
+## Why an Opt-In Primary
 
-| Role | Tier argument |
+Original Pilotfish puts orchestration instructions in global `CLAUDE.md`, so every main session and custom worker sees them. Workers need instructions telling them to ignore the global routing policy.
+
+OpenCode supports custom primary agents. Attaching the orchestration prompt only to `pilotfish` gives cleaner scoping:
+
+- Built-in Build and Plan remain unchanged.
+- Workers receive only their own role prompt.
+- Users choose when orchestration overhead is worthwhile.
+- The installer does not change `default_agent` or the global model.
+
+## Why These Roles
+
+| Role | Design reason |
 |---|---|
-| `scout`, `Explore` | Reconnaissance is the highest-volume, lowest-judgment token sink in a coding session (telemetry showed ~36% of calls were exploration even before deliberate routing). For *locating* facts — not judging them — Haiku at low effort is effectively equivalent; judgment stays with the orchestrator. Both roles carry a positive `tools: Read, Glob, Grep` allowlist, so "read-only" is enforced, not just prompted. |
-| `mech-executor` | Fully-specified work has its judgment already done — by the orchestrator, in the spec. Sonnet executes specs faithfully, and on subscriptions it additionally draws on the dedicated Sonnet-only weekly bucket (extra headroom on top of the shared all-models limit). |
-| `executor` | Real implementation needs local design judgment; Opus is the measured sweet spot below the frontier. Notably it beats routing to the frontier even ignoring cost, because routine work doesn't benefit from Fable-tier reasoning. |
-| `verifier` | Official guidance: independent fresh-context verifiers outperform self-critique. It is read-and-run only — a verifier that fixes things stops being independent. |
-| `security-executor` | Two reasons: security work deserves consistently high effort, and the frontier model's safety classifiers can refuse benign defensive-security work mid-task. Pre-routing security to Opus makes the refusal path unreachable instead of handled. |
+| `scout` | Narrow fact finding is frequent, cheap, and safe to constrain to read/search tools |
+| `Explore` | Broad reconnaissance needs a larger search budget but still no write access |
+| `mech-executor` | A complete specification has already supplied the judgment; the worker should execute rather than redesign |
+| `executor` | Real implementation needs local decisions and stronger code reasoning |
+| `verifier` | Fresh-context refutation catches unchecked claims and context blindness better than implementer self-review |
+| `security-executor` | Security work deserves explicit routing, assumptions, abuse-case testing, and a high-capability model |
 
-The `Explore` override exists because Claude Code v2.1.198 changed the built-in Explore agent to inherit the main-session model — on a frontier main session, that silently upgrades your cheapest workload to your most expensive model. A same-name user-level agent shadows it.
+The original names are preserved. Pilotfish supplies `scout`, while uppercase `Explore` coexists with OpenCode's lowercase built-in `explore` because OpenCode agent names are case-sensitive.
 
-## Quality: verification over executor pedigree
+## Permission-Controlled Agent Graph
 
-The intuitive objection to cheap executors is quality. pilotfish's answer is structural, not hopeful:
+The `pilotfish` primary may invoke only the six Pilotfish workers. Each worker has Task denied, making it a leaf agent.
 
-1. The orchestrator writes complete one-shot specs (goal, constraints, done-criteria, the *why*) — most cheap-model failures are actually spec failures.
-2. Escalation is bounded: two failed attempts on a tier, then escalate or take over. No infinite cheap retries that burn more than they save.
-3. Non-trivial work passes through `verifier` — an adversarial, fresh-context pass that tries to *refute* the claimed outcome before the orchestrator reports it done.
+Read-only roles start with a deny-all rule and then allow only read, glob, grep, and list. Environment files remain denied. The verifier denies file-edit tools and Task while retaining bash so it can run tests.
 
-A verifier isn't free — it runs on Opus and re-reads context in a fresh session. It's cheaper than generation only because it reads-and-runs rather than writes-and-iterates, and because the gate is scoped to *non-trivial* work (small changes skip it; the policy says so). What it buys is a change of question: from "is the executor smart enough?" to "did the output survive an independent refutation attempt?" — a much better question. Two known limits, held honestly: same-tier verification catches context-rot and unchecked claims, not capability-ceiling errors (Opus won't know what Opus can't know); and the gate covers executor output, not scout reconnaissance — which is why the policy separately tells the orchestrator to sanity-check load-bearing scouted facts. For security-sensitive diffs, the verifier's own prompt escalates it to a maximum-thoroughness pass.
+Permissions provide stronger guarantees than prompts alone, but they are not a complete sandbox. In particular, arbitrary shell commands can write files. The verifier prompt and focused bash denials preserve the read-and-run contract where OpenCode cannot express it perfectly.
 
-## Effort tiers
+## Model Presets
 
-Effort is the second big quota lever after model choice, and the Fable-5 generation shifted the calculus: low effort on current models routinely matches previous-generation `xhigh`. pilotfish therefore pairs every role with an effort:
+OpenCode models are identified as `provider/model-id`; there is no portable alias layer equivalent to Claude's `best`, `opus`, `sonnet`, and `haiku`.
 
-| Role class | Effort | Why |
-|---|---|---|
-| Recon (`scout`, `Explore`) | `low` | High volume, near-zero judgment |
-| Mechanical (`mech-executor`) | `low` | Judgment lives in the spec |
-| Judgment (`executor`, `verifier`) | `medium` | Balance point |
-| Security (`security-executor`) | `high` | Correctness over cost |
-| Main session | `high` (user setting) | Official Fable 5 guidance: `high` for most work, `xhigh` for the longest horizons only |
+Version `0.0.1` therefore ships two explicit, tested mappings:
 
-## Deliberately left out
+- ChatGPT through the OpenAI provider.
+- AntiGravity through model IDs exposed by the user's existing Google integration.
 
-| Not included | Why |
+Model and variant are configured together because reasoning controls differ by provider. The policy prompt names roles, not models, so model assignments can change without rewriting workflow rules.
+
+## Quality Controls
+
+Pilotfish protects delegated quality structurally:
+
+1. The primary sends a complete specification containing goal, constraints, done criteria, paths, and rationale.
+2. A role gets two attempts before escalation or primary takeover.
+3. Non-trivial implementation receives a fresh `verifier` child session.
+4. Reconnaissance is treated as evidence to check rather than an authoritative conclusion.
+5. Workers are prevented from recursively delegating.
+
+The verifier is independent but not free. Small changes may skip it when a second context cannot reasonably protect enough value.
+
+## Parallelism
+
+Read-only searches may run concurrently because they cannot conflict in the worktree.
+
+Writing workers are serialized in `0.0.1`. OpenCode contains experimental worktree APIs, but its stable Task schema does not expose Claude Code's `isolation: "worktree"` behavior or automatic result harvesting. Depending on experimental APIs would violate the release's configuration-only and stable-surface goals.
+
+## Fallback
+
+OpenCode's current agent schema accepts one model per agent and has no general ordered fallback list. Pilotfish does not approximate automatic failover with hidden agents because a failed worker may already have produced side effects, and the primary model cannot rescue itself when its own request fails.
+
+Fallback design remains a tracked limitation. Any future solution must preserve clear cost boundaries, handle partial writes, and avoid requiring a Pilotfish runtime engine.
+
+## Configuration Check
+
+The primary prompt asks OpenCode to inspect `opencode debug agent pilotfish` once per new session. It warns without blocking when the resolved primary model and variant do not match a tested preset.
+
+This is a compatibility warning, not a visibility gate. The `pilotfish` agent remains selectable with any model configuration.
+
+## Deliberately Left Out
+
+| Feature | Reason |
 |---|---|
-| Per-project configuration | The six projects audited before building this had zero model policy in their CLAUDE.md files — correctly. A single global source of truth is the whole point; project files stay pure technical notes. |
-| Enforcement hooks (spawn guards, stop guards à la fable5-orchestrator) | Powerful but heavy; policy-only works well before adding machinery. If discipline slips, hooks are the documented next step — see the research report. |
-| `CLAUDE_CODE_SUBAGENT_MODEL` | It overrides every per-agent frontmatter globally, which is precisely the opposite of tiered routing. The installer warns if it's set. |
-| Pinned model IDs | Pinning trades resilience for reproducibility; for a personal global config, resilience wins. Organizations that need pinning have `ANTHROPIC_DEFAULT_*_MODEL`. |
-| An `opusplan` default | It's a great quota-saver but changes interactive feel (model switches mid-conversation). Offered as an opt-in in the FAQ instead. |
+| Runtime plugin | Original Pilotfish is configuration-only; OpenCode remains the execution engine |
+| Per-project installation | A global opt-in primary provides one personal source of truth |
+| Arbitrary installer model picker | `0.0.1` tests two bounded mappings; advanced users can edit config directly |
+| Mixed-provider preset | Deferred until single-provider behavior is proven |
+| Local Qwen preset | Planned for later OMLX evaluation, including missing context/output metadata |
+| Automatic fallback | No stable native OpenCode mechanism |
+| Parallel writers | No stable Task-level worktree isolation |
+| Enforcement hooks | Policy and permissions are sufficient for the first experimental release |
 
-## Prompting style inside the agents
+## Evolution Rule
 
-The agent system prompts follow the Fable-5-generation guidance from the research: goals and constraints instead of step-by-step scaffolding, an explicit statement of what *not* to do (no scope creep, verifier never fixes), evidence-audited progress claims, and "a precise *blocked because X* is a successful outcome" to prevent guessing. When editing the templates, keep that register — prescriptive checklists measurably degrade current-generation output.
+Pilotfish may adopt new behavior when OpenCode exposes it through stable configuration. It should not grow a parallel orchestration runtime merely to imitate another host's features.
+
+Upstream Pilotfish changes are reviewed through the [semantic sync workflow](./upstream-sync.md). The recorded upstream commit advances only after each change has been adopted, adapted, deferred, or marked inapplicable for OpenCode.

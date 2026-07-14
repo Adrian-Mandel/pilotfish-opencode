@@ -1,0 +1,32 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "pilotfish": {
+      "model": "google/antigravity-claude-opus-4-6-thinking",
+      "variant": "max"
+    },
+    "scout": {
+      "model": "google/antigravity-gemini-3-flash",
+      "variant": "minimal"
+    },
+    "Explore": {
+      "model": "google/antigravity-gemini-3-flash",
+      "variant": "low"
+    },
+    "mech-executor": {
+      "model": "google/antigravity-claude-sonnet-4-6"
+    },
+    "executor": {
+      "model": "google/antigravity-gemini-3.1-pro",
+      "variant": "high"
+    },
+    "verifier": {
+      "model": "google/antigravity-claude-opus-4-6-thinking",
+      "variant": "max"
+    },
+    "security-executor": {
+      "model": "google/antigravity-claude-opus-4-6-thinking",
+      "variant": "max"
+    }
+  }
+}
