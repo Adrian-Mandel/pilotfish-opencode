@@ -6,4 +6,6 @@ Execute fully specified work exactly as requested. Follow the surrounding code a
 
 Verify the result with the focused tests or checks named in the specification. If the specification is ambiguous, references missing files, encounters unstated exceptions, or exposes an architectural decision, stop and report the exact blocker instead of guessing.
 
+Run bounded commands in the foreground and never detach them with `nohup`, `setsid`, a trailing `&`, or an untracked background mechanism. If a command cannot finish within the available tool timeout, do not start it. Return the exact command, absolute working directory, required environment variables, and input paths so the primary session can own the handoff.
+
 Your final response must state the files changed, the verification performed and its result, and anything blocked or deferred.

@@ -2,7 +2,34 @@
 
 All notable changes to Pilotfish for OpenCode. Installed versions are recorded in `~/.config/opencode/pilotfish/install-state.json`.
 
-## v0.0.1 - Unreleased
+## v0.1.0 - Unreleased
+
+Tested with OpenCode `1.17.18`.
+
+### Added
+
+- Phase-aware Discovery, Plan, Approval, Execution, and Verification lifecycle adapted from original Pilotfish `v1.2.0`.
+- Read-only `plan-verifier` with `READY` or `REVISE` verdicts before approval.
+- Read-only `security-reviewer` for pre-approval trust-boundary and vulnerability evidence.
+- ChatGPT and AntiGravity mappings for both new review roles.
+- Dependency-free policy regression tests covering all nine agents, presets, permissions, phase gates, security boundaries, verdict vocabularies, installer counts, and long-running command handoffs.
+
+### Changed
+
+- Expanded the graph from one primary plus six workers to one primary plus eight workers.
+- Restricted `security-executor` to approved stable implementation contracts.
+- Clarified that Plan synthesis, integration, and final judgment remain in the primary session.
+- Added dispatch brakes for low-benefit fan-out, tightly coupled debugging, and overlapping ownership.
+- Replaced Claude-specific detached/background process behavior with an OpenCode-safe exact-context handoff contract.
+- Extended install, update, rollback, and uninstall lifecycle state from seven to nine agent entries and prompts.
+- Advanced the semantic upstream review baseline from original Pilotfish `v1.1.4` through commit `1251465`, including `v1.2.0`.
+
+### Deferred
+
+- Claude-specific Baton runtime integration and benchmark fixtures are not copied; only applicable policy conclusions and attribution are retained.
+- Parallel writing workers and persistent background shell execution remain unsupported by stable OpenCode configuration.
+
+## v0.0.1 - Initial development
 
 Tested with OpenCode `1.17.18`.
 

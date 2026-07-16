@@ -10,6 +10,8 @@
           "*": "deny",
           "scout": "allow",
           "Explore": "allow",
+          "plan-verifier": "allow",
+          "security-reviewer": "allow",
           "mech-executor": "allow",
           "executor": "allow",
           "verifier": "allow",
@@ -51,6 +53,41 @@
         "list": "allow"
       }
     },
+    "plan-verifier": {
+      "description": "Read-only fresh-context challenge of a material Plan before approval; returns READY or REVISE without planning, editing, or executing commands.",
+      "mode": "subagent",
+      "prompt": "{file:./pilotfish/prompts/plan-verifier.md}",
+      "permission": {
+        "*": "deny",
+        "read": {
+          "*": "allow",
+          "*.env": "deny",
+          "*.env.*": "deny",
+          "*.env.example": "allow"
+        },
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow"
+      }
+    },
+    "security-reviewer": {
+      "description": "Read-only pre-approval security analysis of trust boundaries, controls, vulnerabilities, and remediation evidence.",
+      "mode": "subagent",
+      "prompt": "{file:./pilotfish/prompts/security-reviewer.md}",
+      "permission": {
+        "*": "deny",
+        "read": {
+          "*": "allow",
+          "*.env": "deny",
+          "*.env.*": "deny",
+          "*.env.example": "allow"
+        },
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "webfetch": "allow"
+      }
+    },
     "mech-executor": {
       "description": "Executes fully specified mechanical work such as pattern refactors, conventional tests, documentation, bulk edits, and focused test runs.",
       "mode": "subagent",
@@ -68,7 +105,7 @@
       }
     },
     "verifier": {
-      "description": "Fresh-context adversarial verification of non-trivial completed work; reproduces evidence and returns CONFIRMED or REFUTED without fixing findings.",
+      "description": "Fresh-context adversarial outcome verification after implementation; reproduces evidence and returns CONFIRMED or REFUTED without planning, editing, or fixing.",
       "mode": "subagent",
       "prompt": "{file:./pilotfish/prompts/verifier.md}",
       "permission": {
@@ -92,7 +129,7 @@
       }
     },
     "security-executor": {
-      "description": "Handles security-sensitive implementation and analysis involving authentication, authorization, secrets, crypto, validation, hardening, or vulnerabilities.",
+      "description": "Handles approved security-sensitive implementation involving authentication, authorization, secrets, crypto, validation, hardening, or vulnerabilities.",
       "mode": "subagent",
       "prompt": "{file:./pilotfish/prompts/security-executor.md}",
       "permission": {

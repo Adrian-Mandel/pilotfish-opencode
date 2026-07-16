@@ -2,13 +2,13 @@
 
 > Small, specialized workers handle routine work so the strongest model can focus on planning and judgment.
 
-Pilotfish is an experimental multi-model orchestration configuration for [OpenCode](https://opencode.ai). It adds an opt-in `pilotfish` primary agent that delegates reconnaissance, implementation, verification, and security work to six model-pinned subagents.
+Pilotfish is an experimental multi-model orchestration configuration for [OpenCode](https://opencode.ai). It adds an opt-in `pilotfish` primary agent that delegates phase-aware discovery, implementation, and verification to eight model-pinned subagents.
 
 Pilotfish is configuration and prompts, not a runtime orchestrator. OpenCode creates the sessions, calls the models, and enforces tool permissions.
 
-Current version: `0.0.1`
+Current version: `0.1.0`
 
-Semantically synced through original Pilotfish `v1.1.4`; see the [upstream sync workflow](./docs/upstream-sync.md).
+Semantically synced through original Pilotfish commit `1251465`, including `v1.2.0`; see the [upstream sync workflow](./docs/upstream-sync.md).
 
 ## Why
 
@@ -18,20 +18,23 @@ Pilotfish separates work by role:
 
 - Keep architecture, ambiguity resolution, integration, and final review in the primary session.
 - Route high-volume reconnaissance and mechanical work to less expensive models.
-- Use fresh-context adversarial verification for non-trivial changes.
+- Challenge material Plans before approval and non-trivial outcomes after implementation with separate fresh-context roles.
+- Keep pre-approval security analysis capability-separated from approved security implementation.
 - Enforce read-only and leaf-agent boundaries through OpenCode permissions.
 
 ## How It Works
 
-Pilotfish installs one primary agent and six workers in the global OpenCode config:
+Pilotfish installs one primary agent and eight workers in the global OpenCode config:
 
 ```text
 You
  |
  +-- pilotfish (primary orchestrator)
-      |-- scout
-      |-- Explore
-      |-- mech-executor
+       |-- scout
+       |-- Explore
+       |-- plan-verifier
+       |-- security-reviewer
+       |-- mech-executor
       |-- executor
       |-- verifier
       +-- security-executor
@@ -43,16 +46,20 @@ You
 |---|---|
 | `scout` | Narrow read-only lookups with exact file references |
 | `Explore` | Broad read-only searches across files and naming conventions |
+| `plan-verifier` | Read-only Plan challenge before approval; returns `READY` or `REVISE` |
+| `security-reviewer` | Read-only pre-approval security evidence and threat analysis |
 | `mech-executor` | Fully specified pattern edits, conventional tests, docs, and bulk work |
 | `executor` | Features, bug fixes, and refactors requiring local judgment |
-| `verifier` | Fresh-context attempts to refute completed work; never fixes findings |
-| `security-executor` | Authentication, authorization, secrets, crypto, validation, and hardening |
+| `verifier` | Post-implementation attempts to refute completed work; returns `CONFIRMED` or `REFUTED` |
+| `security-executor` | Approved authentication, authorization, secrets, crypto, validation, and hardening changes |
 
-Workers cannot launch subagents. `scout` and `Explore` cannot edit or run shell commands. `verifier` cannot use file-edit tools and reports `CONFIRMED` or `REFUTED` with independent evidence.
+Workers cannot launch subagents. The four discovery and pre-approval review roles cannot edit or run shell commands. `security-reviewer` alone may fetch supplied external evidence. `verifier` cannot use file-edit tools but can run checks after implementation.
+
+Large, ambiguous, architectural, risky, cross-surface, or explicitly plan-first work follows Discovery, Plan, Approval, Execution, and Verification phases. Small stable work remains direct. A material Plan is synthesized in the primary session and may receive a read-only readiness review before explicit approval; writing workers receive only stable, authorized contracts.
 
 ## Presets
 
-The `0.0.1` installer offers two tested presets. It verifies that every required model exists in `opencode models` before changing configuration.
+The `0.1.0` installer offers two tested presets. It verifies that every required model exists in `opencode models` before changing configuration.
 
 ### ChatGPT
 
@@ -61,6 +68,8 @@ The `0.0.1` installer offers two tested presets. It verifies that every required
 | `pilotfish` | `openai/gpt-5.6-sol` | `high` |
 | `scout` | `openai/gpt-5.6-luna` | `low` |
 | `Explore` | `openai/gpt-5.6-luna` | `medium` |
+| `plan-verifier` | `openai/gpt-5.6-sol` | `high` |
+| `security-reviewer` | `openai/gpt-5.6-sol` | `xhigh` |
 | `mech-executor` | `openai/gpt-5.6-terra` | `low` |
 | `executor` | `openai/gpt-5.6-terra` | `high` |
 | `verifier` | `openai/gpt-5.6-sol` | `high` |
@@ -73,6 +82,8 @@ The `0.0.1` installer offers two tested presets. It verifies that every required
 | `pilotfish` | `google/antigravity-claude-opus-4-6-thinking` | `max` |
 | `scout` | `google/antigravity-gemini-3-flash` | `minimal` |
 | `Explore` | `google/antigravity-gemini-3-flash` | `low` |
+| `plan-verifier` | `google/antigravity-claude-opus-4-6-thinking` | `max` |
+| `security-reviewer` | `google/antigravity-claude-opus-4-6-thinking` | `max` |
 | `mech-executor` | `google/antigravity-claude-sonnet-4-6` | default |
 | `executor` | `google/antigravity-gemini-3.1-pro` | `high` |
 | `verifier` | `google/antigravity-claude-opus-4-6-thinking` | `max` |
@@ -82,10 +93,10 @@ AntiGravity support targets the `google/antigravity-*` model IDs exposed by the 
 
 ## Install
 
-The recommended path is to clone the pinned `v0.0.1` release locally, then start OpenCode from that checkout so it reads a local runbook and matching templates:
+The recommended path is to clone the pinned `v0.1.0` release locally, then start OpenCode from that checkout so it reads a local runbook and matching templates:
 
 ```bash
-git clone --branch v0.0.1 --depth 1 https://github.com/Adrian-Mandel/pilotfish-opencode.git
+git clone --branch v0.1.0 --depth 1 https://github.com/Adrian-Mandel/pilotfish-opencode.git
 cd pilotfish-opencode
 opencode
 ```
@@ -107,7 +118,7 @@ The installer:
 3. Detects agent-name and prompt-file collisions.
 4. Shows the exact model and file plan.
 5. Waits for approval.
-6. Merges only the seven Pilotfish agent entries.
+6. Merges only the nine Pilotfish agent entries.
 7. Validates the resolved configuration.
 
 Quit and restart OpenCode after installation. Select `pilotfish` through the normal primary-agent switcher when orchestration is wanted.
@@ -138,8 +149,8 @@ Pilotfish installs global prompts and agent definitions that affect future OpenC
 
 | Target | Change |
 |---|---|
-| Highest-precedence global JSON/JSONC config | Adds seven entries under `agent` |
-| `~/.config/opencode/pilotfish/prompts/` | Adds seven role prompts |
+| Highest-precedence global JSON/JSONC config | Adds nine entries under `agent` |
+| `~/.config/opencode/pilotfish/prompts/` | Adds nine role prompts |
 | `~/.config/opencode/pilotfish/install-state.json` | Records prior touched values for safe uninstall |
 | `~/.config/opencode/pilotfish/backups/` | Stores timestamped recovery copies |
 
@@ -155,7 +166,7 @@ It gives a short, non-blocking warning when the primary model is unspecified or 
 
 The OpenCode port cannot reproduce every Claude Code feature used by original Pilotfish:
 
-| Original capability | OpenCode `0.0.1` behavior |
+| Original capability | OpenCode `0.1.0` behavior |
 |---|---|
 | Ordered automatic `fallbackModel` | No native general equivalent; model failures do not automatically switch roles |
 | `isolation: "worktree"` on a Task | No stable Task option; writing workers are serialized |
@@ -177,7 +188,7 @@ All role assignments live together in the global `agent` map. Advanced users may
 }
 ```
 
-Manual combinations outside the two presets are supported by OpenCode but untested by Pilotfish `0.0.1`.
+Manual combinations outside the two presets are supported by OpenCode but untested by Pilotfish `0.1.0`.
 
 ## Updating
 
@@ -185,7 +196,7 @@ Obtain the release tag you want to install, clone that tagged checkout, and star
 
 ## Uninstall
 
-Ask OpenCode to follow the uninstall section of `install/OPENCODE-INSTALL.md`. It restores the exact pre-install values of the seven touched agent keys and preserves unrelated changes made after installation.
+Ask OpenCode to follow the uninstall section of `install/OPENCODE-INSTALL.md`. It restores the exact pre-install values of the nine touched agent keys and preserves unrelated changes made after installation.
 
 ## Design and Research
 

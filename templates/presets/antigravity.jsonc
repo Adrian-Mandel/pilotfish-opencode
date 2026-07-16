@@ -13,6 +13,14 @@
       "model": "google/antigravity-gemini-3-flash",
       "variant": "low"
     },
+    "plan-verifier": {
+      "model": "google/antigravity-claude-opus-4-6-thinking",
+      "variant": "max"
+    },
+    "security-reviewer": {
+      "model": "google/antigravity-claude-opus-4-6-thinking",
+      "variant": "max"
+    },
     "mech-executor": {
       "model": "google/antigravity-claude-sonnet-4-6"
     },

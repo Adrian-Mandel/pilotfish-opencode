@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This report records the OpenCode capabilities verified for Pilotfish `0.0.1`. It replaces the original repository's Claude-specific model and subscription research with the mechanisms this port actually depends on. Findings are current as of 2026-07-13.
+This report records the OpenCode capabilities verified for Pilotfish `0.1.0`. It replaces the original repository's Claude-specific model and subscription research with the mechanisms this port actually depends on. Findings are current as of 2026-07-16.
 
 ## Configuration and Discovery
 
@@ -95,7 +95,7 @@ The published OpenCode config schema provides one `model` per agent and no gener
 
 Provider gateways may implement their own routing, but that is provider-specific and outside Pilotfish's two presets. Prompt-driven retries are not equivalent because a worker may fail after side effects, and a failed primary cannot run its own recovery policy.
 
-Pilotfish `0.0.1` documents this difference rather than claiming automatic failover.
+Pilotfish `0.1.0` documents this difference rather than claiming automatic failover.
 
 ## Implications for Pilotfish
 
@@ -107,10 +107,17 @@ Pilotfish `0.0.1` documents this difference rather than claiming automatic failo
 | Fresh verifier context | Native Task child session |
 | Leaf workers | Native Task denial |
 | Read-only reconnaissance | Native permissions |
+| Read-only Plan and security review | Native permissions with separate role prompts |
 | Allowed delegation graph | Native ordered Task permissions |
 | Automatic model fallback | Not available generally |
 | Task worktree isolation | Not available on stable Task surface |
 | Runtime plugin required | No, for the Phase 1 feature set |
+
+## Upstream v1.2.0 Evidence
+
+Original Pilotfish `v1.2.0` introduced phase-specific dispatch brakes and separate Plan, security, and outcome review contracts. Its published Baton and dispatch-brake fixtures are Claude-specific experiments, not OpenCode benchmarks, but their policy conclusions are host-independent: bounded discovery may precede a known implementation, Plan synthesis stays with the primary, approval gates precede writes, and fresh review roles need capability separation.
+
+This port adopts those contracts through OpenCode agents and permissions. It does not copy Baton integration, Claude invocation-level model rules, worktree arguments, or background-process claims. OpenCode-native preset resolution and policy tests provide the local evidence instead.
 
 ## Sources
 

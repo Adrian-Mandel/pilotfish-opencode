@@ -2,12 +2,12 @@
 
 This walkthrough installs Pilotfish from a pinned local checkout. OpenCode reads the runbook and templates directly from the repository; no remote files are fetched during installation.
 
-Pilotfish `0.0.1` requires OpenCode `1.17.18` or newer.
+Pilotfish `0.1.0` requires OpenCode `1.17.18` or newer.
 
 ## 1. Clone the Pinned Release
 
 ```bash
-git clone --branch v0.0.1 --depth 1 https://github.com/Adrian-Mandel/pilotfish-opencode.git
+git clone --branch v0.1.0 --depth 1 https://github.com/Adrian-Mandel/pilotfish-opencode.git
 cd pilotfish-opencode
 ```
 
@@ -84,8 +84,8 @@ After approval, the installer should report successful checks for:
 
 - Resolved OpenCode configuration.
 - The `pilotfish` primary model and variant.
-- All six worker definitions.
-- Read-only Scout and Explore permissions.
+- All eight worker definitions.
+- Read-only Scout, Explore, Plan Verifier, and Security Reviewer permissions.
 - Leaf-agent restrictions.
 - Verifier edit denial.
 - Unchanged global `model` and `default_agent` values.
@@ -96,7 +96,7 @@ The installed files live under:
 ~/.config/opencode/pilotfish/
 ```
 
-The installer also merges seven entries into the highest-precedence global JSON/JSONC config under `~/.config/opencode/`.
+The installer also merges nine entries into the highest-precedence global JSON/JSONC config under `~/.config/opencode/`.
 
 ## 6. Restart and Select Pilotfish
 
@@ -119,6 +119,8 @@ From a neutral directory, inspect the global definitions without project overrid
 ```bash
 OPENCODE_DISABLE_PROJECT_CONFIG=1 opencode debug agent pilotfish
 OPENCODE_DISABLE_PROJECT_CONFIG=1 opencode debug agent scout
+OPENCODE_DISABLE_PROJECT_CONFIG=1 opencode debug agent plan-verifier
+OPENCODE_DISABLE_PROJECT_CONFIG=1 opencode debug agent security-reviewer
 OPENCODE_DISABLE_PROJECT_CONFIG=1 opencode debug agent verifier
 ```
 
@@ -126,6 +128,8 @@ Expected results:
 
 - `pilotfish` has `mode: primary` and the selected preset model.
 - `scout` has no bash, edit, or Task access.
+- `plan-verifier` has repository read tools only.
+- `security-reviewer` adds web fetch to repository reads but has no bash, edit, or Task access.
 - `verifier` has bash and read access but no edit or Task access.
 
 ## Updating

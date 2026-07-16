@@ -7,14 +7,15 @@ Pilotfish for OpenCode starts a new experimental version line at `0.0.1`.
 1. Update `VERSION`.
 2. Add a matching entry at the top of `CHANGELOG.md`.
 3. Confirm the installer reads the version from `VERSION`; do not add independent version stamps to prompts.
-4. Validate JSON syntax for `templates/opencode.base.jsonc` and both preset fragments.
-5. Resolve the base plus each preset with the current supported OpenCode release.
-6. Inspect all seven agents with `opencode debug agent <name>`.
-7. Confirm the required model IDs and variants still appear in `opencode models --verbose`.
-8. Exercise fresh install, repeated install, update with customization, and uninstall restoration.
-9. Follow `docs/upstream-sync.md`, review through current `upstream/main`, and update `UPSTREAM_VERSION`.
-10. Verify active documentation contains no Claude installation paths or removed files.
-11. Review the release diff, commit, tag, and publish.
+4. Run `python3 -m unittest discover -s tests -v` and `git diff --check`.
+5. Validate JSON syntax for `templates/opencode.base.jsonc` and both preset fragments.
+6. Resolve the base plus each preset with the current supported OpenCode release.
+7. Inspect all nine agents with `opencode debug agent <name>`.
+8. Confirm the required model IDs and variants still appear in `opencode models --verbose`.
+9. Exercise fresh install, repeated install, update with customization, and uninstall restoration.
+10. Follow `docs/upstream-sync.md`, review through current `upstream/main`, and update `UPSTREAM_VERSION`.
+11. Verify active documentation contains no Claude installation paths or removed files.
+12. Review the release diff, commit, tag, and publish.
 
 ```bash
 git tag vX.Y.Z

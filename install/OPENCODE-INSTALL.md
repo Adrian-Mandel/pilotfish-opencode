@@ -8,8 +8,8 @@ Pilotfish is an opt-in, multi-model primary agent for OpenCode. It remains confi
 
 | Target | Change |
 |---|---|
-| Highest-precedence global JSON/JSONC config | Merge one primary agent and six worker definitions into `agent` |
-| `~/.config/opencode/pilotfish/prompts/` | Install the seven model-neutral role prompts |
+| Highest-precedence global JSON/JSONC config | Merge one primary agent and eight worker definitions into `agent` |
+| `~/.config/opencode/pilotfish/prompts/` | Install the nine model-neutral role prompts |
 | `~/.config/opencode/pilotfish/install-state.json` | Record the selected preset and prior touched values for safe uninstall |
 
 Pilotfish does not change the user's global `model`, `small_model`, `default_agent`, providers, plugins, permissions, or credentials. The user selects the `pilotfish` primary when orchestration is wanted.
@@ -52,7 +52,7 @@ Before the normal preflight:
 2. If it is missing but Pilotfish agent entries or prompt files exist, treat the install as unmanaged and ask before adopting it. Do not invent prior values for uninstall.
 3. Compare the recorded version with the repository `VERSION` and show relevant `CHANGELOG.md` entries.
 4. Compare installed prompts and touched agent entries with the current templates. Show every customization before asking whether to preserve or replace it.
-5. Preserve the original `previousAgents` map from the first managed install. Never replace it during an update, or uninstall would restore the previous Pilotfish release instead of the true pre-install state.
+5. Preserve every existing entry in `previousAgents` and `previousPrompts` from the first managed install. Never replace an existing entry during an update, or uninstall would restore the previous Pilotfish release instead of the true pre-install state. When a newer release introduces a required agent key or prompt filename that is absent from those maps, treat only that name as newly touched: after approval and before any write, append its exact current pre-update state using the same rules as a first install. Do not infer that state from `installedAgents` or from an older template.
 6. Confirm the recorded `configPath` is still the highest-precedence active global config. If a new higher layer now exists, stop and ask the user to consolidate or remove the conflict before updating; do not silently migrate lifecycle state between files.
 
 ## Step 1: Read-Only Preflight
@@ -89,6 +89,8 @@ Inspect the resolved global `agent` object, each of the three global config file
 - `pilotfish`
 - `scout`
 - `Explore`
+- `plan-verifier`
+- `security-reviewer`
 - `mech-executor`
 - `executor`
 - `verifier`
@@ -155,26 +157,32 @@ On the first managed install, record the pre-install value of every touched agen
 }
 ```
 
-Include all seven agent keys and all seven prompt filenames. For a present agent key, `value` must contain its complete pre-install target-file object. For a present prompt, copy its exact pre-install bytes to a durable path under `backups/preinstall-prompts/` and record that relative `backupPath`. `installedAgents` must contain the complete merged Pilotfish definitions actually written, including the selected model and variant.
+Include all nine agent keys and all nine prompt filenames. For a present agent key, `value` must contain its complete pre-install target-file object. For a present prompt, copy its exact pre-install bytes to a durable path under `backups/preinstall-prompts/` and record that relative `backupPath`. `installedAgents` must contain the complete merged Pilotfish definitions actually written, including the selected model and variant.
 
 Replace `<VERSION>` with the exact contents of the repository `VERSION` file.
 Replace `<CONFIG_PATH>` with the exact target file selected during preflight.
 
 Do not store provider credentials, unrelated config, or resolved environment values in this file.
 
-On update, preserve `configPath`, `configExisted`, `previousAgents`, and `previousPrompts`; prepare updated `version`, `preset`, and `installedAgents` values in memory after approval. Do not overwrite the existing state yet.
+On update, preserve `configPath`, `configExisted`, and every existing entry in `previousAgents` and `previousPrompts`. After approval and before changing config or prompts, extend the maps for every newly introduced required name that is absent:
+
+- For an absent agent-map entry, record whether that key is currently present in the target config and, when present, its complete current value.
+- For an absent prompt-map entry, record whether that prompt currently exists and, when present, copy its exact bytes to a new durable path under `backups/preinstall-prompts/` before recording the path.
+- If any required current value or prompt backup cannot be captured, stop without writing anything.
+
+Prepare the extended maps plus updated `version`, `preset`, and `installedAgents` in memory. Do not overwrite `install-state.json` until post-install validation succeeds. This first-touch migration is required when upgrading a seven-agent `0.0.1` state to the nine-agent `0.1.0` graph; otherwise uninstall could not restore a pre-existing `plan-verifier` or `security-reviewer` definition.
 
 ### 3. Install Prompts
 
-Create `~/.config/opencode/pilotfish/prompts/` and write the seven files from `templates/pilotfish/prompts/` with identical filenames and content.
+Create `~/.config/opencode/pilotfish/prompts/` and write the nine files from `templates/pilotfish/prompts/` with identical filenames and content.
 
 If an installed file differs, show the diff and follow the user's approved preserve-or-replace decision. A preserved custom prompt remains the installed prompt and must be called out in the final summary.
 
 ### 4. Merge Agent Configuration
 
-Start with the seven definitions from `templates/opencode.base.jsonc`. Recursively merge the selected preset's matching `agent` entries so each role gains its model and optional variant.
+Start with the nine definitions from `templates/opencode.base.jsonc`. Recursively merge the selected preset's matching `agent` entries so each role gains its model and optional variant.
 
-Merge those seven complete definitions into the existing global `agent` object. Preserve every unrelated top-level key and every unrelated agent. Do not rewrite the entire file merely to normalize formatting.
+Merge those nine complete definitions into the existing global `agent` object. Preserve every unrelated top-level key and every unrelated agent. Do not rewrite the entire file merely to normalize formatting.
 
 Ensure the config has:
 
@@ -188,18 +196,18 @@ Prompt references stay relative to the global config:
 {file:./pilotfish/prompts/<role>.md}
 ```
 
-If the config did not exist, create the minimal config containing `$schema` and the seven merged agent entries.
+If the config did not exist, create the minimal config containing `$schema` and the nine merged agent entries.
 
 ## Step 4: Verify and Hand Off
 
 Run all of these checks with `OPENCODE_DISABLE_PROJECT_CONFIG=1` from a neutral directory so project config cannot override the global installation:
 
 1. `opencode debug config` succeeds.
-2. `opencode debug agent pilotfish` reports `mode: primary`, the selected primary model and variant, and Task access to the six Pilotfish roles.
-3. Inspect all six workers with `opencode debug agent <name>`.
-4. Confirm `scout` and `Explore` cannot use edit, bash, or Task tools.
-5. Confirm the three executors cannot use Task.
-6. Confirm `verifier` cannot use edit or Task but can use bash and read tools.
+2. `opencode debug agent pilotfish` reports `mode: primary`, the selected primary model and variant, and Task access to the eight Pilotfish worker roles.
+3. Inspect all eight workers with `opencode debug agent <name>`.
+4. Confirm `scout`, `Explore`, `plan-verifier`, and `security-reviewer` cannot use edit, bash, or Task tools; only `security-reviewer` may use `webfetch`.
+5. Confirm the three executors cannot use Task, and `security-executor` requires an approved stable contract in its prompt.
+6. Confirm `verifier` cannot use edit or Task but can use bash and read tools; confirm its verdict vocabulary differs from `plan-verifier`.
 7. Confirm the global `model` and `default_agent` values are unchanged.
 8. Confirm the prepared install state contains no credentials or unrelated config.
 
@@ -218,12 +226,12 @@ Uninstall requires `install-state.json`. If it is missing, present a manual remo
 1. Read `previousAgents`, `previousPrompts`, and `installedAgents` from state.
 2. Reinspect all three global config layers and both global Markdown agent directories. If a higher-precedence file or Markdown agent added after installation now defines a Pilotfish name, stop and show the dependency; require the user to remove, relocate, or explicitly handle it before prompts can be safely removed.
 3. Back up the target config, installed prompts, and install state before changing anything.
-4. For each of the seven current target-file agent entries, compare it with `installedAgents`.
+4. For each of the nine current target-file agent entries, compare it with `installedAgents`.
 5. If any entry differs, show the customization and ask the user either to restore the pre-install value or abort uninstall. Do not preserve a Pilotfish agent while deleting the prompt it references.
 6. When `previousAgents[name].present` is true, restore its complete recorded target-file value.
 7. When it is false, remove that key from the target file. Any lower-layer value then reappears naturally.
 8. Preserve every unrelated config key and agent.
-9. Restore prompts recorded as present in `previousPrompts` from their durable pre-install backups. Remove prompts recorded as absent only after all seven Pilotfish entries have been restored or removed. If a current prompt was customized after installation, show the diff and require approval before replacing or deleting it.
+9. Restore prompts recorded as present in `previousPrompts` from their durable pre-install backups. Remove prompts recorded as absent only after all nine Pilotfish entries have been restored or removed. If a current prompt was customized after installation, show the diff and require approval before replacing or deleting it.
 10. Run `OPENCODE_DISABLE_PROJECT_CONFIG=1 opencode debug config` from a neutral directory. If validation fails, restore the config, prompts, and install state from the uninstall backups and stop.
 11. After successful validation, remove `install-state.json` and empty Pilotfish directories. Keep backups unless the user explicitly asks to delete them.
 12. If Pilotfish created the target config and removing its entries leaves only the schema declaration, offer to delete the file; do not delete it automatically.

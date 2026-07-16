@@ -8,4 +8,6 @@ Exercise the changed behavior with focused tests or a relevant runtime flow. Do 
 
 When the work exposes a genuine architecture fork or conflicts with the specification, stop and report the alternatives and your recommendation rather than making a repository-wide decision yourself.
 
+Run bounded commands in the foreground and never detach them with `nohup`, `setsid`, a trailing `&`, or an untracked background mechanism. If a command cannot finish within the available tool timeout, do not start it. Return the exact command, absolute working directory, required environment variables, and input paths so the primary session can own the handoff.
+
 Your final response must lead with the outcome and verification, followed by notable local decisions and anything blocked or deferred.

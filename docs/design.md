@@ -20,7 +20,7 @@ No Pilotfish plugin, daemon, custom Task tool, or model gateway is installed.
 | Concern | OpenCode mechanism | Changes when |
 |---|---|---|
 | Who orchestrates | Opt-in `pilotfish` primary agent | The preferred primary model changes |
-| Who performs each role | Six subagent definitions with model and variant | A preset or role assignment changes |
+| Who performs each role | Eight subagent definitions with model and variant | A preset or role assignment changes |
 | How delegation behaves | Model-neutral prompt files | Workflow policy changes |
 
 The global config stores the agent graph. Plain prompt files store behavior. Source preset fragments store only model and variant overlays.
@@ -42,18 +42,20 @@ OpenCode supports custom primary agents. Attaching the orchestration prompt only
 |---|---|
 | `scout` | Narrow fact finding is frequent, cheap, and safe to constrain to read/search tools |
 | `Explore` | Broad reconnaissance needs a larger search budget but still no write access |
+| `plan-verifier` | A material Plan benefits from fresh-context challenge before approval, with repository reads but no command or write capability |
+| `security-reviewer` | Pre-approval security evidence needs high-capability judgment and a read-only tool boundary |
 | `mech-executor` | A complete specification has already supplied the judgment; the worker should execute rather than redesign |
 | `executor` | Real implementation needs local decisions and stronger code reasoning |
-| `verifier` | Fresh-context refutation catches unchecked claims and context blindness better than implementer self-review |
-| `security-executor` | Security work deserves explicit routing, assumptions, abuse-case testing, and a high-capability model |
+| `verifier` | Post-implementation fresh-context refutation catches unchecked claims and context blindness better than implementer self-review |
+| `security-executor` | Approved security implementation deserves explicit routing, assumptions, abuse-case testing, and a high-capability model |
 
 The original names are preserved. Pilotfish supplies `scout`, while uppercase `Explore` coexists with OpenCode's lowercase built-in `explore` because OpenCode agent names are case-sensitive.
 
 ## Permission-Controlled Agent Graph
 
-The `pilotfish` primary may invoke only the six Pilotfish workers. Each worker has Task denied, making it a leaf agent.
+The `pilotfish` primary may invoke only the eight Pilotfish workers. Each worker has Task denied, making it a leaf agent.
 
-Read-only roles start with a deny-all rule and then allow only read, glob, grep, and list. Environment files remain denied. The verifier denies file-edit tools and Task while retaining bash so it can run tests.
+Read-only roles start with a deny-all rule and then allow only explicit evidence tools. Environment files remain denied. `security-reviewer` additionally allows web fetches; the verifier denies file-edit tools and Task while retaining bash so it can reproduce tests after implementation.
 
 Permissions provide stronger guarantees than prompts alone, but they are not a complete sandbox. In particular, arbitrary shell commands can write files. The verifier prompt and focused bash denials preserve the read-and-run contract where OpenCode cannot express it perfectly.
 
@@ -61,7 +63,7 @@ Permissions provide stronger guarantees than prompts alone, but they are not a c
 
 OpenCode models are identified as `provider/model-id`; there is no portable alias layer equivalent to Claude's `best`, `opus`, `sonnet`, and `haiku`.
 
-Version `0.0.1` therefore ships two explicit, tested mappings:
+Version `0.1.0` therefore ships two explicit, tested mappings:
 
 - ChatGPT through the OpenAI provider.
 - AntiGravity through model IDs exposed by the user's existing Google integration.
@@ -72,19 +74,29 @@ Model and variant are configured together because reasoning controls differ by p
 
 Pilotfish protects delegated quality structurally:
 
-1. The primary sends a complete specification containing goal, constraints, done criteria, paths, and rationale.
-2. A role gets two attempts before escalation or primary takeover.
-3. Non-trivial implementation receives a fresh `verifier` child session.
-4. Reconnaissance is treated as evidence to check rather than an authoritative conclusion.
-5. Workers are prevented from recursively delegating.
+1. Discovery receives a bounded evidence contract; the primary synthesizes one Plan.
+2. Material Plans may receive a fresh, read-only `plan-verifier` challenge before approval.
+3. Writing roles receive stable, authorized contracts with scope, ownership, constraints, and done criteria.
+4. A role gets two attempts before escalation or primary takeover.
+5. Non-trivial implementation receives a fresh `verifier` child session.
+6. Reconnaissance is treated as evidence to check rather than an authoritative conclusion.
+7. Workers are prevented from recursively delegating.
 
-The verifier is independent but not free. Small changes may skip it when a second context cannot reasonably protect enough value.
+Both verification roles are independent but not free. Small work may skip them when a second context cannot reasonably protect enough value.
+
+## Phase-Specific Dispatch Brakes
+
+Role eligibility does not make delegation mandatory. Small, local, stable work remains in the primary session. Larger work moves through Discovery, Plan, Approval when required, Execution, and Verification. Discovery can begin before the implementation outcome is known, but only under a stable question, evidence format, scope, and stop condition. Plan synthesis, integration, and final judgment remain primary-session responsibilities.
+
+Delegation is blocked when workers would repeatedly depend on evolving primary-session evidence, ownership overlaps, or synthesis and verification cost exceed the likely benefit. One unknown bug therefore keeps diagnosis, first minimal fix, and live verification in one reasoning chain instead of becoming a sequential scout-to-executor pipeline.
 
 ## Parallelism
 
 Read-only searches may run concurrently because they cannot conflict in the worktree.
 
-Writing workers are serialized in `0.0.1`. OpenCode contains experimental worktree APIs, but its stable Task schema does not expose Claude Code's `isolation: "worktree"` behavior or automatic result harvesting. Depending on experimental APIs would violate the release's configuration-only and stable-surface goals.
+Writing workers are serialized in `0.1.0`. OpenCode contains experimental worktree APIs, but its stable Task schema does not expose Claude Code's `isolation: "worktree"` behavior or automatic result harvesting. Depending on experimental APIs would violate the release's configuration-only and stable-surface goals.
+
+Leaf roles never detach long-running commands. If a command cannot finish within the host tool timeout, the worker returns its exact command and execution context to the primary. Stable OpenCode configuration does not guarantee persistent background shell tracking, so Pilotfish reports that limitation instead of promising Claude-specific process behavior.
 
 ## Fallback
 
@@ -104,7 +116,7 @@ This is a compatibility warning, not a visibility gate. The `pilotfish` agent re
 |---|---|
 | Runtime plugin | Original Pilotfish is configuration-only; OpenCode remains the execution engine |
 | Per-project installation | A global opt-in primary provides one personal source of truth |
-| Arbitrary installer model picker | `0.0.1` tests two bounded mappings; advanced users can edit config directly |
+| Arbitrary installer model picker | `0.1.0` tests two bounded mappings; advanced users can edit config directly |
 | Mixed-provider preset | Deferred until single-provider behavior is proven |
 | Local Qwen preset | Planned for later OMLX evaluation, including missing context/output metadata |
 | Automatic fallback | No stable native OpenCode mechanism |
