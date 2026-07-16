@@ -57,7 +57,13 @@ Before the normal preflight:
 
 ## Step 1: Read-Only Preflight
 
-### 1. Locate the Global Config
+### 1. Verify the OpenCode Version
+
+Run `opencode --version` and parse its semantic version. Pilotfish requires OpenCode `1.17.18` or newer, the verified baseline for its agent schema and permission enforcement.
+
+If the command is unavailable, the version cannot be parsed, or the version is older, stop before presenting a write plan or changing anything. Ask the user to update OpenCode; do not install a prompt-only approximation of denied tools or Task boundaries.
+
+### 2. Locate the Global Config
 
 Inspect all three global config layers under `~/.config/opencode/`: `config.json`, `opencode.json`, and `opencode.jsonc`. OpenCode loads them in that order, so later files override earlier ones.
 
@@ -70,13 +76,13 @@ Read every existing layer without printing secrets. Report which file supplies e
 
 The target file receives Pilotfish entries at the highest active global layer. Lower-layer definitions remain untouched and naturally reappear when an added target key is removed during uninstall.
 
-### 2. Check Model Availability
+### 3. Check Model Availability
 
 Run `opencode models` and compare the output with both supported preset requirement lists.
 
 Report each preset as available or unavailable. Offer only available presets. Do not accept a guessed alias or silently substitute another model.
 
-### 3. Check Agent Collisions
+### 4. Check Agent Collisions
 
 Inspect the resolved global `agent` object, each of the three global config files, and `~/.config/opencode/agents/` or singular `agent/` directories for these exact names:
 
@@ -96,7 +102,7 @@ For a Markdown agent collision, stop and ask the user to relocate or remove that
 
 Project-level agent definitions may override this global installation in individual repositories. Note that fact when relevant; never edit project configuration during a global install.
 
-### 4. Inspect Existing Pilotfish Files
+### 5. Inspect Existing Pilotfish Files
 
 If `~/.config/opencode/pilotfish/` exists, list its files and compare them with the templates. Flag unknown or customized files. Never delete or overwrite unknown content silently.
 

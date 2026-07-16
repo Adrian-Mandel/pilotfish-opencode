@@ -24,6 +24,8 @@ Initial experimental OpenCode port.
 - Replaced Claude Code settings, agent frontmatter, and global `CLAUDE.md` policy with native OpenCode agent configuration and prompt files.
 - Rewrote research and design documentation around verified OpenCode behavior.
 - Restarted versioning at `0.0.1` for the new experimental fork.
+- Made a pinned local `v0.0.1` checkout the recommended installation path; raw `main` is documented as an unpinned convenience path.
+- Require OpenCode `1.17.18` or newer before installation so agent schema and permission assumptions use the tested runtime baseline.
 
 ### Removed
 

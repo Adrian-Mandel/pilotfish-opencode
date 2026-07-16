@@ -82,13 +82,23 @@ AntiGravity support targets the `google/antigravity-*` model IDs exposed by the 
 
 ## Install
 
-Connect the provider you intend to use, confirm its models appear in `opencode models`, then ask OpenCode to run the installer:
+The recommended path is to clone the pinned `v0.0.1` release locally, then start OpenCode from that checkout so it reads a local runbook and matching templates:
+
+```bash
+git clone --branch v0.0.1 --depth 1 https://github.com/Adrian-Mandel/pilotfish-opencode.git
+cd pilotfish-opencode
+opencode
+```
+
+In that OpenCode session, using a normal primary agent such as Build, paste:
 
 ```text
-Read https://raw.githubusercontent.com/Adrian-Mandel/pilotfish-opencode/main/install/OPENCODE-INSTALL.md
-and follow it to install pilotfish into my global OpenCode configuration.
+Read the local file install/OPENCODE-INSTALL.md in the current checkout and follow it to install Pilotfish into my global OpenCode configuration.
+Use only the templates in this checkout.
 Show me the complete plan and get my approval before writing anything.
 ```
+
+> **Runtime requirement:** OpenCode `1.17.18` or newer. This is the verified baseline for the agent schema and permission enforcement Pilotfish relies on. The installer stops before writing on an older or unidentifiable version.
 
 The installer:
 
@@ -104,15 +114,25 @@ Quit and restart OpenCode after installation. Select `pilotfish` through the nor
 
 For a local checkout with step-by-step verification, see the [local installation walkthrough](./docs/local-install.md).
 
-### Install a Reviewed Revision
+### Raw Main Convenience Path
 
-Remote installation has the same trust boundary as running any fetched setup instructions. Review the files under `templates/` and pin every fetch to one release tag or commit SHA:
+You can ask OpenCode to fetch the current runbook directly, but this is mutable and unpinned: `main` can change between review and installation, and remote-instruction safety checks may intercept it. If that happens, use the pinned local checkout above; do not disable or bypass the safety check.
 
 ```text
-Read https://raw.githubusercontent.com/Adrian-Mandel/pilotfish-opencode/<TAG_OR_SHA>/install/OPENCODE-INSTALL.md
-and install pilotfish using every template from that same <TAG_OR_SHA>.
+Read https://raw.githubusercontent.com/Adrian-Mandel/pilotfish-opencode/main/install/OPENCODE-INSTALL.md
+and follow it to install Pilotfish into my global OpenCode configuration.
 Show me the complete plan and get my approval before writing anything.
 ```
+
+## Trust and Security
+
+Pilotfish installs global prompts and agent definitions that affect future OpenCode sessions. Treat the installer like any software setup process:
+
+- Prefer the pinned local release so the runbook and templates cannot change between review and installation.
+- Review `install/OPENCODE-INSTALL.md`, `templates/opencode.base.jsonc`, the selected preset, and the prompt files before approval.
+- Keep the approval gate; the installer must show every file and configuration change before writing.
+- Do not bypass remote prompt-injection protection to make the raw URL path work.
+- Pilotfish does not modify provider credentials, the global default model, or the default agent.
 
 ## What Gets Installed
 
@@ -161,7 +181,7 @@ Manual combinations outside the two presets are supported by OpenCode but untest
 
 ## Updating
 
-Rerun the install prompt. The installer reads `install-state.json`, shows changes since the installed version, surfaces customized prompts or model assignments, and updates only after approval.
+Obtain the release tag you want to install, clone that tagged checkout, and start OpenCode inside it. Then ask OpenCode to read the local `install/OPENCODE-INSTALL.md` and follow its update flow. The installer reads `install-state.json`, shows changes since the installed version, surfaces customized prompts or model assignments, and updates only after approval.
 
 ## Uninstall
 

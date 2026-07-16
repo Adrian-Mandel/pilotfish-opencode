@@ -1,10 +1,19 @@
 # Local Installation Walkthrough
 
-This walkthrough installs Pilotfish from a local checkout. OpenCode reads the runbook and templates directly from the repository; no remote files are fetched.
+This walkthrough installs Pilotfish from a pinned local checkout. OpenCode reads the runbook and templates directly from the repository; no remote files are fetched during installation.
 
-Pilotfish `0.0.1` is tested with OpenCode `1.17.18`.
+Pilotfish `0.0.1` requires OpenCode `1.17.18` or newer.
 
-## 1. Check OpenCode and Providers
+## 1. Clone the Pinned Release
+
+```bash
+git clone --branch v0.0.1 --depth 1 https://github.com/Adrian-Mandel/pilotfish-opencode.git
+cd pilotfish-opencode
+```
+
+Review the local runbook and templates before launching OpenCode.
+
+## 2. Check OpenCode and Providers
 
 Confirm the installed OpenCode version:
 
@@ -38,7 +47,9 @@ google/antigravity-gemini-3.1-pro
 
 The installer will not modify provider authentication.
 
-## 2. Start OpenCode in the Checkout
+The installer stops before writing if the version is older than `1.17.18` or cannot be identified.
+
+## 3. Start OpenCode in the Checkout
 
 Open a terminal in the Pilotfish repository and start OpenCode:
 
@@ -48,7 +59,7 @@ opencode
 
 Use a normal primary agent such as Build for the installation. Do not select Pilotfish yet because it has not been installed.
 
-## 3. Run the Local Installer
+## 4. Run the Local Installer
 
 Paste this prompt into OpenCode:
 
@@ -67,7 +78,7 @@ The installer performs a read-only preflight first. It should report:
 
 Select one available preset and review the plan. Nothing should be written until you explicitly approve it.
 
-## 4. Review the Result
+## 5. Review the Result
 
 After approval, the installer should report successful checks for:
 
@@ -87,7 +98,7 @@ The installed files live under:
 
 The installer also merges seven entries into the highest-precedence global JSON/JSONC config under `~/.config/opencode/`.
 
-## 5. Restart and Select Pilotfish
+## 6. Restart and Select Pilotfish
 
 Quit OpenCode completely and start it again. Configuration and agent files are loaded at startup.
 
@@ -101,7 +112,7 @@ Use scout to find the project version and report the file and value.
 
 On the first turn, Pilotfish should inspect its resolved definition. A tested preset proceeds normally; an unspecified or changed primary model produces a short non-blocking warning.
 
-## 6. Optional Manual Verification
+## 7. Optional Manual Verification
 
 From a neutral directory, inspect the global definitions without project overrides:
 
@@ -119,7 +130,7 @@ Expected results:
 
 ## Updating
 
-Pull the desired repository revision, start OpenCode in the checkout, and use:
+Clone the desired tagged release, start OpenCode in that checkout, and use:
 
 ```text
 Read install/OPENCODE-INSTALL.md and follow its update flow for my existing Pilotfish installation.
