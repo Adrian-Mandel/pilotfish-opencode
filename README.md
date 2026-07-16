@@ -102,6 +102,8 @@ The installer:
 
 Quit and restart OpenCode after installation. Select `pilotfish` through the normal primary-agent switcher when orchestration is wanted.
 
+For a local checkout with step-by-step verification, see the [local installation walkthrough](./docs/local-install.md).
+
 ### Install a Reviewed Revision
 
 Remote installation has the same trust boundary as running any fetched setup instructions. Review the files under `templates/` and pin every fetch to one release tag or commit SHA:
