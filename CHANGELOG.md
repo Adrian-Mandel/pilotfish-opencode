@@ -25,6 +25,7 @@ Tested with OpenCode `1.17.18`.
 - Replaced Claude-specific detached/background process behavior with an OpenCode-safe exact-context handoff contract.
 - Extended install, update, rollback, and uninstall lifecycle state from seven to nine agent entries and prompts.
 - Advanced the semantic upstream review baseline from original Pilotfish `v1.1.4` through commit `1251465`, including `v1.2.0`.
+- Adapted the current upstream installer UX for OpenCode: updates are idempotent install reruns with an up-to-date no-write stop, while phased uninstall retains key-level restoration, layered-config checks, rollback, and retained backups.
 
 ### Deferred
 

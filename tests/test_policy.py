@@ -202,6 +202,99 @@ class PolicyContractTests(unittest.TestCase):
         for name in AGENTS:
             self.assertIn(f"`{name}`", installer)
 
+    def test_installer_update_and_uninstall_lifecycle_contract(self) -> None:
+        installer = (ROOT / "install" / "OPENCODE-INSTALL.md").read_text(
+            encoding="utf-8"
+        )
+
+        for phrase in (
+            "An update is an idempotent re-run",
+            "this checkout's `VERSION` and `CHANGELOG.md` from the same pinned ref",
+            "report that Pilotfish is up to date and stop",
+            "Do not ask for a preset, present a write plan, or write any file",
+            "Keep the recorded preset by default",
+            "Current and desired are identical",
+            "Current matches the prior managed `installedAgents[name]`, but desired changed",
+            "Treat it as a customization: show the diff and ask",
+            "Do not claim that old prompt hashes exist",
+            "Preserved custom agents remain the installed values",
+            "Preserve every existing entry in `previousAgents` and `previousPrompts` from the first managed install",
+            "Never replace an existing entry during an update",
+            "write `install-state.json` as the final installation step",
+            "If validation fails, restore the target config backup, prompts, and previous install state",
+            "If writing state fails, roll back the config and prompts",
+        ):
+            self.assertIn(phrase, installer)
+
+        for heading in (
+            "### Phase 1: Inspect and classify (read-only)",
+            "### Phase 2: Present one restoration plan and get approval",
+            "### Phase 3: Back up before writes",
+            "### Phase 4: Restore or remove agents",
+            "### Phase 5: Restore or remove prompts",
+            "### Phase 6: Validate, roll back, and clean up",
+        ):
+            self.assertIn(heading, installer)
+
+        self.assertLess(
+            installer.index("### Phase 2: Present one restoration plan and get approval"),
+            installer.index("### Phase 3: Back up before writes"),
+        )
+        self.assertLess(
+            installer.index("### Phase 4: Restore or remove agents"),
+            installer.index("### Phase 5: Restore or remove prompts"),
+        )
+        for phrase in (
+            "overwritten pre-install values cannot be reconstructed without state",
+            "Keep these backups after a successful uninstall",
+            "Never auto-delete the global config",
+            "classify a difference only as potentially customized",
+            "potentially customized prompt",
+        ):
+            self.assertIn(phrase, installer)
+
+    def test_update_and_uninstall_docs_are_actionable(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        local_install = (ROOT / "docs" / "local-install.md").read_text(
+            encoding="utf-8"
+        )
+
+        for phrase in (
+            "Updating means rerunning the installer",
+            "all from the same ref",
+            "git clone --branch <RELEASE_TAG>",
+            "cd pilotfish-opencode",
+            "opencode",
+            "Read install/OPENCODE-INSTALL.md and update my existing Pilotfish installation",
+            "stops without writing",
+            "unchanged agents and prompts are skipped",
+            "customization is diffed",
+            "Raw `main` remains mutable",
+            "one exact restoration plan",
+            "overwritten pre-install values cannot be reconstructed",
+        ):
+            self.assertIn(phrase, readme)
+
+        for phrase in (
+            "same pinned ref",
+            "Updating is simply rerunning install",
+            "Read install/OPENCODE-INSTALL.md and update my existing Pilotfish installation",
+            "stops without asking for a preset or writing anything",
+            "identical agents and prompts skip",
+            "changed custom content is shown as a diff",
+            "one exact restoration plan",
+            "overwritten pre-install values cannot be reconstructed",
+        ):
+            self.assertIn(phrase, local_install)
+
+    def test_upstream_installer_adaptation_is_reproducible(self) -> None:
+        sync = (ROOT / "docs" / "upstream-sync.md").read_text(encoding="utf-8")
+
+        self.assertIn("install/AGENT-INSTALL.md", sync)
+        self.assertIn("f10f9f332fd22d4487f7d29c2f7b084d4579385b", sync)
+        self.assertIn("see the installer lifecycle adaptation row", sync)
+        self.assertNotIn("see the Pending lifecycle row", sync)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -96,3 +96,7 @@ Reviewed upstream range:
 | Policy regression tests | Adapted | `tests/test_policy.py` validates the OpenCode graph, presets, permissions, phase gates, verdicts, installer counts, and long-command contract. |
 
 The review target includes `5e087ab` and merge commit `1251465`, which add Baton design provenance without changing runtime behavior. The OpenCode design and research documents credit the upstream evidence while keeping the fork dependency-free.
+
+## Current Main Installer UX Adaptation
+
+The current upstream `main` installer was reviewed for its simple lifecycle UX: detect the installed version, stop without writes when current, otherwise show the changelog and rerun the normal idempotent install flow; uninstall reverses the managed targets in a short sequence. Reviewed source: upstream `main` `install/AGENT-INSTALL.md`, blob SHA `f10f9f332fd22d4487f7d29c2f7b084d4579385b`. This fork adapts that behavior in `OPENCODE-INSTALL.md` without advancing `UPSTREAM_VERSION` or treating the review as a full upstream sync. OpenCode retains stronger key-level first-touch restoration, layered-config checks, validation rollback, and retained backups; see the installer lifecycle adaptation row in the deviations ledger.

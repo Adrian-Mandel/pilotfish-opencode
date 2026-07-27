@@ -192,11 +192,33 @@ Manual combinations outside the two presets are supported by OpenCode but untest
 
 ## Updating
 
-Obtain the release tag you want to install, clone that tagged checkout, and start OpenCode inside it. Then ask OpenCode to read the local `install/OPENCODE-INSTALL.md` and follow its update flow. The installer reads `install-state.json`, shows changes since the installed version, surfaces customized prompts or model assignments, and updates only after approval.
+Updating means rerunning the installer from the desired pinned checkout. Use a checkout whose runbook, `VERSION`, `CHANGELOG.md`, and templates are all from the same ref; do not mix a pinned checkout with `main` files.
+
+```bash
+git clone --branch <RELEASE_TAG> --depth 1 https://github.com/Adrian-Mandel/pilotfish-opencode.git
+cd pilotfish-opencode
+opencode
+```
+
+```text
+Read install/OPENCODE-INSTALL.md and update my existing Pilotfish installation from this checkout.
+Use only this checkout. Keep my recorded preset unless I ask to switch it.
+Show the changelog and exact plan, then get my approval before writing anything.
+```
+
+The installer stops without writing when `install-state.json` already records this checkout's version. Otherwise it reruns the normal install flow: unchanged agents and prompts are skipped, and any customization is diffed and requires a keep-or-replace decision. Raw `main` remains mutable; do not use it to mix refs or bypass safety checks. The original pre-install values remain preserved for uninstall.
 
 ## Uninstall
 
-Ask OpenCode to follow the uninstall section of `install/OPENCODE-INSTALL.md`. It restores the exact pre-install values of the nine touched agent keys and preserves unrelated changes made after installation.
+From a compatible pinned checkout, use:
+
+```text
+Read install/OPENCODE-INSTALL.md and uninstall my Pilotfish installation.
+Inspect state and current config layers, show one exact restoration plan with any diffs,
+and get my approval before writing anything.
+```
+
+Uninstall restores or removes only the nine touched agent keys, then restores or removes prompts after their agent references are gone. It preserves unrelated config, keeps backups, validates before removing state, and never auto-deletes the global config. Without install state, it offers only conservative manual removal because overwritten pre-install values cannot be reconstructed.
 
 ## Design and Research
 

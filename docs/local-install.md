@@ -134,14 +134,15 @@ Expected results:
 
 ## Updating
 
-Clone the desired tagged release, start OpenCode in that checkout, and use:
+Clone the desired tagged release and start OpenCode in that checkout. The runbook, `VERSION`, `CHANGELOG.md`, and templates must all come from this same pinned ref. Updating is simply rerunning install:
 
 ```text
-Read install/OPENCODE-INSTALL.md and follow its update flow for my existing Pilotfish installation.
-Use only this local checkout. Show all prompt, model, and configuration differences and get my approval before writing anything.
+Read install/OPENCODE-INSTALL.md and update my existing Pilotfish installation from this local checkout.
+Use only this checkout. Keep my recorded preset unless I ask to switch it.
+Show the changelog and exact plan, then get my approval before writing anything.
 ```
 
-The original pre-install agent and prompt state remains preserved for uninstall.
+If `install-state.json` already records this checkout's version, the installer reports that it is current and stops without asking for a preset or writing anything. Otherwise it follows the normal install Steps 1–4: identical agents and prompts skip; changed custom content is shown as a diff and requires a keep-or-replace decision. The original pre-install agent and prompt state remains preserved for uninstall.
 
 ## Uninstalling
 
@@ -149,9 +150,10 @@ Start OpenCode in the checkout containing the version you installed or a compati
 
 ```text
 Read install/OPENCODE-INSTALL.md and follow its uninstall section for my Pilotfish installation.
-Show the restoration plan and get my approval before changing anything.
+Inspect state and current config layers, show one exact restoration plan with any diffs,
+and get my approval before writing anything.
 ```
 
-Uninstall restores prior touched agent entries and prompt files rather than replacing the entire global config with an old backup.
+Uninstall first classifies current entries and prompts, then backs them up after approval. It restores or removes only the nine touched agent keys, handles prompts only after agent references are gone, validates the resolved config, and then removes state and empty directories. It keeps backups and never auto-deletes the global config. If state is missing, it can offer only conservative manual removal: overwritten pre-install values cannot be reconstructed.
 
 Restart OpenCode after update or uninstall.
