@@ -9,6 +9,8 @@ Tested with OpenCode `1.17.18`.
 ### Added
 
 - Phase-aware Discovery, Plan, Approval, Execution, and Verification lifecycle adapted from original Pilotfish `v1.2.0`.
+- Fresh Explore routing for repeated, context-heavy accessible project-local artifact reconnaissance, with exact references, uncertainty reporting, and primary selective review.
+- An authoritative upstream-deviations ledger and a sanitized ongoing artifact-routing evaluation record.
 - Read-only `plan-verifier` with `READY` or `REVISE` verdicts before approval.
 - Read-only `security-reviewer` for pre-approval trust-boundary and vulnerability evidence.
 - ChatGPT and AntiGravity mappings for both new review roles.

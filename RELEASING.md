@@ -14,8 +14,9 @@ Pilotfish for OpenCode starts a new experimental version line at `0.0.1`.
 8. Confirm the required model IDs and variants still appear in `opencode models --verbose`.
 9. Exercise fresh install, repeated install, update with customization, and uninstall restoration.
 10. Follow `docs/upstream-sync.md`, review through current `upstream/main`, and update `UPSTREAM_VERSION`.
-11. Verify active documentation contains no Claude installation paths or removed files.
-12. Review the release diff, commit, tag, and publish.
+11. Review `docs/upstream-deviations.md`; every current difference must be represented, and no row may have `Pending` in Source at release.
+12. Verify active documentation contains no Claude installation paths or removed files.
+13. Review the release diff, commit, tag, and publish.
 
 ```bash
 git tag vX.Y.Z

@@ -17,7 +17,7 @@ Small, local, already-stable work should be completed directly. Large, ambiguous
 | Role | Delegate when |
 |---|---|
 | `scout` | A narrow search, lookup, symbol usage, configuration value, or direct "where is X" question |
-| `Explore` | Reconnaissance requires substantial searches across many files, directories, or naming conventions |
+| `Explore` | Reconnaissance requires substantial searches across many files, directories, naming conventions, or accessible project-local artifacts |
 | `plan-verifier` | A material Plan needs a read-only fresh-context challenge before approval; requests only `READY` or `REVISE` |
 | `security-reviewer` | Security evidence or threat analysis is needed before approval; this role is read-only |
 | `mech-executor` | Approved or otherwise authorized work is mechanical and fully specified |
@@ -30,10 +30,12 @@ Small, local, already-stable work should be completed directly. Large, ambiguous
 - Identify the current phase before every Task call. Discovery requires a stable research contract, not a pre-decided implementation outcome. Writing roles require a stable execution contract and any required approval.
 - Block fan-out when workers would depend repeatedly on this session's evolving evidence, ownership overlaps, no clear synthesis or verification owner exists, or integration cost exceeds likely benefit.
 - Keep bounded repository scans in this session by default. Read-only fan-out is useful when evidence surfaces are genuinely independent and substantial, external latency can overlap, or independent perspectives materially reduce Plan uncertainty.
+- Delegate repeated, context-heavy artifact inspection—such as collections of screenshots or generated frame sheets, many PDF pages, or large logs—to a new, not resumed, read-only reconnaissance worker session when its net benefit is positive.
 - For one unknown bug, keep root-cause discovery, trace-driven debugging, tightly coupled state propagation, the first minimal fix, and live verification in one reasoning chain. Do not create a sequential `scout` to `executor` pipeline that forces rediscovery.
 - Give every worker one complete contract: goal, constraints, done criteria, relevant paths, exclusive ownership, and why the work matters.
 - Start with the least expensive role that can plausibly succeed. After two failed attempts, escalate or take over; do not retry the same tier a third time.
 - Treat reconnaissance as evidence, not authority. Recheck any single scouted fact that carries an important decision.
+- For artifact reconnaissance, require concise findings with exact references and uncertainties; retain primary synthesis and selectively inspect decision-critical evidence.
 - Never swap Plan and outcome verification. `plan-verifier` is read-only and returns `READY` or `REVISE`; `verifier` can run checks after implementation and returns `CONFIRMED` or `REFUTED`.
 - Route pre-approval security analysis to `security-reviewer`. Route only an approved, stable security implementation contract to `security-executor`.
 - Do not delegate final decisions, tightly coupled one-path investigations, Plan synthesis, integration judgment, or work the user explicitly asked you to judge.

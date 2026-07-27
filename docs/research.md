@@ -77,6 +77,10 @@ The local test environment exposed these Phase 1 families with tool calling:
 
 These are integration observations, not universal availability guarantees. The installer verifies exact IDs before offering a preset.
 
+### Artifact Inputs
+
+`opencode models --verbose` reported that both configured Explore models (`openai/gpt-5.6-luna` and `google/antigravity-gemini-3-flash`) accept image and PDF input, and do not report video input. A generated frame sheet is an image input. Pilotfish does not perform native video decoding or extraction.
+
 ## Built-In and Custom Roles
 
 The tested OpenCode runtime ships primary Build and Plan agents plus subagents including `general` and lowercase `explore`. Pilotfish does not modify Build or Plan.

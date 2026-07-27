@@ -32,6 +32,9 @@ class PolicyContractTests(unittest.TestCase):
         self.policy = (
             ROOT / "templates" / "pilotfish" / "prompts" / "pilotfish.md"
         ).read_text(encoding="utf-8")
+        self.explore = (
+            ROOT / "templates" / "pilotfish" / "prompts" / "Explore.md"
+        ).read_text(encoding="utf-8")
 
     def test_agent_graph_and_prompts_match(self) -> None:
         self.assertEqual(set(self.base["agent"]), set(AGENTS))
@@ -96,6 +99,73 @@ class PolicyContractTests(unittest.TestCase):
             "one unknown bug",
         ):
             self.assertIn(phrase, self.policy)
+
+    def test_artifact_reconnaissance_uses_a_fresh_read_only_worker(self) -> None:
+        for phrase in (
+            "Small, local, already-stable work should be completed directly",
+            "new, not resumed, read-only reconnaissance worker session",
+            "collections of screenshots or generated frame sheets",
+            "many PDF pages, or large logs",
+            "Treat reconnaissance as evidence, not authority. Recheck any single scouted fact that carries an important decision.",
+            "exact references and uncertainties",
+            "retain primary synthesis",
+            "selectively inspect decision-critical evidence",
+        ):
+            self.assertIn(phrase, self.policy)
+
+    def test_explore_artifact_contract_preserves_access_boundary(self) -> None:
+        for phrase in (
+            "accessible project-local artifact reconnaissance",
+            "separate confirmed observations from uncertainty",
+            "path, page, frame, or log-range references",
+            "report the blocked path instead of requesting broader access",
+            "Never modify files",
+            "design review",
+        ):
+            self.assertIn(phrase, self.explore)
+
+        description = self.base["agent"]["Explore"]["description"]
+        self.assertIn("accessible project-local artifact reconnaissance", description)
+        self.assertIn("exact references", description)
+        self.assertIn("uncertainties", description)
+
+    def test_deviation_ledger_and_release_gate_are_linked(self) -> None:
+        ledger = (ROOT / "docs" / "upstream-deviations.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "| Difference | Upstream behavior | OpenCode behavior | Rationale / revisit condition | Source |",
+            ledger,
+        )
+        self.assertIn("| Fresh artifact-routing reconnaissance |", ledger)
+        for path in (
+            ROOT / "README.md",
+            ROOT / "docs" / "design.md",
+            ROOT / "docs" / "upstream-sync.md",
+        ):
+            self.assertIn("upstream-deviations.md", path.read_text(encoding="utf-8"))
+
+        releasing = (ROOT / "RELEASING.md").read_text(encoding="utf-8")
+        self.assertIn("docs/upstream-deviations.md", releasing)
+        self.assertIn("no row may have `Pending` in Source at release", releasing)
+
+    def test_artifact_capability_docs_do_not_claim_native_video_support(self) -> None:
+        research = (ROOT / "docs" / "research.md").read_text(encoding="utf-8")
+        evaluation = (ROOT / "docs" / "artifact-routing-evaluation.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("accept image and PDF input", research)
+        self.assertIn("do not report video input", research)
+        self.assertIn("does not perform native video decoding or extraction", research)
+        self.assertIn("No native video claim", evaluation)
+        self.assertIn("fresh Task child", evaluation)
+        self.assertIn("temporary direct Explore run", evaluation)
+        self.assertIn("external-path denial occurred on the ChatGPT child Task", evaluation)
+        self.assertIn("not end-to-end routing success", evaluation)
+        self.assertIn("routing appropriateness", evaluation)
+        self.assertIn("duplicate primary reads", evaluation)
+        self.assertIn("workflow impact", evaluation)
+        self.assertNotIn("native video support", research + evaluation)
 
     def test_security_roles_preserve_approval_boundary(self) -> None:
         prompt_dir = ROOT / "templates" / "pilotfish" / "prompts"

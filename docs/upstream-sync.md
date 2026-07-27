@@ -4,6 +4,8 @@ Pilotfish for OpenCode is a semantic port of [Nanako0129/pilotfish](https://gith
 
 `UPSTREAM_VERSION` contains the exact upstream commit last reviewed for applicability. The current baseline is upstream commit `125146508587d69eab1265b00210a59d1e5b375f`, including release `v1.2.0` and its follow-up attribution change.
 
+The [upstream deviations ledger](./upstream-deviations.md) is the authoritative current record of every intentional difference from that baseline. Update it with each adaptation, extension, omission, or deferral; it is distinct from this workflow's historical review narrative.
+
 ## Why Direct Merges Are Avoided
 
 A normal merge from `upstream/main` would repeatedly reintroduce Claude-specific paths, settings, model aliases, frontmatter, and documentation. It would also create modify/delete conflicts because the OpenCode fork intentionally replaced those files.

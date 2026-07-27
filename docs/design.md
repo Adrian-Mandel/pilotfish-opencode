@@ -41,7 +41,7 @@ OpenCode supports custom primary agents. Attaching the orchestration prompt only
 | Role | Design reason |
 |---|---|
 | `scout` | Narrow fact finding is frequent, cheap, and safe to constrain to read/search tools |
-| `Explore` | Broad reconnaissance needs a larger search budget but still no write access |
+| `Explore` | Broad codebase or accessible project-local artifact reconnaissance needs a larger search budget but still no write access |
 | `plan-verifier` | A material Plan benefits from fresh-context challenge before approval, with repository reads but no command or write capability |
 | `security-reviewer` | Pre-approval security evidence needs high-capability judgment and a read-only tool boundary |
 | `mech-executor` | A complete specification has already supplied the judgment; the worker should execute rather than redesign |
@@ -127,4 +127,4 @@ This is a compatibility warning, not a visibility gate. The `pilotfish` agent re
 
 Pilotfish may adopt new behavior when OpenCode exposes it through stable configuration. It should not grow a parallel orchestration runtime merely to imitate another host's features.
 
-Upstream Pilotfish changes are reviewed through the [semantic sync workflow](./upstream-sync.md). The recorded upstream commit advances only after each change has been adopted, adapted, deferred, or marked inapplicable for OpenCode.
+Upstream Pilotfish changes are reviewed through the [semantic sync workflow](./upstream-sync.md). The [upstream deviations ledger](./upstream-deviations.md) is the authoritative current record of intentional differences from the reviewed baseline. The recorded upstream commit advances only after each change has been adopted, adapted, deferred, or marked inapplicable for OpenCode.

@@ -37,7 +37,7 @@
       }
     },
     "Explore": {
-      "description": "Broad read-only codebase exploration across many files, directories, and naming conventions; returns locations and a concise synthesis.",
+      "description": "Broad read-only codebase or accessible project-local artifact reconnaissance; returns concise locations, exact references, and uncertainties.",
       "mode": "subagent",
       "prompt": "{file:./pilotfish/prompts/Explore.md}",
       "permission": {

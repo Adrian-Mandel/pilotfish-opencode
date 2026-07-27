@@ -45,7 +45,7 @@ You
 | Role | Used for |
 |---|---|
 | `scout` | Narrow read-only lookups with exact file references |
-| `Explore` | Broad read-only searches across files and naming conventions |
+| `Explore` | Broad read-only codebase or accessible project-local artifact reconnaissance with exact references and uncertainties |
 | `plan-verifier` | Read-only Plan challenge before approval; returns `READY` or `REVISE` |
 | `security-reviewer` | Read-only pre-approval security evidence and threat analysis |
 | `mech-executor` | Fully specified pattern edits, conventional tests, docs, and bulk work |
@@ -202,7 +202,9 @@ Ask OpenCode to follow the uninstall section of `install/OPENCODE-INSTALL.md`. I
 
 - [Design rationale](./docs/design.md)
 - [OpenCode research](./docs/research.md)
+- [Artifact-routing evaluation](./docs/artifact-routing-evaluation.md)
 - [Upstream sync workflow](./docs/upstream-sync.md)
+- [Upstream deviations ledger](./docs/upstream-deviations.md)
 - [Changelog](./CHANGELOG.md)
 
 ## License
