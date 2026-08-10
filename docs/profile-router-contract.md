@@ -54,7 +54,8 @@ Each row is a coupling point to OpenCode 1.18.10. If one changes upstream, the l
 
 These are known, bounded, and must not be addressed by adding router complexity.
 
-- **Marker residue in captured events.** A task description carries a transient SHA-256 call marker. Raw tool-input events captured before cleanup may retain it. The digest contains no prompt or credential data.
+- **Marker residue in captured events and in the UI.** A task description carries a transient SHA-256 call marker. Raw tool-input events captured before cleanup retain it, and the CLI/TUI shows the marked description in the running task label, e.g. `read VERSION file [pilotfish-task:a3a03696…]`. Only the child session title is cleaned. The digest contains no prompt or credential data.
+- **AntiGravity 3.5 and 3.6 flash are unreachable.** `opencode-antigravity-auth` 1.6.0 intercepts every `google/*` request and strips the `-preview` suffix, and the AntiGravity endpoint has no `gemini-3.5-flash` or `gemini-3.6-flash`, so both 404 through every path. The plugin implements only `antigravity-gemini-3-flash`, `-3-pro`, `-3.1-pro`, `antigravity-claude-opus-4-6-thinking`, and `antigravity-claude-sonnet-4-6`. No configuration change reaches the newer flash models; that needs plugin or upstream support.
 - **Child title cleanup is best-effort.** If the host's `session.update` fails, a child session may keep its marked title and need manual cleanup. Authorization is already revoked at that point, so this is display metadata only.
 - **Resumed Tasks have no marker** to restore, by design; they authorize on exact `task_id`, parent, and agent instead.
 - **Hidden agents via `--agent`.** OpenCode refuses a hidden agent before router hooks run and may fall back to its own default primary. That is not a Pilotfish execution and Pilotfish does not attempt to intercept it.
