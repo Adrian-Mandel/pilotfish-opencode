@@ -65,13 +65,12 @@ function readTemplate(relativePath) {
   return parseJsonc(readFileSync(join(REPO_ROOT, relativePath), "utf8"));
 }
 
+// A preset binds agents to models and nothing else. Global keys stay out of
+// it deliberately: Pilotfish is opt-in and does not own the user's top-level
+// configuration.
 function mergeAgents(base, preset) {
-  // A preset carries provider-specific top-level settings as well as agent
-  // bindings — `small_model` is one — so non-agent keys have to survive the
-  // merge rather than being dropped with everything outside `agent`.
-  const { agent: overlays, $schema, ...topLevel } = preset;
-  const merged = { ...structuredClone(base), ...topLevel };
-  for (const [name, overlay] of Object.entries(overlays ?? {})) {
+  const merged = structuredClone(base);
+  for (const [name, overlay] of Object.entries(preset.agent ?? {})) {
     merged.agent[name] = { ...(merged.agent[name] ?? {}), ...overlay };
   }
   return merged;

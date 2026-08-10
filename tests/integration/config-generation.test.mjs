@@ -82,24 +82,6 @@ describe("profile router config generation in OpenCode", () => {
     }
   });
 
-  // Presets carry provider-specific top-level keys, not only agent bindings.
-  // `small_model` is dropped silently if the merge only walks `agent`, and the
-  // failure is invisible: the install still works, it just keeps paying for
-  // title generation and compaction on the selected primary.
-  test("the host resolves the preset's small_model", () => {
-    const preset = JSON.parse(
-      readFileSync(join(REPO_ROOT, "templates/presets/chatgpt.jsonc"), "utf8")
-        .replace(/^\s*\/\/.*$/gm, ""),
-    );
-    assert.ok(preset.small_model, "a preset must declare a small_model");
-    assert.equal(config.small_model, preset.small_model);
-    assert.notEqual(
-      config.small_model,
-      config.agent.pilotfish.model,
-      "small_model exists to keep compaction off the primary",
-    );
-  });
-
   test("Task permission admits the clones without widening the public map", () => {
     const task = config.agent.pilotfish.permission.task;
     const entries = Object.entries(task);
