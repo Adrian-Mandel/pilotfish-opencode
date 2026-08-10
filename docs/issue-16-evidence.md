@@ -59,7 +59,7 @@ This reframes the cost. The waste is not that the gate runs; it is that each fix
 ### Consequences
 
 - **P1 as specified is refuted by its own precondition and should be closed, not implemented.** The verification budget it proposes is still worth having, but as a chain-level budget: cap re-verification rounds per claim, and on exhaustion escalate to the primary session rather than dispatching another verifier.
-- **P5 is not a follow-on to P1; it is the primary lever.** The issue estimates P5 as "likely partly resolved by P1 — re-measure first". The opposite holds. Repeated identical commands within a session (`git diff --check` ×47) and 19-run verify chains are the same phenomenon at two granularities.
+- ~~**P5 is not a follow-on to P1; it is the primary lever.**~~ Written before P5 was measured, on the assumption that `git diff --check` ×47 and 19-run verify chains were the same phenomenon at two granularities. They are not: the ×47 is a `build` session, and the chains are Pilotfish. See P5 below — the chain depth found here is the whole finding, and it has no within-session counterpart.
 - The `verifier` `steps` backstop added under P4 (60, above the observed per-session maximum of 55) bounds a single runaway run. It does not bound the chain, which is a sequence of separate sessions.
 
 ### Reproducing
@@ -106,9 +106,98 @@ Pilotfish's own tool calls, with the execution time OpenCode recorded for them:
 
 `bash`, `grep`, and `glob` together are 767 calls costing **0.29h of execution**. At ~21s of generation per pilotfish step, the round-trips around them cost roughly fifteen times what the tools do. Context size is not the mechanism and neither is tool latency; it is one full model turn per cheap call.
 
-`read` is the exception at ~12.7s per call, which argues for delegating bulk reading rather than against it.
+`read` appears to be the exception at ~12.7s per call. **It is not** — see P5 below. The mean is carried by three permission-stalled calls; 515 of pilotfish's 520 reads complete in under 0.5s. Bulk reading is worth delegating for the same round-trip reason as everything else, not because reads are slow.
 
 The trigger added to the Dispatch Rules is therefore expressed in round-trips — more than about three, and the answer wanted is a conclusion — rather than in context size or file count.
+
+## P5: re-verification churn is not a Pilotfish problem
+
+P5 was carried forward as the primary remaining lever, on the strength of `git diff --check` ×47 in a single session. The prior note asked for measurement first, to separate two patterns needing opposite fixes: one agent re-checking itself within a session, versus successive fresh contexts each re-deriving the same check.
+
+**Neither is what the ×47 is.** P5 should be closed.
+
+### The repeated commands belong to an agent Pilotfish does not own
+
+Of 2,734 completed `bash` calls, grouping by (session, command) and keeping pairs repeated five or more times:
+
+| agent | repeated calls | worst single command |
+|---|---|---|
+| `build` | 265 | 47 |
+| `security-executor` | 70 | 23 |
+| `pilotfish` | 26 | 9 |
+| `executor` | 16 | 6 |
+| `mech-executor` | 14 | 7 |
+| `plan` | 5 | 5 |
+
+`build` is OpenCode's built-in primary, not a Pilotfish agent. It accounts for **67% of repeated-command volume at this threshold**, and the ×47 headline is one `build` session (*Issue #65 branch and plan*, which also holds `./tools/test-fast.sh` ×43 and `./tools/test-smoke.sh` ×33). No Pilotfish prompt change reaches it. The worst any Pilotfish agent does to one command in one session is 9.
+
+The 67% is threshold-dependent and should be quoted with its threshold: build holds 54.3% of repeat volume at ≥2, 63.9% at ≥4, 66.9% at ≥5, and 77.3% at ≥10. It is the plurality-to-majority holder at every threshold — 824 of all 2,734 completed `bash` calls — so the conclusion is stable even though the single number is not.
+
+### Almost every repeat follows an edit, which is correct behaviour
+
+For each pair of consecutive identical commands, whether any `edit`/`write`/`patch` landed in between:
+
+| agent | consecutive repeats | after a write | no write between |
+|---|---|---|---|
+| `build` | 326 | 282 | 44 |
+| `pilotfish` | 69 | 51 | 18 |
+| `security-executor` | 66 | 65 | 1 |
+| `executor` | 65 | 64 | 1 |
+| `mech-executor` | 16 | 16 | 0 |
+| `plan` | 11 | 1 | 10 |
+| `verifier` | 5 | 0 | 5 |
+| `general` | 2 | 0 | 2 |
+
+**85.5%** of consecutive identical runs (479/560) follow an edit — which is the behaviour you want. Stripping them out leaves **81 genuinely redundant re-runs across all 347 sessions, costing 4.1 seconds of combined execution**. The largest single category is `git status --short --branch` ×17 in `build`, at an average gap of 49 minutes — a session resumed, not a loop.
+
+Duplicate reads tell the same story: 128 exact repeats (same file, same offset/limit window, no intervening write to that file) out of 3,881 reads, **3.3%**. Treat that as an upper bound: `apply_patch` is the dominant write tool at 577 calls and records no `filePath` (its targets live inside the patch text), so the "no intervening write" filter cannot see it. Counting an `apply_patch` whose patch text names the file as a write drops duplicates to **73 (1.9%)**.
+
+Against 21.9h of generation, the entire P5 phenomenon is noise.
+
+### Correction: `read` is not slow
+
+The P3 table above records 1.85h across 525 pilotfish reads, ~12.7s each, and reasoned from it. The distribution refutes the mean:
+
+| bucket | pilotfish reads | total |
+|---|---|---|
+| < 0.5s | 515 | 0.2 min |
+| 0.5–2s | 2 | 0.0 min |
+| > 60s | 3 | **110.7 min** |
+
+Three calls, the longest 6,345s, carry 99.8% of the total. Read-only agents with pre-approved reads show what the tool actually costs: `Explore` averages 0.04s over 582 reads, `plan-verifier` 0.03s over 415. The outliers are permission prompts waiting on a human, not I/O.
+
+### Two success criteria measure human idle time
+
+The same artifact invalidates the last two rows of the criteria table.
+
+Total recorded wall clock across assistant messages is 224.34h, against 21.9h of actual generation. Steps of ≥60s are 90.4% of it. Decomposing those 460 steps:
+
+- **73.45h** (214 steps) sits in steps whose longest single tool call itself exceeded 60s. This is *not* mostly human wait: it decomposes as `task` 56.04h, `question` 11.42h, `glob` 5.84h, `read` 2.73h, `grep` 0.97h, `bash` 0.52h. Three-quarters of it is `task` — nested subagent runs, i.e. the double-counting this document's closing note already warns about. Only `question` is unambiguously waiting on a person.
+- **118.54h** (90 steps) sits in steps with no tool call at all. Of those, **8 steps carry 114.93h and produced zero output tokens** — the `tokens` object is present and explicitly zero on every one, not missing, and 7 of the 8 carry a recorded error (6 `MessageAbortedError`, 1 `UnknownError`). They are abandoned messages.
+- The remainder, 10.80h across 156 steps, is the only part that plausibly measures the system being slow.
+
+The rate check settles it: sub-60s steps generate at **17.0 tokens/sec**; the tool-less ≥60s steps at **0.278**. Repo-wide, 63 aborted assistant messages carry **147.42h of the 224.34h total**.
+
+So `steps ≥60s as share of wall clock` measures abandoned messages and nested-task double-counting, not model latency; and `max repeated identical command per session` measures `build` re-running tests after edits. Both are withdrawn.
+
+### Reproducing
+
+```bash
+sqlite3 ~/.local/share/opencode/opencode.db "
+SELECT s.agent, count(*) reruns
+FROM (SELECT p.session_id sid,
+             trim(json_extract(p.data,'\$.state.input.command')) cmd,
+             p.time_created t,
+             LAG(p.time_created) OVER (PARTITION BY p.session_id,
+               trim(json_extract(p.data,'\$.state.input.command'))
+               ORDER BY p.time_created) prev_t
+      FROM part p
+      WHERE json_extract(p.data,'\$.type')='tool'
+        AND json_extract(p.data,'\$.tool')='bash'
+        AND json_extract(p.data,'\$.state.status')='completed') b
+JOIN session s ON s.id=b.sid
+WHERE b.prev_t IS NOT NULL GROUP BY s.agent ORDER BY 2 DESC;"
+```
 
 ## P6: the injected `AGENTS.md`
 
@@ -131,10 +220,14 @@ Two of the issue's five targets measure verification *volume*, which the P1 evid
 | verifier runs per parent session, p95 | 19 | — | **≤ 4** |
 | REFUTED rate | 72% | (implicit floor) | **no material fall** — the gate must keep finding what it finds |
 | pilotfish `task` wait | 9.64h | −25% wall clock | unchanged |
-| max repeated identical command per session | 47 | < 10 | unchanged |
-| steps ≥60s as share of wall clock | 74.1% | < 50% | unchanged |
+| max repeated identical command per session | 47 | < 10 | *withdrawn* — the 47 is a `build` session, and 85.5% of repeats follow an edit |
+| steps ≥60s as share of wall clock | 74.1% | < 50% | *withdrawn* — 8 zero-token abandoned messages carry 115h of the 224h measured |
 
-The two withdrawn rows are not replaced by a cheaper proxy. If verification cost must be reported as a single number, report chain depth: it falls only when work converges, and it cannot be gamed by skipping the gate.
+The 74.1% baseline does not reconcile with anything measurable now: the figure is 90.4% across all agents and 95.3% for pilotfish alone. It predates this branch, so the scope it was computed over is unrecoverable — one more reason not to carry the row forward.
+
+The withdrawn rows are not replaced by cheaper proxies. If verification cost must be reported as a single number, report chain depth: it falls only when work converges, and it cannot be gamed by skipping the gate.
+
+Four of the eight original criteria are now withdrawn, in two pairs and for two different reasons. The first pair measured the wrong axis — verification volume, where less is not better. The second pair measured the wrong clock: any metric built on assistant-message wall time is dominated by permission stalls and abandoned messages, and reports on the user's availability rather than the system's speed. **Own-generation time is the only sound timing base in this database**, which is what the issue's original 21.9h decomposition correctly used.
 
 ## Reproducing the timing figures
 
