@@ -15,7 +15,7 @@
 //   node tests/integration/fixture.mjs destroy <root>
 
 import { spawn } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync, existsSync } from "node:fs";
+import { closeSync, cpSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, symlinkSync, writeFileSync, existsSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -66,8 +66,12 @@ function readTemplate(relativePath) {
 }
 
 function mergeAgents(base, preset) {
-  const merged = structuredClone(base);
-  for (const [name, overlay] of Object.entries(preset.agent ?? {})) {
+  // A preset carries provider-specific top-level settings as well as agent
+  // bindings — `small_model` is one — so non-agent keys have to survive the
+  // merge rather than being dropped with everything outside `agent`.
+  const { agent: overlays, $schema, ...topLevel } = preset;
+  const merged = { ...structuredClone(base), ...topLevel };
+  for (const [name, overlay] of Object.entries(overlays ?? {})) {
     merged.agent[name] = { ...(merged.agent[name] ?? {}), ...overlay };
   }
   return merged;
@@ -163,12 +167,22 @@ export function fixtureEnv(fixture) {
   };
 }
 
-export function runOpencode(fixture, args, { cwd = fixture.project, timeoutMs = 180_000 } = {}) {
+// `stdoutFile` captures stdout by redirecting the child's own file descriptor
+// instead of reading it through a pipe. Piped output stops at 65530 bytes; the
+// same command redirected to a file yields all of it. Anything that can exceed
+// 64 KiB — `debug config` resolves every prompt inline, so it does — must use
+// this path or it will silently parse a truncated document.
+export function runOpencode(
+  fixture,
+  args,
+  { cwd = fixture.project, timeoutMs = 180_000, stdoutFile = null } = {},
+) {
   return new Promise((resolvePromise) => {
+    const handle = stdoutFile ? openSync(stdoutFile, "w") : null;
     const child = spawn("opencode", args, {
       cwd,
       env: fixtureEnv(fixture),
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ["ignore", handle ?? "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";
@@ -177,7 +191,7 @@ export function runOpencode(fixture, args, { cwd = fixture.project, timeoutMs = 
       timedOut = true;
       child.kill("SIGKILL");
     }, timeoutMs);
-    child.stdout.on("data", (chunk) => {
+    child.stdout?.on("data", (chunk) => {
       stdout += chunk;
     });
     child.stderr.on("data", (chunk) => {
@@ -185,6 +199,10 @@ export function runOpencode(fixture, args, { cwd = fixture.project, timeoutMs = 
     });
     child.on("close", (code) => {
       clearTimeout(timer);
+      if (handle !== null) {
+        closeSync(handle);
+        stdout = readFileSync(stdoutFile, "utf8");
+      }
       resolvePromise({ code, stdout, stderr, timedOut });
     });
   });
@@ -193,10 +211,6 @@ export function runOpencode(fixture, args, { cwd = fixture.project, timeoutMs = 
 export function destroyFixture(fixture) {
   rmSync(fixture.root, { recursive: true, force: true });
 }
-
-// `opencode debug config` truncates its own stdout at 64 KiB. Template-only
-// fixtures stay under that, but an inheritGlobal fixture does not: use
-// `debug agent <name>` to inspect individual bindings there.
 
 // Router rejections surface as a generic error on stdout (host fact H10); the
 // exact reason is only in the logs.

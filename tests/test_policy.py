@@ -352,6 +352,39 @@ class PolicyContractTests(unittest.TestCase):
         for phrase in ("path, page, frame, or log-range references", "Never modify files", "design review"):
             self.assertIn(phrase, explore)
 
+    def test_verification_is_bounded_by_a_chain_budget(self) -> None:
+        # 72% of historical verifier verdicts were REFUTED and three parent
+        # sessions produced 60% of all verifier runs, so the gate's cost is
+        # re-verification depth, not gate frequency. See
+        # docs/issue-16-evidence.md.
+        policy = text("templates/pilotfish/prompts/pilotfish.md")
+        outcome = text("templates/pilotfish/prompts/verifier.md")
+        for phrase in (
+            "After the second `REFUTED` on the same claim",
+            "does this claim hold?",
+            "its own bounded task with its own stop condition",
+        ):
+            self.assertIn(phrase, policy)
+        for phrase in (
+            "do not refute work that did what it said",
+            "Do not re-derive the whole surface from scratch",
+            "unchanged inputs",
+        ):
+            self.assertIn(phrase, outcome)
+
+    def test_read_only_delegation_is_parallel_by_default(self) -> None:
+        # Only 21.7% of read-only child sessions ever overlapped another, and
+        # the serialization rule is about conflicting edits, which read-only
+        # roles cannot have.
+        policy = text("templates/pilotfish/prompts/pilotfish.md")
+        for phrase in (
+            "Serialize writing roles, and only writing roles",
+            "which own no files and cannot conflict",
+            "Dispatch independent read-only questions together in one turn",
+            "three search or read round-trips",
+        ):
+            self.assertIn(phrase, policy)
+
     def test_installer_preserves_historical_lifecycle_safeguards(self) -> None:
         installer = text("install/OPENCODE-INSTALL.md")
         for phrase in (
