@@ -40,9 +40,8 @@ The AntiGravity preset requires:
 
 ```text
 google/antigravity-claude-opus-4-6-thinking
-google/antigravity-claude-sonnet-4-6
-google/antigravity-gemini-3-flash
 google/antigravity-gemini-3.1-pro
+google/antigravity-gemini-3.6-flash
 ```
 
 The installer will not modify provider authentication. It stops before writing if the version is older than `1.18.10`, cannot be identified, or a chosen preset's exact models and variants are unavailable.
@@ -89,7 +88,7 @@ After approval, the installer should report successful checks for:
 - Leaf-agent restrictions.
 - Verifier edit denial.
 - Unchanged global `model` and `default_agent` values.
-- Exact profile routing: ChatGPT's 24 hidden clones and AntiGravity's validated no-clone passthrough.
+- Exact profile routing: 24 hidden clones for the selected preset's three profiles, and none for the other preset's.
 
 The installed files live under:
 
@@ -111,7 +110,7 @@ Try a read-only smoke test:
 Use scout to find the project version and report the file and value.
 ```
 
-On the first turn, Pilotfish should inspect its resolved definition. A tested preset proceeds normally; an unspecified or changed primary model produces a short non-blocking warning. For ChatGPT, choose Sol/high, Terra/high, or Luna/max before that first Pilotfish message: the session is then pinned. Start a new session to select another primary profile.
+On the first turn, Pilotfish should inspect its resolved definition. A tested preset proceeds normally; an unspecified or changed primary model produces a short non-blocking warning. Choose a supported primary before that first Pilotfish message: Sol/high, Terra/high, or Luna/max on ChatGPT; Opus/max, Pro/high, or Flash/high on AntiGravity. The session is then pinned. Start a new session to select another primary profile.
 
 ## 7. Optional Manual Verification
 

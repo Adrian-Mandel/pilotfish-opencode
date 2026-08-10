@@ -61,7 +61,7 @@ Large, ambiguous, architectural, risky, cross-surface, or explicitly plan-first 
 
 The global config must load `./pilotfish/profile-router.mjs` with `{"preset":"chatgpt"}` or `{"preset":"antigravity"}`. The managed runtime files are `~/.config/opencode/pilotfish/profile-router.mjs` and `profiles.json`; the latter is the exact approved profile source.
 
-For ChatGPT, the first Pilotfish message selects Sol, Terra, or Luna from the public primary model, pins that profile for the session, and creates 24 hidden worker clones. The router recovers that pin from the first persisted Pilotfish user message when OpenCode or the plugin restarts, so a resumed session cannot silently change its primary model. The profile pin persists across agent switches, but Task remapping is active only while Pilotfish is the current successfully resolved agent. Tasks are redirected to the selected clone before Task resolution. For a new foreground Task, the router appends a transient SHA-256 call marker to the description, binds authorization to the exact child title and parent, then restores the clean child title before provider execution. For a resumed Task, it validates and binds the exact `task_id` without a marker. `tool.execute.after` restores the mutable description and result title and clears authorization; OpenCode `1.18.10` may retain the marked description in its already-captured raw tool-input event. The marker contains only a one-way hash of the call ID, not prompt or credential data. Direct root, sibling, mismatched, or replayed internal chat is rejected. Experimental background Task timing is unsupported and fails closed. The public primary model and variant remain untouched. Same-session model switches are rejected; start a new session. Unsupported or cross-preset models, unavailable history, and malformed persisted Pilotfish model data are rejected before provider execution. AntiGravity is validated passthrough: public mappings are checked, no clones are created, and public Task roles are unchanged; its pin is recovered the same way. Hidden `pilotfish-profile-*` names are implementation details: only exact one-time router-authorized Task children may use them. OpenCode's CLI itself refuses a hidden subagent passed to `--agent` and may fall back to its default primary, so internal names must never be selected directly. Because OpenCode skips a plugin factory that throws, catchable factory initialization errors are deferred through protective hooks that block Pilotfish and internal-agent use while leaving unrelated sessions alone.
+The first Pilotfish message selects a profile from the public primary model and pins it for the session; the active preset's profiles each contribute eight hidden worker clones, so a three-profile preset creates 24 hidden clones. The router recovers that pin from the first persisted Pilotfish user message when OpenCode or the plugin restarts, so a resumed session cannot silently change its primary model. The profile pin persists across agent switches, but Task remapping is active only while Pilotfish is the current successfully resolved agent. Tasks are redirected to the selected clone before Task resolution. For a new foreground Task, the router appends a transient SHA-256 call marker to the description, binds authorization to the exact child title and parent, then restores the clean child title before provider execution. For a resumed Task, it validates and binds the exact `task_id` without a marker. `tool.execute.after` restores the mutable description and result title and clears authorization; OpenCode `1.18.10` may retain the marked description in its already-captured raw tool-input event. The marker contains only a one-way hash of the call ID, not prompt or credential data. Direct root, sibling, mismatched, or replayed internal chat is rejected. Experimental background Task timing is unsupported and fails closed. The public primary model and variant remain untouched. Same-session model switches are rejected; start a new session. Unsupported or cross-preset models, unavailable history, and malformed persisted Pilotfish model data are rejected before provider execution. AntiGravity behaves identically to ChatGPT: its Opus, Pro, and Flash profiles route to their own hidden clones and recover their pin the same way. Hidden `pilotfish-profile-*` names are implementation details: only exact one-time router-authorized Task children may use them. OpenCode's CLI itself refuses a hidden subagent passed to `--agent` and may fall back to its default primary, so internal names must never be selected directly. Because OpenCode skips a plugin factory that throws, catchable factory initialization errors are deferred through protective hooks that block Pilotfish and internal-agent use while leaving unrelated sessions alone.
 
 New-task authorization starts unbound. Only a matching post-authorization `session.created` event may bind the exact new child ID; a pre-existing sibling remains unauthorized even if retitled to the marker. Authorizations independently expire after 30 seconds, and their timers are cleared on consume, after-hook cleanup, parent deletion, or plugin disposal. The supported order is before hook → `session.created` → child chat → after hook; child chat racing the event fails closed.
 
@@ -85,19 +85,17 @@ The persisted public mapping remains the Sol row. The router's canonical profile
 
 Sol, Terra, and Luna are `openai/gpt-5.6-sol`, `openai/gpt-5.6-terra`, and `openai/gpt-5.6-luna`. The primary variants shown in the `pilotfish` column are tested recommendations, not router gates. The selected primary model chooses the worker profile; primary effort remains under direct user control and may change within a model-pinned session without changing its worker profile.
 
-### AntiGravity
+### AntiGravity public defaults and runtime profiles
 
-| Role | Model | Variant |
-|---|---|---|
-| `pilotfish` | `google/antigravity-claude-opus-4-6-thinking` | `max` |
-| `scout` | `google/antigravity-gemini-3-flash` | `minimal` |
-| `Explore` | `google/antigravity-gemini-3-flash` | `low` |
-| `plan-verifier` | `google/antigravity-claude-opus-4-6-thinking` | `max` |
-| `security-reviewer` | `google/antigravity-claude-opus-4-6-thinking` | `max` |
-| `mech-executor` | `google/antigravity-claude-sonnet-4-6` | default |
-| `executor` | `google/antigravity-gemini-3.1-pro` | `high` |
-| `verifier` | `google/antigravity-claude-opus-4-6-thinking` | `max` |
-| `security-executor` | `google/antigravity-claude-opus-4-6-thinking` | `max` |
+The persisted public mapping remains the Opus row.
+
+| Primary profile | `pilotfish` | `scout` | `Explore` | `plan-verifier` | `security-reviewer` | `mech-executor` | `executor` | `verifier` | `security-executor` |
+|---|---|---|---|---|---|---|---|---|---|
+| Opus | Opus/max | Flash/low | Flash/medium | Opus/max | Opus/max | Flash/low | Pro/high | Opus/max | Opus/max |
+| Pro | Pro/high | Flash/low | Flash/medium | Pro/high | Opus/max | Flash/low | Pro/high | Pro/high | Opus/low |
+| Flash | Flash/high | Flash/minimal | Flash/low | Pro/high | Opus/low | Flash/minimal | Flash/high | Pro/high | Pro/high |
+
+Opus, Pro, and Flash are `google/antigravity-claude-opus-4-6-thinking`, `google/antigravity-gemini-3.1-pro`, and `google/antigravity-gemini-3.6-flash`. Opus exposes only `low` and `max`, and Pro only `low` and `high`, so this preset's effort ladder is shorter than ChatGPT's.
 
 AntiGravity support targets the `google/antigravity-*` model IDs exposed by the user's existing OpenCode integration. Pilotfish does not install or configure that integration.
 

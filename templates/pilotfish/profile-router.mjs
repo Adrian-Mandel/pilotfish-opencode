@@ -113,14 +113,6 @@ function loadProfiles() {
   return JSON.parse(readFileSync(PROFILES_URL, "utf8"));
 }
 
-function sameBinding(actual, expected) {
-  return (
-    isObject(actual) &&
-    actual.model === expected.model &&
-    actual.variant === expected.variant
-  );
-}
-
 function validateBinding(binding, label) {
   if (!isObject(binding) || typeof binding.model !== "string") {
     throw new Error(`Pilotfish profile data has no model for ${label}.`);
@@ -130,9 +122,16 @@ function validateBinding(binding, label) {
   }
 }
 
+// Profiles are pure data: adding one is a profiles.json edit, never a code
+// change here. A preset is only a named grouping of profile names.
 function validateProfiles(data) {
-  if (!isObject(data) || !Array.isArray(data.publicRoles) || !isObject(data.profiles)) {
-    throw new Error("Pilotfish profile data must define publicRoles and profiles.");
+  if (
+    !isObject(data) ||
+    !Array.isArray(data.publicRoles) ||
+    !isObject(data.profiles) ||
+    !isObject(data.presets)
+  ) {
+    throw new Error("Pilotfish profile data must define publicRoles, presets, and profiles.");
   }
 
   const [primary, ...workers] = data.publicRoles;
@@ -140,53 +139,79 @@ function validateProfiles(data) {
     throw new Error("Pilotfish profile data must define pilotfish and exactly eight public workers.");
   }
 
-  for (const profile of ["sol", "terra", "luna"]) {
-    const mapping = data.profiles[profile];
+  const profileNames = Object.keys(data.profiles);
+  if (profileNames.length === 0) {
+    throw new Error("Pilotfish profile data must define at least one profile.");
+  }
+
+  // Selection is keyed by primary model, so two profiles may never claim the
+  // same one; that would make routing ambiguous rather than merely wrong.
+  const claimedPrimaries = new Map();
+  for (const name of profileNames) {
+    const mapping = data.profiles[name];
     if (!isObject(mapping) || !isObject(mapping.workers)) {
-      throw new Error(`Pilotfish profile data is missing the ${profile} mapping.`);
+      throw new Error(`Pilotfish profile data is missing the ${name} mapping.`);
     }
-    validateBinding(mapping.primary, `${profile} primary`);
+    validateBinding(mapping.primary, `${name} primary`);
+    const claimedBy = claimedPrimaries.get(mapping.primary.model);
+    if (claimedBy !== undefined) {
+      throw new Error(
+        `Pilotfish profiles "${claimedBy}" and "${name}" both claim primary model "${mapping.primary.model}"; primary models must select exactly one profile.`,
+      );
+    }
+    claimedPrimaries.set(mapping.primary.model, name);
     if (Object.keys(mapping.workers).length !== workers.length) {
-      throw new Error(`Pilotfish profile data has incomplete ${profile} worker mappings.`);
+      throw new Error(`Pilotfish profile data has incomplete ${name} worker mappings.`);
     }
     for (const role of workers) {
-      validateBinding(mapping.workers[role], `${profile} ${role}`);
+      validateBinding(mapping.workers[role], `${name} ${role}`);
     }
   }
 
-  if (!isObject(data.antigravity) || !isObject(data.antigravity.workers)) {
-    throw new Error("Pilotfish profile data is missing the antigravity mapping.");
+  const presetNames = Object.keys(data.presets);
+  if (presetNames.length === 0) {
+    throw new Error("Pilotfish profile data must define at least one preset.");
   }
-  validateBinding(data.antigravity.primary, "antigravity primary");
-  if (Object.keys(data.antigravity.workers).length !== workers.length) {
-    throw new Error("Pilotfish profile data has incomplete antigravity worker mappings.");
-  }
-  for (const role of workers) {
-    validateBinding(data.antigravity.workers[role], `antigravity ${role}`);
+  for (const name of presetNames) {
+    const members = data.presets[name];
+    if (!Array.isArray(members) || members.length === 0) {
+      throw new Error(`Pilotfish preset "${name}" must list at least one profile.`);
+    }
+    if (new Set(members).size !== members.length) {
+      throw new Error(`Pilotfish preset "${name}" lists a duplicate profile.`);
+    }
+    for (const member of members) {
+      if (!Object.hasOwn(data.profiles, member)) {
+        throw new Error(`Pilotfish preset "${name}" refers to unknown profile "${member}".`);
+      }
+    }
   }
 
   return data;
 }
 
-function profileForModel(data, model) {
-  return Object.entries(data.profiles).find(([, profile]) => profile.primary.model === model);
+// An omitted preset activates every profile; a named preset activates only its
+// members, which is what keeps one provider's clones out of another's config.
+function activeProfileNames(data, preset) {
+  if (preset === undefined) return Object.keys(data.profiles);
+  if (typeof preset !== "string" || !Object.hasOwn(data.presets, preset)) {
+    throw new Error(
+      `Pilotfish profile router option "preset" must be omitted or name a defined preset (${Object.keys(data.presets).join(", ")}).`,
+    );
+  }
+  return [...data.presets[preset]];
 }
 
 // Guarantee G2/G8: the profile is a pure function of the primary model, and an
 // unsupported model fails closed rather than defaulting.
-function stateForModel(data, preset, model) {
-  if (preset === "chatgpt") {
-    const match = profileForModel(data, model);
-    if (!match) {
-      throw new Error(`Pilotfish ChatGPT profile does not support primary model "${model ?? "unknown"}".`);
-    }
-    return { kind: "mapped", model, profile: match[0] };
+function stateForModel(data, profileNames, model) {
+  const match = profileNames.find((name) => data.profiles[name].primary.model === model);
+  if (!match) {
+    throw new Error(
+      `Pilotfish does not support primary model "${model ?? "unknown"}" for the active profiles (${profileNames.join(", ")}).`,
+    );
   }
-
-  if (model !== data.antigravity.primary.model) {
-    throw new Error(`Pilotfish AntiGravity preset does not support primary model "${model ?? "unknown"}".`);
-  }
-  return { kind: "passthrough", model };
+  return { model, profile: match };
 }
 
 // ---------------------------------------------------------------------------
@@ -266,13 +291,13 @@ function requirePilotfishAgents(config) {
   return agents;
 }
 
-function configureChatGPT(config, data) {
+function configureProfiles(config, data, profileNames) {
   const agents = requirePilotfishAgents(config);
   const workers = data.publicRoles.slice(1);
   validatePublicWorkers(agents, workers);
 
   const cloneNames = [];
-  for (const profile of Object.keys(data.profiles)) {
+  for (const profile of profileNames) {
     for (const role of workers) cloneNames.push(internalAgentName(profile, role));
   }
   for (const name of cloneNames) {
@@ -282,7 +307,8 @@ function configureChatGPT(config, data) {
   }
 
   const clones = {};
-  for (const [profile, mapping] of Object.entries(data.profiles)) {
+  for (const profile of profileNames) {
+    const mapping = data.profiles[profile];
     for (const role of workers) {
       const clone = structuredClone(agents[role]);
       const binding = mapping.workers[role];
@@ -295,19 +321,6 @@ function configureChatGPT(config, data) {
 
   extendTaskPermission(agents.pilotfish, cloneNames, workers);
   Object.assign(agents, clones);
-}
-
-function configureAntigravity(config, data) {
-  const agents = requirePilotfishAgents(config);
-  const workers = data.publicRoles.slice(1);
-  validatePublicWorkers(agents, workers);
-  for (const role of workers) {
-    if (!sameBinding(agents[role], data.antigravity.workers[role])) {
-      throw new Error(
-        `Pilotfish AntiGravity passthrough requires public worker "${role}" to match the canonical AntiGravity model and variant.`,
-      );
-    }
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -323,7 +336,7 @@ function recoveryError(detail) {
 // Guarantee G10: router state is process-local, so a resumed session recovers
 // its pin from the first persisted Pilotfish user message instead of treating
 // an empty cache as a new session.
-async function recoverPersistedState(client, sessionID, data, preset) {
+async function recoverPersistedState(client, sessionID, data, profileNames) {
   if (typeof client?.session?.messages !== "function") {
     throw recoveryError("OpenCode client.session.messages is unavailable");
   }
@@ -366,7 +379,7 @@ async function recoverPersistedState(client, sessionID, data, preset) {
   );
   const first = priorPilotfishMessages[0];
   try {
-    return stateForModel(data, preset, first.model);
+    return stateForModel(data, profileNames, first.model);
   } catch {
     throw recoveryError(`the first persisted Pilotfish model is unsupported (${first.model})`);
   }
@@ -567,8 +580,7 @@ function createAuthorizationStore({ client, timing, getSessionState, getCurrentA
         authorization.marker === taskAuthorizationMarker(callID) &&
         authorization.markedTitle === info.title &&
         authorization.expectedAgent === info.agent &&
-        state?.kind === "mapped" &&
-        state.profile === authorization.profile &&
+        state?.profile === authorization.profile &&
         currentAgent?.agent === "pilotfish" &&
         currentAgent.active === true &&
         (created === undefined || created >= authorization.createdAt),
@@ -664,14 +676,13 @@ function createAuthorizationStore({ client, timing, getSessionState, getCurrentA
     // on the same profile that authorized this child.
     const currentAgent = getCurrentAgent(parentSessionID);
     const state = getSessionState(parentSessionID);
-    const expectedAgent =
-      state?.kind === "mapped"
-        ? internalAgentName(state.profile, authorization.publicRole)
-        : undefined;
+    const expectedAgent = state
+      ? internalAgentName(state.profile, authorization.publicRole)
+      : undefined;
     if (
       currentAgent?.agent !== "pilotfish" ||
       currentAgent.active !== true ||
-      state?.kind !== "mapped" ||
+      state === undefined ||
       state.profile !== authorization.profile ||
       expectedAgent !== authorization.expectedAgent ||
       resolvedAgent !== authorization.expectedAgent
@@ -812,12 +823,8 @@ function resolveTiming(options) {
 }
 
 function createProfileRouter(options = {}) {
-  const preset = options.preset;
-  if (preset !== "chatgpt" && preset !== "antigravity") {
-    throw new Error('Pilotfish profile router option "preset" must be "chatgpt" or "antigravity".');
-  }
-
   const data = validateProfiles(loadProfiles());
+  const profileNames = activeProfileNames(data, options.preset);
   const workerRoles = data.publicRoles.slice(1);
   const sessions = new Map();
   const currentAgents = new Map();
@@ -843,7 +850,7 @@ function createProfileRouter(options = {}) {
     if (!recovery) {
       recovery = {
         cancelled: false,
-        promise: recoverPersistedState(options.client, input.sessionID, data, preset),
+        promise: recoverPersistedState(options.client, input.sessionID, data, profileNames),
       };
       pendingRecoveries.set(input.sessionID, recovery);
     }
@@ -868,7 +875,7 @@ function createProfileRouter(options = {}) {
       return;
     }
 
-    const state = recovered ?? stateForModel(data, preset, model);
+    const state = recovered ?? stateForModel(data, profileNames, model);
     sessions.set(input.sessionID, state);
     assertPinnedModel(state, model);
     if (currentAgents.get(input.sessionID) === agentMarker) agentMarker.active = true;
@@ -919,8 +926,7 @@ function createProfileRouter(options = {}) {
       // Host fact H1: config-hook errors are logged and ignored, so the failure
       // is stored and raised at the first Pilotfish message instead.
       try {
-        if (preset === "chatgpt") configureChatGPT(input, data);
-        else configureAntigravity(input, data);
+        configureProfiles(input, data, profileNames);
       } catch (error) {
         configurationError = error;
       }
@@ -965,7 +971,7 @@ function createProfileRouter(options = {}) {
       const currentAgent = currentAgents.get(input.sessionID);
       if (currentAgent?.agent !== "pilotfish" || currentAgent.active !== true) return;
       const state = sessions.get(input.sessionID);
-      if (!state || state.kind !== "mapped") return;
+      if (!state) return;
       if (!workerRoles.includes(requestedRole)) return;
 
       if (output.args.background === true) {

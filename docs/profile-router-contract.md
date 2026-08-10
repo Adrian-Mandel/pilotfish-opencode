@@ -8,7 +8,9 @@ Anything in **Guarantees** is owned and must stay tested. Anything in **Non-guar
 
 Pinned host: OpenCode `1.18.10`. A host upgrade invalidates every claim below until the integration fixture is re-run.
 
-Scope of the current issue: the ChatGPT preset (`sol`, `terra`, `luna`). The AntiGravity mapping stays as prototyped and is not extended here; per-model AntiGravity profiles are deferred to a follow-up issue.
+Profiles are data. `profiles.json` defines one entry per profile and groups them into named presets; the router contains no profile-specific code, so adding a provider or a model tier is a data edit. Two profiles may never claim the same primary model, and a preset activates only its own profiles.
+
+Current profiles: `sol`, `terra`, `luna` (ChatGPT preset) and `opus`, `pro`, `flash` (AntiGravity preset).
 
 ## Why hidden clones exist
 

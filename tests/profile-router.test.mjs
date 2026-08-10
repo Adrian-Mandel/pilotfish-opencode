@@ -7,6 +7,7 @@ const profiles = JSON.parse(
   readFileSync(new URL("../templates/pilotfish/profiles.json", import.meta.url), "utf8"),
 );
 const workers = profiles.publicRoles.slice(1);
+const AG_PRIMARY = profiles.profiles.opus.primary.model;
 
 function clone(value) {
   return structuredClone(value);
@@ -232,7 +233,8 @@ test("ChatGPT configuration creates exact hidden profile clones without mutating
       publicBindings[role],
     );
   }
-  for (const [profile, mapping] of Object.entries(profiles.profiles)) {
+  for (const profile of profiles.presets.chatgpt) {
+    const mapping = profiles.profiles[profile];
     for (const role of workers) {
       const name = internalAgentName(profile, role);
       const expected = clone(config.agent[role]);
@@ -240,6 +242,11 @@ test("ChatGPT configuration creates exact hidden profile clones without mutating
       assert.deepEqual(config.agent[name], expected);
       assert.equal(config.agent[name].mode, "subagent");
       assert.equal(config.agent.pilotfish.permission.task[name], "allow");
+    }
+  }
+  for (const profile of profiles.presets.antigravity) {
+    for (const role of workers) {
+      assert.equal(config.agent[internalAgentName(profile, role)], undefined);
     }
   }
   for (const role of workers) assert.equal(config.agent[role].mode, "subagent");
@@ -269,7 +276,7 @@ test("AntiGravity configuration also rejects non-subagent public workers atomica
 
   assert.deepEqual(config, before);
   await assert.rejects(
-    hooks["chat.message"](message("invalid-ag-mode", profiles.antigravity.primary.model)),
+    hooks["chat.message"](message("invalid-ag-mode", AG_PRIMARY)),
     /configuration failed.*public worker agent "executor".*mode "subagent"/i,
   );
 });
@@ -513,12 +520,12 @@ test("direct internal profile chat requests fail closed for absent and mapped se
 
   const antigravity = await router({ preset: "antigravity" });
   await assertDirectChatRejected(antigravity, {
-    ...message("ag-absent", profiles.antigravity.primary.model),
+    ...message("ag-absent", AG_PRIMARY),
     agent: internalAgentName("sol", "scout"),
   });
-  await antigravity["chat.message"](message("ag-mapped", profiles.antigravity.primary.model));
+  await antigravity["chat.message"](message("ag-mapped", AG_PRIMARY));
   await assertDirectChatRejected(antigravity, {
-    ...message("ag-mapped", profiles.antigravity.primary.model),
+    ...message("ag-mapped", AG_PRIMARY),
     agent: internalAgentName("terra", "verifier"),
   });
 });
@@ -540,10 +547,9 @@ test("raw and resolved internal chat identities reject independently of routing 
   );
 });
 
-test("invalid or missing preset initialization resolves to atomic fail-closed protective hooks", async () => {
+test("invalid preset initialization resolves to atomic fail-closed protective hooks", async () => {
   const hooks = await router({ preset: "invalid" });
-  const missingPresetHooks = await router();
-  for (const protective of [hooks, missingPresetHooks]) {
+  for (const protective of [hooks]) {
     const config = chatgptConfig();
     const before = clone(config);
     protective.config(config);
@@ -703,27 +709,22 @@ test("a later Build chat supersedes pending Pilotfish recovery without deleting 
   assert.equal(history.calls.length, 1);
 });
 
-test("AntiGravity preserves its pin across active-agent transitions without remapping Tasks", async () => {
+test("AntiGravity remaps Tasks only while Pilotfish is the active agent", async () => {
   const hooks = await router({ preset: "antigravity" });
   const sessionID = "antigravity-transition";
-  await hooks["chat.message"](message(sessionID, profiles.antigravity.primary.model));
-  await hooks["chat.message"]({
-    ...message(sessionID, profiles.antigravity.primary.model),
-    agent: "build",
-  });
-  const buildTask = { args: { subagent_type: "executor" } };
-  await hooks["tool.execute.before"]({ tool: "task", sessionID }, buildTask);
+  await hooks["chat.message"](message(sessionID, AG_PRIMARY));
+
+  await hooks["chat.message"]({ ...message(sessionID, AG_PRIMARY), agent: "build" });
+  const buildTask = { args: { subagent_type: "executor", description: "build task" } };
+  await hooks["tool.execute.before"]({ tool: "task", sessionID, callID: "ag-build" }, buildTask);
   assert.equal(buildTask.args.subagent_type, "executor");
 
-  await hooks["chat.message"](message(sessionID, profiles.antigravity.primary.model, "low"));
-  const pilotfishTask = { args: { subagent_type: "executor" } };
-  await hooks["tool.execute.before"]({ tool: "task", sessionID }, pilotfishTask);
-  assert.equal(pilotfishTask.args.subagent_type, "executor");
+  await hooks["chat.message"](message(sessionID, AG_PRIMARY, "low"));
+  const pilotfishTask = { args: { subagent_type: "executor", description: "routed task" } };
+  await hooks["tool.execute.before"]({ tool: "task", sessionID, callID: "ag-routed" }, pilotfishTask);
+  assert.equal(pilotfishTask.args.subagent_type, internalAgentName("opus", "executor"));
 
-  await hooks["chat.message"]({
-    ...message(sessionID, profiles.antigravity.primary.model),
-    agent: "build",
-  });
+  await hooks["chat.message"]({ ...message(sessionID, AG_PRIMARY), agent: "build" });
   await assert.rejects(
     hooks["chat.message"](message(sessionID, "openai/gpt-5.6-sol")),
     /model changed.*new session/i,
@@ -1489,7 +1490,7 @@ test("session deletion only cleans the deleted session", async () => {
 test("cross-preset primary models fail before routing", async () => {
   const chatgpt = await router({ preset: "chatgpt" });
   await assert.rejects(
-    chatgpt["chat.message"](message("wrong-chatgpt", profiles.antigravity.primary.model, "max")),
+    chatgpt["chat.message"](message("wrong-chatgpt", AG_PRIMARY, "max")),
     /does not support/i,
   );
 
@@ -1500,17 +1501,32 @@ test("cross-preset primary models fail before routing", async () => {
   );
 });
 
-test("AntiGravity validates canonical workers, creates no clones, and passes public roles through", async () => {
+test("each preset activates only its own profiles", async () => {
   const config = antigravityConfig();
   const hooks = await router({ preset: "antigravity" });
   hooks.config(config);
-  assert.equal(Object.keys(config.agent).some((name) => name.startsWith("pilotfish-profile-")), false);
 
-  await hooks["chat.message"](message("ag", profiles.antigravity.primary.model, "max"));
-  await hooks["chat.message"](message("ag", profiles.antigravity.primary.model, "low"));
-  const task = { args: { subagent_type: "executor", task_id: "same" } };
-  await hooks["tool.execute.before"]({ tool: "task", sessionID: "ag" }, task);
-  assert.deepEqual(task.args, { subagent_type: "executor", task_id: "same" });
+  for (const profile of profiles.presets.antigravity) {
+    for (const role of workers) {
+      const generated = config.agent[internalAgentName(profile, role)];
+      assert.ok(generated, `missing clone for ${profile}/${role}`);
+      assert.equal(generated.hidden, true);
+      assert.equal(generated.model, profiles.profiles[profile].workers[role].model);
+      assert.equal(generated.variant, profiles.profiles[profile].workers[role].variant);
+    }
+  }
+  for (const profile of profiles.presets.chatgpt) {
+    for (const role of workers) {
+      const name = internalAgentName(profile, role);
+      assert.equal(config.agent[name], undefined);
+      assert.equal(config.agent.pilotfish.permission.task[name], undefined);
+    }
+  }
+
+  await hooks["chat.message"](message("ag", AG_PRIMARY, "max"));
+  const task = { args: { subagent_type: "executor", description: "routed" } };
+  await hooks["tool.execute.before"]({ tool: "task", sessionID: "ag", callID: "ag-only" }, task);
+  assert.equal(task.args.subagent_type, internalAgentName("opus", "executor"));
 
   await assertDirectInvocationRejected(
     hooks,
@@ -1541,13 +1557,17 @@ test("configuration errors are deferred without partial mutation and spare non-P
     /configuration failed.*refusing to weaken customized Task permission/i,
   );
 
-  const wrongAntigravity = antigravityConfig();
-  wrongAntigravity.agent.executor.variant = "max";
+  const customizedAntigravity = antigravityConfig();
+  customizedAntigravity.agent.executor.variant = "max";
   const antigravityHooks = await router({ preset: "antigravity" });
-  antigravityHooks.config(wrongAntigravity);
-  await assert.rejects(
-    antigravityHooks["chat.message"](message("wrong-ag", profiles.antigravity.primary.model, "max")),
-    /configuration failed.*canonical AntiGravity model and variant/i,
+  antigravityHooks.config(customizedAntigravity);
+  await assert.doesNotReject(
+    antigravityHooks["chat.message"](message("customized-ag", AG_PRIMARY, "max")),
+  );
+  assert.equal(customizedAntigravity.agent.executor.variant, "max");
+  assert.equal(
+    customizedAntigravity.agent[internalAgentName("opus", "executor")].variant,
+    profiles.profiles.opus.workers.executor.variant,
   );
 });
 
@@ -1769,19 +1789,19 @@ test("session deletion clears a pending recovery before it can pin the session",
   await assert.rejects(pending, /could not recover.*session was deleted/i);
 });
 
-test("a restarted AntiGravity router recovers its persisted passthrough profile", async () => {
+test("a restarted AntiGravity router recovers its persisted profile", async () => {
   const sessionID = "restart-antigravity";
   const history = historyClient({
     historyBySession: {
       [sessionID]: [
         persistedMessage("openai/gpt-5.6-sol", 1, "build"),
-        persistedMessage(profiles.antigravity.primary.model, 100),
+        persistedMessage(AG_PRIMARY, 100),
       ],
     },
   });
   const hooks = await router({ preset: "antigravity" }, history.client);
 
-  await hooks["chat.message"](message(sessionID, profiles.antigravity.primary.model, "low"));
+  await hooks["chat.message"](message(sessionID, AG_PRIMARY, "low"));
   await assert.rejects(
     hooks["chat.message"](message(sessionID, "openai/gpt-5.6-sol")),
     /model changed.*new session/i,
@@ -1794,4 +1814,22 @@ test("the default plugin path fails closed when OpenCode supplies no client", as
     hooks["chat.message"](message("no-client", "openai/gpt-5.6-sol")),
     /could not recover.*client\.session\.messages is unavailable.*Do not continue this session/i,
   );
+});
+
+test("an omitted preset activates every defined profile", async () => {
+  const config = chatgptConfig();
+  const hooks = await router();
+  hooks.config(config);
+
+  for (const profile of Object.keys(profiles.profiles)) {
+    for (const role of workers) {
+      assert.ok(config.agent[internalAgentName(profile, role)], `missing ${profile}/${role}`);
+    }
+  }
+
+  const sessionID = "every-profile";
+  await hooks["chat.message"](message(sessionID, AG_PRIMARY, "max"));
+  const task = { args: { subagent_type: "scout", description: "routed" } };
+  await hooks["tool.execute.before"]({ tool: "task", sessionID, callID: "all" }, task);
+  assert.equal(task.args.subagent_type, internalAgentName("opus", "scout"));
 });

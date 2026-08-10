@@ -8,11 +8,15 @@ Tested with OpenCode `1.18.10`.
 
 ### Added
 
-- Canonical Sol, Terra, Luna, and AntiGravity model-profile mappings with a dependency-free runtime profile router.
+- Canonical Sol, Terra, and Luna ChatGPT profiles and Opus, Pro, and Flash AntiGravity profiles, with a dependency-free runtime profile router.
 - Session-pinned Task routing to hidden capability-preserving worker clones, plus focused executable router contracts.
+- A profile router contract fixing the router's guarantees, its OpenCode `1.18.10` couplings, its accepted risks, and its threat model.
+- An isolated OpenCode integration fixture and a host-level config-generation test that needs no provider request.
 
 ### Changed
 
+- Profiles are data: `profiles.json` defines each profile and groups them into named presets, so adding a provider or model tier no longer changes router code.
+- AntiGravity routes like every other preset instead of validating public bindings and passing Tasks through unchanged.
 - Extended install, update, rollback, and uninstall ownership to the required router plugin tuple and hash-tracked runtime files.
 - Raised the verified OpenCode baseline to `1.18.10` for the runtime hook contract.
 

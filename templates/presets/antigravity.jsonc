@@ -6,12 +6,12 @@
       "variant": "max"
     },
     "scout": {
-      "model": "google/antigravity-gemini-3-flash",
-      "variant": "minimal"
+      "model": "google/antigravity-gemini-3.6-flash",
+      "variant": "low"
     },
     "Explore": {
-      "model": "google/antigravity-gemini-3-flash",
-      "variant": "low"
+      "model": "google/antigravity-gemini-3.6-flash",
+      "variant": "medium"
     },
     "plan-verifier": {
       "model": "google/antigravity-claude-opus-4-6-thinking",
@@ -22,7 +22,8 @@
       "variant": "max"
     },
     "mech-executor": {
-      "model": "google/antigravity-claude-sonnet-4-6"
+      "model": "google/antigravity-gemini-3.6-flash",
+      "variant": "low"
     },
     "executor": {
       "model": "google/antigravity-gemini-3.1-pro",

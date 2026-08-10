@@ -34,12 +34,23 @@ class PolicyContractTests(unittest.TestCase):
             "sol": ("openai/gpt-5.6-sol", "high"),
             "terra": ("openai/gpt-5.6-terra", "high"),
             "luna": ("openai/gpt-5.6-luna", "max"),
+            "opus": ("google/antigravity-claude-opus-4-6-thinking", "max"),
+            "pro": ("google/antigravity-gemini-3.1-pro", "high"),
+            "flash": ("google/antigravity-gemini-3.6-flash", "high"),
         }
         for profile, primary in expected_primary.items():
             actual = self.profiles["profiles"][profile]
             self.assertEqual((actual["primary"]["model"], actual["primary"]["variant"]), primary)
             self.assertEqual(set(actual["workers"]), set(WORKERS))
-        self.assertEqual(set(self.profiles["antigravity"]["workers"]), set(WORKERS))
+        self.assertEqual(
+            self.profiles["presets"],
+            {"chatgpt": ["sol", "terra", "luna"], "antigravity": ["opus", "pro", "flash"]},
+        )
+        for members in self.profiles["presets"].values():
+            for name in members:
+                self.assertIn(name, self.profiles["profiles"])
+        primaries = [p["primary"]["model"] for p in self.profiles["profiles"].values()]
+        self.assertEqual(len(primaries), len(set(primaries)))
 
     def test_router_runtime_artifacts_exist(self) -> None:
         self.assertTrue((ROOT / "templates/pilotfish/profile-router.mjs").is_file())
@@ -54,7 +65,7 @@ class PolicyContractTests(unittest.TestCase):
             "installedRuntimeFiles", "SHA-256", "`0.1.0` first-touch migration",
             "byte-identically", "Write `install-state.json` last",
             "**before** deleting runtime files", "Preserve unrelated entries and their order",
-            "24 hidden internal clones", "creates no clones",
+            "24 hidden internal clones", "creates clones only for its own profiles",
             "unsupported or cross-preset models fail before assistant/provider execution",
             "pre-existing sibling retitled to a marker",
             "public workers and hidden clones are subagents",
@@ -79,7 +90,7 @@ class PolicyContractTests(unittest.TestCase):
         combined = "\n".join(text(path) for path in ("README.md", "docs/design.md", "docs/research.md"))
         for phrase in (
             "runtime profile router", "config`, `chat.message`, `tool.execute.before`, `tool.execute.after`, and `session.deleted",
-            "before Task permission and agent resolution", "24 hidden", "no clones",
+            "before Task permission and agent resolution", "24 hidden", "only its own profiles",
             "logs and ignores plugin configuration errors", "provider-qualified", "no fallback",
             "start a new session", "issue #11", "implementation details",
             "pre-existing sibling", "expired", "replayed internal chat",
@@ -99,7 +110,7 @@ class PolicyContractTests(unittest.TestCase):
         self.assertIn("1.18.10", local)
         self.assertIn("profile-router.mjs", local)
         self.assertIn("restart", local)
-        for binding in self.profiles["antigravity"]["workers"].values():
+        for binding in self.profiles["profiles"]["opus"]["workers"].values():
             self.assertIn(binding["model"], local)
         for phrase in (
             "node --test tests/profile-router.test.mjs", "isolated/neutral OpenCode context",
@@ -234,24 +245,55 @@ class PolicyContractTests(unittest.TestCase):
             )
 
     def test_antigravity_profile_values_are_exact(self) -> None:
-        antigravity = self.profiles["antigravity"]
-        self.assertEqual(
-            antigravity["primary"],
-            {"model": "google/antigravity-claude-opus-4-6-thinking", "variant": "max"},
-        )
-        self.assertEqual(
-            antigravity["workers"],
-            {
-                "scout": {"model": "google/antigravity-gemini-3-flash", "variant": "minimal"},
-                "Explore": {"model": "google/antigravity-gemini-3-flash", "variant": "low"},
-                "plan-verifier": {"model": "google/antigravity-claude-opus-4-6-thinking", "variant": "max"},
-                "security-reviewer": {"model": "google/antigravity-claude-opus-4-6-thinking", "variant": "max"},
-                "mech-executor": {"model": "google/antigravity-claude-sonnet-4-6"},
-                "executor": {"model": "google/antigravity-gemini-3.1-pro", "variant": "high"},
-                "verifier": {"model": "google/antigravity-claude-opus-4-6-thinking", "variant": "max"},
-                "security-executor": {"model": "google/antigravity-claude-opus-4-6-thinking", "variant": "max"},
+        expected = {
+            "opus": {
+                "primary": ("google/antigravity-claude-opus-4-6-thinking", "max"),
+                "scout": ("google/antigravity-gemini-3.6-flash", "low"),
+                "Explore": ("google/antigravity-gemini-3.6-flash", "medium"),
+                "plan-verifier": ("google/antigravity-claude-opus-4-6-thinking", "max"),
+                "security-reviewer": ("google/antigravity-claude-opus-4-6-thinking", "max"),
+                "mech-executor": ("google/antigravity-gemini-3.6-flash", "low"),
+                "executor": ("google/antigravity-gemini-3.1-pro", "high"),
+                "verifier": ("google/antigravity-claude-opus-4-6-thinking", "max"),
+                "security-executor": ("google/antigravity-claude-opus-4-6-thinking", "max"),
             },
-        )
+            "pro": {
+                "primary": ("google/antigravity-gemini-3.1-pro", "high"),
+                "scout": ("google/antigravity-gemini-3.6-flash", "low"),
+                "Explore": ("google/antigravity-gemini-3.6-flash", "medium"),
+                "plan-verifier": ("google/antigravity-gemini-3.1-pro", "high"),
+                "security-reviewer": ("google/antigravity-claude-opus-4-6-thinking", "max"),
+                "mech-executor": ("google/antigravity-gemini-3.6-flash", "low"),
+                "executor": ("google/antigravity-gemini-3.1-pro", "high"),
+                "verifier": ("google/antigravity-gemini-3.1-pro", "high"),
+                "security-executor": ("google/antigravity-claude-opus-4-6-thinking", "low"),
+            },
+            "flash": {
+                "primary": ("google/antigravity-gemini-3.6-flash", "high"),
+                "scout": ("google/antigravity-gemini-3.6-flash", "minimal"),
+                "Explore": ("google/antigravity-gemini-3.6-flash", "low"),
+                "plan-verifier": ("google/antigravity-gemini-3.1-pro", "high"),
+                "security-reviewer": ("google/antigravity-claude-opus-4-6-thinking", "low"),
+                "mech-executor": ("google/antigravity-gemini-3.6-flash", "minimal"),
+                "executor": ("google/antigravity-gemini-3.6-flash", "high"),
+                "verifier": ("google/antigravity-gemini-3.1-pro", "high"),
+                "security-executor": ("google/antigravity-gemini-3.1-pro", "high"),
+            },
+        }
+        for name, mapping in expected.items():
+            profile = self.profiles["profiles"][name]
+            self.assertEqual(
+                (profile["primary"]["model"], profile["primary"]["variant"]),
+                mapping["primary"],
+                name,
+            )
+            for role in WORKERS:
+                binding = profile["workers"][role]
+                self.assertEqual(
+                    (binding["model"], binding.get("variant")),
+                    mapping[role],
+                    f"{name}/{role}",
+                )
 
     def test_router_source_and_primary_prompt_contracts(self) -> None:
         router = text("templates/pilotfish/profile-router.mjs")
@@ -261,7 +303,7 @@ class PolicyContractTests(unittest.TestCase):
         for phrase in (
             '"chat.message"', '"tool.execute.before"', '"tool.execute.after"', "session.deleted",
             "internalAgentName", "model changed after this session was pinned",
-            "AntiGravity passthrough", "configuration failed",
+            "configureProfiles", "activeProfileNames", "configuration failed",
             "internal profile agents cannot be invoked directly",
             'mode "subagent"', "cannot be invoked directly through chat",
             "client.session.messages", "could not recover this session's persisted model profile",

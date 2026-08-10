@@ -19,6 +19,7 @@ const PROFILES = JSON.parse(
   readFileSync(join(REPO_ROOT, "templates/pilotfish/profiles.json"), "utf8"),
 );
 const WORKERS = PROFILES.publicRoles.slice(1);
+const ACTIVE = PROFILES.presets.chatgpt;
 
 async function resolvedConfig(fixture) {
   const result = await runOpencode(fixture, ["debug", "config"]);
@@ -44,7 +45,7 @@ describe("profile router config generation in OpenCode", () => {
   test("the host resolves one visible primary plus every hidden clone", () => {
     const agents = config.agent;
     const clones = Object.keys(agents).filter((name) => name.startsWith("pilotfish-profile-"));
-    assert.equal(clones.length, Object.keys(PROFILES.profiles).length * WORKERS.length);
+    assert.equal(clones.length, ACTIVE.length * WORKERS.length);
     assert.equal(agents.pilotfish.mode, "primary");
     for (const name of clones) {
       assert.equal(agents[name].hidden, true, `${name} must be hidden`);
@@ -53,7 +54,8 @@ describe("profile router config generation in OpenCode", () => {
   });
 
   test("every generated clone carries its approved model and variant", () => {
-    for (const [profile, mapping] of Object.entries(PROFILES.profiles)) {
+    for (const profile of ACTIVE) {
+      const mapping = PROFILES.profiles[profile];
       for (const role of WORKERS) {
         const clone = config.agent[`pilotfish-profile-${profile}-${role}`];
         assert.ok(clone, `missing clone for ${profile}/${role}`);
@@ -80,7 +82,7 @@ describe("profile router config generation in OpenCode", () => {
     const entries = Object.entries(task);
     assert.deepEqual(entries[0], ["*", "deny"], "the deny-all rule must stay first");
     for (const role of WORKERS) assert.equal(task[role], "allow", `${role} must stay allowed`);
-    for (const profile of Object.keys(PROFILES.profiles)) {
+    for (const profile of ACTIVE) {
       for (const role of WORKERS) {
         assert.equal(task[`pilotfish-profile-${profile}-${role}`], "allow");
       }
