@@ -270,8 +270,8 @@ class PolicyContractTests(unittest.TestCase):
             "profile router initialization failed", "validateProfiles(loadProfiles())",
             "createHash", "session.update", "markedTaskDescription",
             "TASK_AUTHORIZATION_TTL_MS", 'event?.type === "session.created"',
-            "scheduleAuthorizationExpiry", "clearParentAuthorizations", "async dispose()",
-            "cleanupAuthorization", "boundChildSessionID", "Promise.allSettled",
+            "scheduleAuthorizationExpiry", "createAuthorizationStore", "async dispose()",
+            "clearParent(", "cleanupAuthorization", "boundChildSessionID", "Promise.allSettled",
         ):
             self.assertIn(phrase, router)
         for binding in (

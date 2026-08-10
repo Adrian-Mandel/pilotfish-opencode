@@ -1,3 +1,20 @@
+// Pilotfish profile router.
+//
+// Guarantees, host dependencies, accepted risks, and threat model are fixed in
+// docs/profile-router-contract.md. Changes outside that contract require
+// re-approval before implementation.
+//
+// This file is installed as a single hash-tracked runtime artifact, so its four
+// concerns are separated by section and explicit dependency injection rather
+// than by module boundaries:
+//
+//   1. Shared primitives
+//   2. Profile data: loading, validation, and model-to-profile selection
+//   3. Permission validation and config generation
+//   4. Session recovery across processes
+//   5. Child authorization store (state, timers, cleanup)
+//   6. Composition root and plugin entry
+
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 
@@ -7,12 +24,38 @@ const TASK_MARKER_PREFIX = " [pilotfish-task:";
 const TASK_MARKER_SUFFIX = "]";
 const TASK_AUTHORIZATION_TTL_MS = 30_000;
 
-function loadProfiles() {
-  return JSON.parse(readFileSync(PROFILES_URL, "utf8"));
+// ---------------------------------------------------------------------------
+// 1. Shared primitives
+// ---------------------------------------------------------------------------
+
+function isObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function modelName(model) {
+  if (typeof model === "string") return model;
+  if (!isObject(model)) return undefined;
+  if (typeof model.providerID === "string" && typeof model.modelID === "string") {
+    return `${model.providerID}/${model.modelID}`;
+  }
+  return typeof model.model === "string" ? model.model : undefined;
+}
+
+function historyTimestamp(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.length > 0) {
+    const timestamp = Date.parse(value);
+    if (Number.isFinite(timestamp)) return timestamp;
+  }
+  return undefined;
 }
 
 function internalAgentName(profile, role) {
   return `${INTERNAL_PREFIX}${profile}-${role}`;
+}
+
+function isInternalAgentName(agent) {
+  return typeof agent === "string" && agent.startsWith(INTERNAL_PREFIX);
 }
 
 function taskAuthorizationMarker(callID) {
@@ -42,10 +85,7 @@ function taskMarkerFromTitle(title, agent) {
   return /^[a-f0-9]{64}$/.test(marker) ? marker : undefined;
 }
 
-function isInternalAgentName(agent) {
-  return typeof agent === "string" && agent.startsWith(INTERNAL_PREFIX);
-}
-
+// Guard G6: internal names are never a legal caller-supplied target.
 function rejectDirectInternalChat(input, output) {
   for (const agent of [output?.message?.agent, input?.agent]) {
     if (isInternalAgentName(agent)) {
@@ -58,16 +98,19 @@ function rejectDirectInternalChat(input, output) {
 
 function rejectDirectInternalTask(input, output) {
   if (input?.tool !== "task" || !isObject(output?.args)) return;
-  const requestedRole = output.args.subagent_type;
-  if (isInternalAgentName(requestedRole)) {
+  if (isInternalAgentName(output.args.subagent_type)) {
     throw new Error(
       "Pilotfish internal profile agents cannot be invoked directly; request a public Pilotfish worker role instead.",
     );
   }
 }
 
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
+// ---------------------------------------------------------------------------
+// 2. Profile data
+// ---------------------------------------------------------------------------
+
+function loadProfiles() {
+  return JSON.parse(readFileSync(PROFILES_URL, "utf8"));
 }
 
 function sameBinding(actual, expected) {
@@ -76,15 +119,6 @@ function sameBinding(actual, expected) {
     actual.model === expected.model &&
     actual.variant === expected.variant
   );
-}
-
-function modelName(model) {
-  if (typeof model === "string") return model;
-  if (!isObject(model)) return undefined;
-  if (typeof model.providerID === "string" && typeof model.modelID === "string") {
-    return `${model.providerID}/${model.modelID}`;
-  }
-  return typeof model.model === "string" ? model.model : undefined;
 }
 
 function validateBinding(binding, label) {
@@ -134,6 +168,31 @@ function validateProfiles(data) {
   return data;
 }
 
+function profileForModel(data, model) {
+  return Object.entries(data.profiles).find(([, profile]) => profile.primary.model === model);
+}
+
+// Guarantee G2/G8: the profile is a pure function of the primary model, and an
+// unsupported model fails closed rather than defaulting.
+function stateForModel(data, preset, model) {
+  if (preset === "chatgpt") {
+    const match = profileForModel(data, model);
+    if (!match) {
+      throw new Error(`Pilotfish ChatGPT profile does not support primary model "${model ?? "unknown"}".`);
+    }
+    return { kind: "mapped", model, profile: match[0] };
+  }
+
+  if (model !== data.antigravity.primary.model) {
+    throw new Error(`Pilotfish AntiGravity preset does not support primary model "${model ?? "unknown"}".`);
+  }
+  return { kind: "passthrough", model };
+}
+
+// ---------------------------------------------------------------------------
+// 3. Permission validation and config generation
+// ---------------------------------------------------------------------------
+
 function validatePublicWorkers(agents, workers) {
   for (const role of workers) {
     const worker = agents[role];
@@ -170,6 +229,7 @@ function lastMatchingTaskRule(entries, agentName) {
   return match;
 }
 
+// Guarantee G9: never widen or override a customized Task permission map.
 function extendTaskPermission(pilotfish, cloneNames, workers) {
   const task = pilotfish?.permission?.task;
   const entries = isObject(task) ? Object.entries(task) : [];
@@ -198,14 +258,19 @@ function extendTaskPermission(pilotfish, cloneNames, workers) {
   for (const name of cloneNames) task[name] = "allow";
 }
 
-function configureChatGPT(config, data) {
+function requirePilotfishAgents(config) {
   const agents = config?.agent;
   if (!isObject(agents) || !isObject(agents.pilotfish)) {
     throw new Error("Pilotfish profile router requires the public pilotfish agent.");
   }
+  return agents;
+}
 
+function configureChatGPT(config, data) {
+  const agents = requirePilotfishAgents(config);
   const workers = data.publicRoles.slice(1);
   validatePublicWorkers(agents, workers);
+
   const cloneNames = [];
   for (const profile of Object.keys(data.profiles)) {
     for (const role of workers) cloneNames.push(internalAgentName(profile, role));
@@ -233,11 +298,7 @@ function configureChatGPT(config, data) {
 }
 
 function configureAntigravity(config, data) {
-  const agents = config?.agent;
-  if (!isObject(agents) || !isObject(agents.pilotfish)) {
-    throw new Error("Pilotfish profile router requires the public pilotfish agent.");
-  }
-
+  const agents = requirePilotfishAgents(config);
   const workers = data.publicRoles.slice(1);
   validatePublicWorkers(agents, workers);
   for (const role of workers) {
@@ -249,33 +310,9 @@ function configureAntigravity(config, data) {
   }
 }
 
-function profileForModel(data, model) {
-  return Object.entries(data.profiles).find(([, profile]) => profile.primary.model === model);
-}
-
-function stateForModel(data, preset, model) {
-  if (preset === "chatgpt") {
-    const match = profileForModel(data, model);
-    if (!match) {
-      throw new Error(`Pilotfish ChatGPT profile does not support primary model "${model ?? "unknown"}".`);
-    }
-    return { kind: "mapped", model, profile: match[0] };
-  }
-
-  if (model !== data.antigravity.primary.model) {
-    throw new Error(`Pilotfish AntiGravity preset does not support primary model "${model ?? "unknown"}".`);
-  }
-  return { kind: "passthrough", model };
-}
-
-function historyTimestamp(value) {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.length > 0) {
-    const timestamp = Date.parse(value);
-    if (Number.isFinite(timestamp)) return timestamp;
-  }
-  return undefined;
-}
+// ---------------------------------------------------------------------------
+// 4. Session recovery
+// ---------------------------------------------------------------------------
 
 function recoveryError(detail) {
   return new Error(
@@ -283,32 +320,9 @@ function recoveryError(detail) {
   );
 }
 
-function createInitializationFailureHooks() {
-  const initializationError = () =>
-    new Error(
-      "Pilotfish profile router initialization failed. Fix the Pilotfish router preset and managed runtime files, restart OpenCode, and start a new session.",
-    );
-
-  return {
-    config() {},
-
-    async "chat.message"(input, output) {
-      rejectDirectInternalChat(input, output);
-      const resolvedAgent = output?.message?.agent;
-      const rawAgent = input?.agent;
-      if (resolvedAgent === "pilotfish" || rawAgent === "pilotfish") {
-        throw initializationError();
-      }
-    },
-
-    async "tool.execute.before"(input, output) {
-      rejectDirectInternalTask(input, output);
-    },
-
-    async dispose() {},
-  };
-}
-
+// Guarantee G10: router state is process-local, so a resumed session recovers
+// its pin from the first persisted Pilotfish user message instead of treating
+// an empty cache as a new session.
 async function recoverPersistedState(client, sessionID, data, preset) {
   if (typeof client?.session?.messages !== "function") {
     throw recoveryError("OpenCode client.session.messages is unavailable");
@@ -353,34 +367,27 @@ async function recoverPersistedState(client, sessionID, data, preset) {
   const first = priorPilotfishMessages[0];
   try {
     return stateForModel(data, preset, first.model);
-  } catch (error) {
+  } catch {
     throw recoveryError(`the first persisted Pilotfish model is unsupported (${first.model})`);
   }
 }
 
-function createProfileRouter(options = {}) {
-  const preset = options.preset;
-  if (preset !== "chatgpt" && preset !== "antigravity") {
-    throw new Error('Pilotfish profile router option "preset" must be "chatgpt" or "antigravity".');
-  }
+// ---------------------------------------------------------------------------
+// 5. Child authorization store
+// ---------------------------------------------------------------------------
 
-  const data = validateProfiles(loadProfiles());
-  const sessions = new Map();
-  const currentAgents = new Map();
-  const pendingRecoveries = new Map();
-  const taskAuthorizations = new Map();
-  // Tests may inject deterministic timers; production expiry can only be shortened, never extended.
-  const testTiming = isObject(options.__testTiming) ? options.__testTiming : {};
-  const authorizationTTL =
-    typeof testTiming.ttl === "number" && Number.isFinite(testTiming.ttl)
-      ? Math.max(1, Math.min(TASK_AUTHORIZATION_TTL_MS, testTiming.ttl))
-      : TASK_AUTHORIZATION_TTL_MS;
-  const now = typeof testTiming.now === "function" ? testTiming.now : Date.now;
-  const scheduleTimeout =
-    typeof testTiming.setTimeout === "function" ? testTiming.setTimeout : setTimeout;
-  const cancelTimeout =
-    typeof testTiming.clearTimeout === "function" ? testTiming.clearTimeout : clearTimeout;
-  let configurationError;
+// Owns every authorization record, its expiry timer, and its child-title
+// cleanup. Guarantee G7 lives here. Dependencies are injected so this section
+// never reaches into router session state directly.
+function createAuthorizationStore({ client, timing, getSessionState, getCurrentAgent }) {
+  const authorizations = new Map();
+  const { now, setTimeout: scheduleTimeout, clearTimeout: cancelTimeout, ttl } = timing;
+
+  function internalChatError(detail) {
+    return new Error(
+      `Pilotfish internal profile agents cannot be invoked directly through chat: ${detail}. Only one-time router-authorized Task children are allowed; select the public pilotfish agent instead.`,
+    );
+  }
 
   function clearAuthorizationTimer(authorization) {
     if (authorization.timer === undefined) return;
@@ -394,26 +401,33 @@ function createProfileRouter(options = {}) {
   }
 
   function finalizeAuthorization(parentSessionID, callID, authorization) {
-    const byCall = taskAuthorizations.get(parentSessionID);
+    const byCall = authorizations.get(parentSessionID);
     if (!byCall || byCall.get(callID) !== authorization) return;
     clearAuthorizationTimer(authorization);
     restoreAuthorizationArgs(authorization);
     byCall.delete(callID);
-    if (byCall.size === 0) taskAuthorizations.delete(parentSessionID);
+    if (byCall.size === 0) authorizations.delete(parentSessionID);
   }
 
-  function authorizationExpired(parentSessionID, callID, authorization) {
-    if (authorization.expiresAt > now()) return false;
-    void cleanupAuthorization(parentSessionID, callID, authorization).catch(() => {});
-    return true;
-  }
-
-  function scheduleAuthorizationExpiry(parentSessionID, callID, authorization) {
-    authorization.timer = scheduleTimeout(
-      () => cleanupAuthorization(parentSessionID, callID, authorization).catch(() => {}),
-      authorizationTTL,
-    );
-    authorization.timer?.unref?.();
+  async function updateChildTitle(childSessionID, title) {
+    if (typeof client?.session?.update !== "function") {
+      throw new Error("OpenCode client.session.update is unavailable");
+    }
+    let result;
+    try {
+      result = await client.session.update({
+        path: { id: childSessionID },
+        body: { title },
+      });
+    } catch (error) {
+      throw new Error(`child title restoration failed (${error?.message ?? "unknown error"})`);
+    }
+    if (!isObject(result) || (result.error !== undefined && result.error !== null)) {
+      throw new Error("OpenCode returned an error while restoring the child title");
+    }
+    if (!isObject(result.data)) {
+      throw new Error("OpenCode returned malformed child data after title restoration");
+    }
   }
 
   async function restoreMarkedBoundChildTitle(parentSessionID, authorization) {
@@ -426,13 +440,13 @@ function createProfileRouter(options = {}) {
     }
     const childSessionID = authorization.boundChildSessionID;
     if (typeof childSessionID !== "string" || childSessionID.length === 0) return;
-    if (typeof options.client?.session?.get !== "function") {
+    if (typeof client?.session?.get !== "function") {
       throw new Error("OpenCode client.session.get is unavailable for child title cleanup");
     }
 
     let result;
     try {
-      result = await options.client.session.get({ path: { id: childSessionID } });
+      result = await client.session.get({ path: { id: childSessionID } });
     } catch (error) {
       throw new Error(`child title cleanup lookup failed (${error?.message ?? "unknown error"})`);
     }
@@ -459,10 +473,11 @@ function createProfileRouter(options = {}) {
     authorization.titleRestored = true;
   }
 
+  // Revocation is synchronous so chat/after races cannot replay it while
+  // cleanup is awaited; title restoration is best-effort per the contract.
   function cleanupAuthorization(parentSessionID, callID, authorization) {
     if (authorization.cleanupPromise) return authorization.cleanupPromise;
 
-    // Revocation is synchronous so chat/after races cannot replay it while cleanup is awaited.
     authorization.cleanupStarted = true;
     authorization.revoked = true;
     clearAuthorizationTimer(authorization);
@@ -478,8 +493,32 @@ function createProfileRouter(options = {}) {
     return authorization.cleanupPromise;
   }
 
-  async function clearParentAuthorizations(parentSessionID) {
-    const byCall = taskAuthorizations.get(parentSessionID);
+  function authorizationExpired(parentSessionID, callID, authorization) {
+    if (authorization.expiresAt > now()) return false;
+    void cleanupAuthorization(parentSessionID, callID, authorization).catch(() => {});
+    return true;
+  }
+
+  function expireParent(parentSessionID) {
+    const byCall = authorizations.get(parentSessionID);
+    if (!byCall) return;
+    for (const [callID, authorization] of [...byCall.entries()]) {
+      authorizationExpired(parentSessionID, callID, authorization);
+    }
+  }
+
+  // Host fact H6: tool.execute.after is skipped when execution throws, so
+  // expiry must be driven independently of the after-hook.
+  function scheduleAuthorizationExpiry(parentSessionID, callID, authorization) {
+    authorization.timer = scheduleTimeout(
+      () => cleanupAuthorization(parentSessionID, callID, authorization).catch(() => {}),
+      ttl,
+    );
+    authorization.timer?.unref?.();
+  }
+
+  async function clearParent(parentSessionID) {
+    const byCall = authorizations.get(parentSessionID);
     if (!byCall) return;
     const cleanups = [];
     for (const [callID, authorization] of [...byCall.entries()]) {
@@ -488,53 +527,68 @@ function createProfileRouter(options = {}) {
     await Promise.allSettled(cleanups);
   }
 
-  function internalChatError(detail) {
-    return new Error(
-      `Pilotfish internal profile agents cannot be invoked directly through chat: ${detail}. Only one-time router-authorized Task children are allowed; select the public pilotfish agent instead.`,
+  function has(parentSessionID, callID) {
+    return authorizations.get(parentSessionID)?.has(callID) === true;
+  }
+
+  function register(parentSessionID, callID, authorization, taskArgs) {
+    authorization.createdAt = now();
+    authorization.expiresAt = authorization.createdAt + ttl;
+    authorization.taskArgs = taskArgs;
+    let byCall = authorizations.get(parentSessionID);
+    if (!byCall) {
+      byCall = new Map();
+      authorizations.set(parentSessionID, byCall);
+    }
+    byCall.set(callID, authorization);
+    scheduleAuthorizationExpiry(parentSessionID, callID, authorization);
+  }
+
+  // Host fact H4: the before-hook never learns the child session ID, so an
+  // exact post-authorization session.created event is the only binding source.
+  function bindCreatedChild(info) {
+    const marker = taskMarkerFromTitle(info.title, info.agent);
+    if (!marker) return;
+    if (!authorizations.has(info.parentID)) return;
+    expireParent(info.parentID);
+    const byCall = authorizations.get(info.parentID);
+    if (!byCall) return;
+
+    const state = getSessionState(info.parentID);
+    const currentAgent = getCurrentAgent(info.parentID);
+    const created = historyTimestamp(info.time?.created ?? info.createdAt);
+    const matches = [...byCall.entries()].filter(
+      ([callID, authorization]) =>
+        authorization.resumed !== true &&
+        authorization.bound !== true &&
+        authorization.consumed !== true &&
+        authorization.cleanupStarted !== true &&
+        authorization.marker === marker &&
+        authorization.marker === taskAuthorizationMarker(callID) &&
+        authorization.markedTitle === info.title &&
+        authorization.expectedAgent === info.agent &&
+        state?.kind === "mapped" &&
+        state.profile === authorization.profile &&
+        currentAgent?.agent === "pilotfish" &&
+        currentAgent.active === true &&
+        (created === undefined || created >= authorization.createdAt),
     );
+    if (matches.length !== 1) return;
+
+    const authorization = matches[0][1];
+    authorization.bound = true;
+    authorization.childSessionID = info.id;
+    authorization.boundChildSessionID = info.id;
+    authorization.boundCleanTitle = authorization.cleanTitle;
   }
 
-  async function updateChildTitle(childSessionID, title) {
-    if (typeof options.client?.session?.update !== "function") {
-      throw new Error("OpenCode client.session.update is unavailable");
-    }
-    let result;
-    try {
-      result = await options.client.session.update({
-        path: { id: childSessionID },
-        body: { title },
-      });
-    } catch (error) {
-      throw new Error(`child title restoration failed (${error?.message ?? "unknown error"})`);
-    }
-    if (!isObject(result) || (result.error !== undefined && result.error !== null)) {
-      throw new Error("OpenCode returned an error while restoring the child title");
-    }
-    if (!isObject(result.data)) {
-      throw new Error("OpenCode returned malformed child data after title restoration");
-    }
-  }
-
-  async function authorizeInternalChildChat(input, output) {
-    const rawAgent = input?.agent;
-    const resolvedAgent = output?.message?.agent;
-    if (!isInternalAgentName(resolvedAgent)) {
-      throw internalChatError("the resolved chat agent is not the requested internal agent");
-    }
-    if (rawAgent !== undefined && rawAgent !== resolvedAgent) {
-      throw internalChatError("the raw and resolved chat agents conflict");
-    }
-    const childSessionID = input?.sessionID;
-    if (typeof childSessionID !== "string" || childSessionID.length === 0) {
-      throw internalChatError("the child session ID is missing");
-    }
-    if (typeof options.client?.session?.get !== "function") {
+  async function readAuthorizedChild(childSessionID, resolvedAgent) {
+    if (typeof client?.session?.get !== "function") {
       throw internalChatError("OpenCode client.session.get is unavailable");
     }
-
     let result;
     try {
-      result = await options.client.session.get({ path: { id: childSessionID } });
+      result = await client.session.get({ path: { id: childSessionID } });
     } catch (error) {
       throw internalChatError(`child session lookup failed (${error?.message ?? "unknown error"})`);
     }
@@ -547,23 +601,39 @@ function createProfileRouter(options = {}) {
     if (result.data.id !== childSessionID) {
       throw internalChatError("OpenCode returned a different child session");
     }
-    const parentSessionID = result.data.parentID;
-    if (typeof parentSessionID !== "string" || parentSessionID.length === 0) {
+    if (typeof result.data.parentID !== "string" || result.data.parentID.length === 0) {
       throw internalChatError("the chat session has no parent Task session");
     }
     if (result.data.agent !== resolvedAgent) {
       throw internalChatError("the child session agent does not match the resolved internal agent");
     }
+    return result.data;
+  }
 
-    const byCall = taskAuthorizations.get(parentSessionID);
-    const entries = byCall ? [...byCall.entries()] : [];
-    for (const [callID, authorization] of entries) {
-      authorizationExpired(parentSessionID, callID, authorization);
+  // Guarantee G7. Ordering is before -> session.created -> child chat -> after;
+  // every race fails closed.
+  async function authorizeChildChat(input, output) {
+    const rawAgent = input?.agent;
+    const resolvedAgent = output?.message?.agent;
+    if (!isInternalAgentName(resolvedAgent)) {
+      throw internalChatError("the resolved chat agent is not the requested internal agent");
     }
-    const currentByCall = taskAuthorizations.get(parentSessionID);
-    const marker = taskMarkerFromTitle(result.data.title, resolvedAgent);
-    const matches = currentByCall
-      ? [...currentByCall.entries()].filter(
+    if (rawAgent !== undefined && rawAgent !== resolvedAgent) {
+      throw internalChatError("the raw and resolved chat agents conflict");
+    }
+    const childSessionID = input?.sessionID;
+    if (typeof childSessionID !== "string" || childSessionID.length === 0) {
+      throw internalChatError("the child session ID is missing");
+    }
+
+    const child = await readAuthorizedChild(childSessionID, resolvedAgent);
+    const parentSessionID = child.parentID;
+
+    expireParent(parentSessionID);
+    const byCall = authorizations.get(parentSessionID);
+    const marker = taskMarkerFromTitle(child.title, resolvedAgent);
+    const matches = byCall
+      ? [...byCall.entries()].filter(
           ([, authorization]) =>
             authorization.consumed !== true &&
             authorization.cleanupStarted !== true &&
@@ -573,7 +643,7 @@ function createProfileRouter(options = {}) {
               : authorization.bound === true &&
                 authorization.boundChildSessionID === childSessionID &&
                 authorization.marker === marker &&
-                authorization.markedTitle === result.data.title),
+                authorization.markedTitle === child.title),
         )
       : [];
     if (matches.length !== 1) {
@@ -589,8 +659,11 @@ function createProfileRouter(options = {}) {
     authorization.operationOwner = "child-chat";
     clearAuthorizationTimer(authorization);
     restoreAuthorizationArgs(authorization);
-    const currentAgent = currentAgents.get(parentSessionID);
-    const state = sessions.get(parentSessionID);
+
+    // Guarantee G4: the parent must still be a pinned, active Pilotfish session
+    // on the same profile that authorized this child.
+    const currentAgent = getCurrentAgent(parentSessionID);
+    const state = getSessionState(parentSessionID);
     const expectedAgent =
       state?.kind === "mapped"
         ? internalAgentName(state.profile, authorization.publicRole)
@@ -609,10 +682,7 @@ function createProfileRouter(options = {}) {
 
     if (authorization.resumed !== true) {
       const restoration = (async () => {
-        await updateChildTitle(
-          authorization.boundChildSessionID,
-          authorization.boundCleanTitle,
-        );
+        await updateChildTitle(authorization.boundChildSessionID, authorization.boundCleanTitle);
         authorization.titleRestored = true;
       })();
       authorization.operationPromise = restoration;
@@ -625,8 +695,229 @@ function createProfileRouter(options = {}) {
     }
   }
 
+  async function completeTask(parentSessionID, callID, input, output) {
+    const byCall = authorizations.get(parentSessionID);
+    if (!byCall) return;
+    const authorization = byCall.get(callID);
+    if (!authorization) return;
+
+    const restoreArgs = () => {
+      if (authorization.resumed === true) return;
+      if (isObject(input.args)) input.args.description = authorization.originalDescription;
+      if (isObject(output)) output.title = authorization.originalDescription;
+    };
+
+    if (authorization.cleanupStarted === true) {
+      try {
+        await authorization.cleanupPromise.catch(() => {});
+      } finally {
+        restoreArgs();
+      }
+      return;
+    }
+
+    authorization.consumed = true;
+    authorization.operationOwner = "tool-after";
+    clearAuthorizationTimer(authorization);
+    restoreAuthorizationArgs(authorization);
+    const priorOperation = authorization.operationPromise;
+    const afterOperation = (async () => {
+      if (priorOperation) await priorOperation.catch(() => {});
+      if (
+        authorization.resumed !== true &&
+        authorization.bound === true &&
+        authorization.titleRestored !== true
+      ) {
+        await updateChildTitle(authorization.boundChildSessionID, authorization.boundCleanTitle);
+        authorization.titleRestored = true;
+      }
+    })();
+    authorization.operationPromise = afterOperation;
+    try {
+      restoreArgs();
+      await afterOperation;
+    } finally {
+      if (authorization.cleanupStarted !== true) {
+        finalizeAuthorization(parentSessionID, callID, authorization);
+      }
+    }
+  }
+
+  async function disposeAll() {
+    const cleanups = [];
+    for (const parentSessionID of [...authorizations.keys()]) {
+      cleanups.push(clearParent(parentSessionID));
+    }
+    await Promise.allSettled(cleanups);
+  }
+
+  return {
+    authorizeChildChat,
+    bindCreatedChild,
+    clearParent,
+    completeTask,
+    disposeAll,
+    has,
+    register,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 6. Composition root and plugin entry
+// ---------------------------------------------------------------------------
+
+// Host fact H2: a plugin factory that throws is skipped silently, so
+// initialization failure must still install hooks that fail closed.
+function createInitializationFailureHooks() {
+  const initializationError = () =>
+    new Error(
+      "Pilotfish profile router initialization failed. Fix the Pilotfish router preset and managed runtime files, restart OpenCode, and start a new session.",
+    );
+
+  return {
+    config() {},
+
+    async "chat.message"(input, output) {
+      rejectDirectInternalChat(input, output);
+      const resolvedAgent = output?.message?.agent;
+      const rawAgent = input?.agent;
+      if (resolvedAgent === "pilotfish" || rawAgent === "pilotfish") {
+        throw initializationError();
+      }
+    },
+
+    async "tool.execute.before"(input, output) {
+      rejectDirectInternalTask(input, output);
+    },
+
+    async dispose() {},
+  };
+}
+
+function resolveTiming(options) {
+  // Tests may inject deterministic timers; production expiry can only be
+  // shortened, never extended.
+  const testTiming = isObject(options.__testTiming) ? options.__testTiming : {};
+  return {
+    ttl:
+      typeof testTiming.ttl === "number" && Number.isFinite(testTiming.ttl)
+        ? Math.max(1, Math.min(TASK_AUTHORIZATION_TTL_MS, testTiming.ttl))
+        : TASK_AUTHORIZATION_TTL_MS,
+    now: typeof testTiming.now === "function" ? testTiming.now : Date.now,
+    setTimeout:
+      typeof testTiming.setTimeout === "function" ? testTiming.setTimeout : setTimeout,
+    clearTimeout:
+      typeof testTiming.clearTimeout === "function" ? testTiming.clearTimeout : clearTimeout,
+  };
+}
+
+function createProfileRouter(options = {}) {
+  const preset = options.preset;
+  if (preset !== "chatgpt" && preset !== "antigravity") {
+    throw new Error('Pilotfish profile router option "preset" must be "chatgpt" or "antigravity".');
+  }
+
+  const data = validateProfiles(loadProfiles());
+  const workerRoles = data.publicRoles.slice(1);
+  const sessions = new Map();
+  const currentAgents = new Map();
+  const pendingRecoveries = new Map();
+  let configurationError;
+
+  const authorizationStore = createAuthorizationStore({
+    client: options.client,
+    timing: resolveTiming(options),
+    getSessionState: (sessionID) => sessions.get(sessionID),
+    getCurrentAgent: (sessionID) => currentAgents.get(sessionID),
+  });
+
+  // Guarantee G3: once pinned, a session's model may not change.
+  function assertPinnedModel(state, model) {
+    if (state.model !== model) {
+      throw new Error("Pilotfish model changed after this session was pinned; start a new session.");
+    }
+  }
+
+  async function pinSession(input, model, agentMarker) {
+    let recovery = pendingRecoveries.get(input.sessionID);
+    if (!recovery) {
+      recovery = {
+        cancelled: false,
+        promise: recoverPersistedState(options.client, input.sessionID, data, preset),
+      };
+      pendingRecoveries.set(input.sessionID, recovery);
+    }
+    let recovered;
+    try {
+      recovered = await recovery.promise;
+    } finally {
+      if (pendingRecoveries.get(input.sessionID) === recovery) {
+        pendingRecoveries.delete(input.sessionID);
+      }
+    }
+    if (recovery.cancelled) {
+      throw recoveryError("the session was deleted while history was being read");
+    }
+
+    // Another first message may have completed recovery and pinned this
+    // session while this one waited.
+    const pinned = sessions.get(input.sessionID);
+    if (pinned) {
+      assertPinnedModel(pinned, model);
+      if (currentAgents.get(input.sessionID) === agentMarker) agentMarker.active = true;
+      return;
+    }
+
+    const state = recovered ?? stateForModel(data, preset, model);
+    sessions.set(input.sessionID, state);
+    assertPinnedModel(state, model);
+    if (currentAgents.get(input.sessionID) === agentMarker) agentMarker.active = true;
+  }
+
+  async function beginResumedTask(input, taskID, expectedAgent) {
+    if (typeof taskID !== "string" || taskID.length === 0) {
+      throw new Error(
+        "Pilotfish cannot authorize resumed Task because task_id is missing or malformed.",
+      );
+    }
+    if (typeof options.client?.session?.get !== "function") {
+      throw new Error(
+        "Pilotfish cannot authorize resumed Task because OpenCode client.session.get is unavailable.",
+      );
+    }
+    let result;
+    try {
+      result = await options.client.session.get({ path: { id: taskID } });
+    } catch (error) {
+      throw new Error(
+        `Pilotfish cannot authorize resumed Task because session lookup failed (${error?.message ?? "unknown error"}).`,
+      );
+    }
+    if (
+      !isObject(result) ||
+      (result.error !== undefined && result.error !== null) ||
+      !isObject(result.data)
+    ) {
+      throw new Error(
+        "Pilotfish cannot authorize resumed Task because OpenCode returned invalid session data.",
+      );
+    }
+    if (
+      result.data.id !== taskID ||
+      result.data.parentID !== input.sessionID ||
+      result.data.agent !== expectedAgent
+    ) {
+      throw new Error(
+        "Pilotfish cannot authorize resumed Task because task_id is not the exact matching child session for this parent and internal agent.",
+      );
+    }
+    return result.data.title;
+  }
+
   return {
     config(input) {
+      // Host fact H1: config-hook errors are logged and ignored, so the failure
+      // is stored and raised at the first Pilotfish message instead.
       try {
         if (preset === "chatgpt") configureChatGPT(input, data);
         else configureAntigravity(input, data);
@@ -638,9 +929,10 @@ function createProfileRouter(options = {}) {
     async "chat.message"(input, output) {
       const resolved = output?.message;
       if (isInternalAgentName(input?.agent) || isInternalAgentName(resolved?.agent)) {
-        await authorizeInternalChildChat(input, output);
+        await authorizationStore.authorizeChildChat(input, output);
         return;
       }
+
       const agent = resolved?.agent ?? input.agent;
       const agentMarker = { agent, active: false };
       currentAgents.set(input.sessionID, agentMarker);
@@ -650,65 +942,32 @@ function createProfileRouter(options = {}) {
           `Pilotfish profile router configuration failed: ${configurationError.message} Fix the Pilotfish configuration and start a new session.`,
         );
       }
+
       const model = modelName(resolved?.model ?? input.model);
-      let current = sessions.get(input.sessionID);
-
-      if (current) {
-        if (current.model !== model) {
-          throw new Error("Pilotfish model changed after this session was pinned; start a new session.");
-        }
+      const pinned = sessions.get(input.sessionID);
+      if (pinned) {
+        assertPinnedModel(pinned, model);
         if (currentAgents.get(input.sessionID) === agentMarker) agentMarker.active = true;
         return;
       }
 
-      let recovery = pendingRecoveries.get(input.sessionID);
-      if (!recovery) {
-        recovery = {
-          cancelled: false,
-          promise: recoverPersistedState(options.client, input.sessionID, data, preset),
-        };
-        pendingRecoveries.set(input.sessionID, recovery);
-      }
-      let recovered;
-      try {
-        recovered = await recovery.promise;
-      } finally {
-        if (pendingRecoveries.get(input.sessionID) === recovery) {
-          pendingRecoveries.delete(input.sessionID);
-        }
-      }
-      if (recovery.cancelled) {
-        throw recoveryError("the session was deleted while history was being read");
-      }
-
-      // Another first message may have completed recovery and pinned this session while this one waited.
-      current = sessions.get(input.sessionID);
-      if (current) {
-        if (current.model !== model) {
-          throw new Error("Pilotfish model changed after this session was pinned; start a new session.");
-        }
-        if (currentAgents.get(input.sessionID) === agentMarker) agentMarker.active = true;
-        return;
-      }
-
-      current = recovered ?? stateForModel(data, preset, model);
-      sessions.set(input.sessionID, current);
-      if (current.model !== model) {
-        throw new Error("Pilotfish model changed after this session was pinned; start a new session.");
-      }
-      if (currentAgents.get(input.sessionID) === agentMarker) agentMarker.active = true;
+      await pinSession(input, model, agentMarker);
     },
 
     async "tool.execute.before"(input, output) {
       rejectDirectInternalTask(input, output);
       if (input.tool !== "task") return;
       if (!isObject(output.args)) return;
+
+      // Guarantee G4/G5: route only for an active, pinned Pilotfish session and
+      // only for the public worker roles.
       const requestedRole = output.args.subagent_type;
       const currentAgent = currentAgents.get(input.sessionID);
       if (currentAgent?.agent !== "pilotfish" || currentAgent.active !== true) return;
       const state = sessions.get(input.sessionID);
       if (!state || state.kind !== "mapped") return;
-      if (!data.publicRoles.slice(1).includes(requestedRole)) return;
+      if (!workerRoles.includes(requestedRole)) return;
+
       if (output.args.background === true) {
         throw new Error(
           "Pilotfish does not authorize experimental background Tasks; use a foreground Task so the internal child starts before tool.execute.after.",
@@ -720,8 +979,7 @@ function createProfileRouter(options = {}) {
           "Pilotfish cannot authorize the internal Task child because tool.execute.before supplied no usable callID; refusing to rewrite the public worker role.",
         );
       }
-      const existingByCall = taskAuthorizations.get(input.sessionID);
-      if (existingByCall?.has(callID)) {
+      if (authorizationStore.has(input.sessionID, callID)) {
         throw new Error(
           `Pilotfish refuses duplicate Task authorization for callID "${callID}" in this session.`,
         );
@@ -733,51 +991,15 @@ function createProfileRouter(options = {}) {
           "Pilotfish cannot authorize the internal Task child because Task description is missing or malformed.",
         );
       }
-      const taskID = output.args.task_id;
-      const resumed = taskID !== undefined;
-      let authorization;
 
-      if (resumed) {
-        if (typeof taskID !== "string" || taskID.length === 0) {
-          throw new Error(
-            "Pilotfish cannot authorize resumed Task because task_id is missing or malformed.",
-          );
-        }
-        if (typeof options.client?.session?.get !== "function") {
-          throw new Error(
-            "Pilotfish cannot authorize resumed Task because OpenCode client.session.get is unavailable.",
-          );
-        }
-        let result;
-        try {
-          result = await options.client.session.get({ path: { id: taskID } });
-        } catch (error) {
-          throw new Error(
-            `Pilotfish cannot authorize resumed Task because session lookup failed (${error?.message ?? "unknown error"}).`,
-          );
-        }
-        if (
-          !isObject(result) ||
-          (result.error !== undefined && result.error !== null) ||
-          !isObject(result.data)
-        ) {
-          throw new Error(
-            "Pilotfish cannot authorize resumed Task because OpenCode returned invalid session data.",
-          );
-        }
-        if (
-          result.data.id !== taskID ||
-          result.data.parentID !== input.sessionID ||
-          result.data.agent !== expectedAgent
-        ) {
-          throw new Error(
-            "Pilotfish cannot authorize resumed Task because task_id is not the exact matching child session for this parent and internal agent.",
-          );
-        }
+      const taskID = output.args.task_id;
+      let authorization;
+      if (taskID !== undefined) {
+        const cleanTitle = await beginResumedTask(input, taskID, expectedAgent);
         authorization = {
           bound: true,
           childSessionID: taskID,
-          cleanTitle: result.data.title,
+          cleanTitle,
           expectedAgent,
           originalDescription,
           profile: state.profile,
@@ -803,69 +1025,14 @@ function createProfileRouter(options = {}) {
       }
 
       output.args.subagent_type = expectedAgent;
-      authorization.createdAt = now();
-      authorization.expiresAt = authorization.createdAt + authorizationTTL;
-      authorization.taskArgs = output.args;
-      let byCall = existingByCall;
-      if (!byCall) {
-        byCall = new Map();
-        taskAuthorizations.set(input.sessionID, byCall);
-      }
-      byCall.set(callID, authorization);
-      scheduleAuthorizationExpiry(input.sessionID, callID, authorization);
+      authorizationStore.register(input.sessionID, callID, authorization, output.args);
     },
 
     async "tool.execute.after"(input, output) {
       if (input?.tool !== "task") return;
       const callID = input.callID;
       if (typeof callID !== "string" || callID.length === 0) return;
-      const byCall = taskAuthorizations.get(input.sessionID);
-      if (!byCall) return;
-      const authorization = byCall.get(callID);
-      if (!authorization) return;
-      if (authorization.cleanupStarted === true) {
-        try {
-          await authorization.cleanupPromise.catch(() => {});
-        } finally {
-          if (authorization.resumed !== true) {
-            if (isObject(input.args)) input.args.description = authorization.originalDescription;
-            if (isObject(output)) output.title = authorization.originalDescription;
-          }
-        }
-        return;
-      }
-
-      authorization.consumed = true;
-      authorization.operationOwner = "tool-after";
-      clearAuthorizationTimer(authorization);
-      restoreAuthorizationArgs(authorization);
-      const priorOperation = authorization.operationPromise;
-      const afterOperation = (async () => {
-        if (priorOperation) await priorOperation.catch(() => {});
-        if (
-          authorization.resumed !== true &&
-          authorization.bound === true &&
-          authorization.titleRestored !== true
-        ) {
-          await updateChildTitle(
-            authorization.boundChildSessionID,
-            authorization.boundCleanTitle,
-          );
-          authorization.titleRestored = true;
-        }
-      })();
-      authorization.operationPromise = afterOperation;
-      try {
-        if (authorization.resumed !== true) {
-          if (isObject(input.args)) input.args.description = authorization.originalDescription;
-          if (isObject(output)) output.title = authorization.originalDescription;
-        }
-        await afterOperation;
-      } finally {
-        if (authorization.cleanupStarted !== true) {
-          finalizeAuthorization(input.sessionID, callID, authorization);
-        }
-      }
+      await authorizationStore.completeTask(input.sessionID, callID, input, output);
     },
 
     async event(input) {
@@ -881,46 +1048,14 @@ function createProfileRouter(options = {}) {
         ) {
           return;
         }
-        const marker = taskMarkerFromTitle(info.title, info.agent);
-        if (!marker) return;
-        const byCall = taskAuthorizations.get(info.parentID);
-        if (!byCall) return;
-        for (const [callID, authorization] of [...byCall.entries()]) {
-          authorizationExpired(info.parentID, callID, authorization);
-        }
-        const currentByCall = taskAuthorizations.get(info.parentID);
-        if (!currentByCall) return;
-        const state = sessions.get(info.parentID);
-        const currentAgent = currentAgents.get(info.parentID);
-        const created = historyTimestamp(info.time?.created ?? info.createdAt);
-        const matches = [...currentByCall.entries()].filter(
-          ([callID, authorization]) =>
-            authorization.resumed !== true &&
-            authorization.bound !== true &&
-            authorization.consumed !== true &&
-            authorization.cleanupStarted !== true &&
-            authorization.marker === marker &&
-            authorization.marker === taskAuthorizationMarker(callID) &&
-            authorization.markedTitle === info.title &&
-            authorization.expectedAgent === info.agent &&
-            state?.kind === "mapped" &&
-            state.profile === authorization.profile &&
-            currentAgent?.agent === "pilotfish" &&
-            currentAgent.active === true &&
-            (created === undefined || created >= authorization.createdAt),
-        );
-        if (matches.length !== 1) return;
-        const authorization = matches[0][1];
-        authorization.bound = true;
-        authorization.childSessionID = info.id;
-        authorization.boundChildSessionID = info.id;
-        authorization.boundCleanTitle = authorization.cleanTitle;
+        authorizationStore.bindCreatedChild(info);
         return;
       }
+
       if (event?.type !== "session.deleted") return;
       const sessionID = event.properties?.info?.id;
       if (typeof sessionID === "string") {
-        const cleanup = clearParentAuthorizations(sessionID);
+        const cleanup = authorizationStore.clearParent(sessionID);
         currentAgents.delete(sessionID);
         sessions.delete(sessionID);
         const recovery = pendingRecoveries.get(sessionID);
@@ -931,17 +1066,13 @@ function createProfileRouter(options = {}) {
     },
 
     async dispose() {
-      const cleanups = [];
-      for (const parentSessionID of [...taskAuthorizations.keys()]) {
-        cleanups.push(clearParentAuthorizations(parentSessionID));
-      }
+      const cleanup = authorizationStore.disposeAll();
       for (const recovery of pendingRecoveries.values()) recovery.cancelled = true;
       pendingRecoveries.clear();
       currentAgents.clear();
       sessions.clear();
-      await Promise.allSettled(cleanups);
+      await cleanup;
     },
-
   };
 }
 
