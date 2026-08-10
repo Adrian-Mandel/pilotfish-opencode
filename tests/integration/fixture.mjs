@@ -21,7 +21,37 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
+const REAL_CONFIG_DIR = join(homedir(), ".config/opencode");
 const REAL_AUTH = join(homedir(), ".local/share/opencode/auth.json");
+
+// Provider models are not built into OpenCode: ChatGPT and AntiGravity model
+// IDs are registered by auth plugins in the user's global config. A fixture
+// that isolates config therefore has no providers at all unless those plugins
+// and their account files come along, and every live run fails with
+// ProviderModelNotFoundError.
+function realProviderPlugins() {
+  for (const name of ["opencode.jsonc", "opencode.json", "config.json"]) {
+    const path = join(REAL_CONFIG_DIR, name);
+    if (!existsSync(path)) continue;
+    try {
+      const config = parseJsonc(readFileSync(path, "utf8"));
+      const plugins = Array.isArray(config.plugin) ? config.plugin : [];
+      return plugins.filter(
+        (entry) => typeof entry === "string" && !entry.includes("profile-router"),
+      );
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function copyProviderAccounts(configDir) {
+  for (const name of ["antigravity-accounts.json"]) {
+    const source = join(REAL_CONFIG_DIR, name);
+    if (existsSync(source)) symlinkSync(source, join(configDir, name));
+  }
+}
 
 // The templates are .jsonc; OpenCode accepts comments, JSON.parse does not.
 function parseJsonc(source) {
@@ -55,9 +85,12 @@ export function createFixture({ preset = "chatgpt", auth = true, plugin = true }
     readTemplate("templates/opencode.base.jsonc"),
     readTemplate(`templates/presets/${preset}.jsonc`),
   );
-  if (plugin) {
-    config.plugin = [["./pilotfish/profile-router.mjs", { preset }]];
-  }
+  // Provider auth plugins must load before the router so its models exist.
+  const providerPlugins = auth ? realProviderPlugins() : [];
+  config.plugin = [
+    ...providerPlugins,
+    ...(plugin ? [["./pilotfish/profile-router.mjs", { preset }]] : []),
+  ];
   writeFileSync(join(configDir, "opencode.json"), `${JSON.stringify(config, null, 2)}\n`);
 
   // Byte-identical runtime artifacts, exactly as the install runbook requires.
@@ -72,6 +105,7 @@ export function createFixture({ preset = "chatgpt", auth = true, plugin = true }
       );
     }
     symlinkSync(REAL_AUTH, join(dataHome, "opencode", "auth.json"));
+    copyProviderAccounts(configDir);
   }
 
   return { root, configHome, dataHome, configDir, project };
