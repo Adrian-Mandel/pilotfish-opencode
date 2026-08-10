@@ -95,7 +95,7 @@ The persisted public mapping remains the Opus row.
 | Pro | Pro/high | Flash/low | Flash/medium | Pro/high | Opus/max | Flash/low | Pro/high | Pro/high | Opus/low |
 | Flash | Flash/high | Flash/minimal | Flash/low | Pro/high | Opus/low | Flash/minimal | Flash/high | Pro/high | Pro/high |
 
-Opus, Pro, and Flash are `google/antigravity-claude-opus-4-6-thinking`, `google/antigravity-gemini-3.1-pro`, and `google/antigravity-gemini-3.6-flash`. Opus exposes only `low` and `max`, and Pro only `low` and `high`, so this preset's effort ladder is shorter than ChatGPT's.
+Opus, Pro, and Flash are `google/antigravity-claude-opus-4-6-thinking`, `google/antigravity-gemini-3.1-pro`, and `google/antigravity-gemini-3-flash`. Opus exposes only `low` and `max`, and Pro only `low` and `high`, so this preset's effort ladder is shorter than ChatGPT's.
 
 AntiGravity support targets the `google/antigravity-*` model IDs exposed by the user's existing OpenCode integration. Pilotfish does not install or configure that integration.
 

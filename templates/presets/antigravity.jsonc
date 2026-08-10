@@ -6,11 +6,11 @@
       "variant": "max"
     },
     "scout": {
-      "model": "google/antigravity-gemini-3.6-flash",
+      "model": "google/antigravity-gemini-3-flash",
       "variant": "low"
     },
     "Explore": {
-      "model": "google/antigravity-gemini-3.6-flash",
+      "model": "google/antigravity-gemini-3-flash",
       "variant": "medium"
     },
     "plan-verifier": {
@@ -22,7 +22,7 @@
       "variant": "max"
     },
     "mech-executor": {
-      "model": "google/antigravity-gemini-3.6-flash",
+      "model": "google/antigravity-gemini-3-flash",
       "variant": "low"
     },
     "executor": {

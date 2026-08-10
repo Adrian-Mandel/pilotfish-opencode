@@ -57,11 +57,11 @@
     "opus": {
       "primary": { "model": "google/antigravity-claude-opus-4-6-thinking", "variant": "max" },
       "workers": {
-        "scout": { "model": "google/antigravity-gemini-3.6-flash", "variant": "low" },
-        "Explore": { "model": "google/antigravity-gemini-3.6-flash", "variant": "medium" },
+        "scout": { "model": "google/antigravity-gemini-3-flash", "variant": "low" },
+        "Explore": { "model": "google/antigravity-gemini-3-flash", "variant": "medium" },
         "plan-verifier": { "model": "google/antigravity-claude-opus-4-6-thinking", "variant": "max" },
         "security-reviewer": { "model": "google/antigravity-claude-opus-4-6-thinking", "variant": "max" },
-        "mech-executor": { "model": "google/antigravity-gemini-3.6-flash", "variant": "low" },
+        "mech-executor": { "model": "google/antigravity-gemini-3-flash", "variant": "low" },
         "executor": { "model": "google/antigravity-gemini-3.1-pro", "variant": "high" },
         "verifier": { "model": "google/antigravity-claude-opus-4-6-thinking", "variant": "max" },
         "security-executor": { "model": "google/antigravity-claude-opus-4-6-thinking", "variant": "max" }
@@ -70,25 +70,25 @@
     "pro": {
       "primary": { "model": "google/antigravity-gemini-3.1-pro", "variant": "high" },
       "workers": {
-        "scout": { "model": "google/antigravity-gemini-3.6-flash", "variant": "low" },
-        "Explore": { "model": "google/antigravity-gemini-3.6-flash", "variant": "medium" },
+        "scout": { "model": "google/antigravity-gemini-3-flash", "variant": "low" },
+        "Explore": { "model": "google/antigravity-gemini-3-flash", "variant": "medium" },
         "plan-verifier": { "model": "google/antigravity-gemini-3.1-pro", "variant": "high" },
         "security-reviewer": { "model": "google/antigravity-claude-opus-4-6-thinking", "variant": "max" },
-        "mech-executor": { "model": "google/antigravity-gemini-3.6-flash", "variant": "low" },
+        "mech-executor": { "model": "google/antigravity-gemini-3-flash", "variant": "low" },
         "executor": { "model": "google/antigravity-gemini-3.1-pro", "variant": "high" },
         "verifier": { "model": "google/antigravity-gemini-3.1-pro", "variant": "high" },
         "security-executor": { "model": "google/antigravity-claude-opus-4-6-thinking", "variant": "low" }
       }
     },
     "flash": {
-      "primary": { "model": "google/antigravity-gemini-3.6-flash", "variant": "high" },
+      "primary": { "model": "google/antigravity-gemini-3-flash", "variant": "high" },
       "workers": {
-        "scout": { "model": "google/antigravity-gemini-3.6-flash", "variant": "minimal" },
-        "Explore": { "model": "google/antigravity-gemini-3.6-flash", "variant": "low" },
+        "scout": { "model": "google/antigravity-gemini-3-flash", "variant": "minimal" },
+        "Explore": { "model": "google/antigravity-gemini-3-flash", "variant": "low" },
         "plan-verifier": { "model": "google/antigravity-gemini-3.1-pro", "variant": "high" },
         "security-reviewer": { "model": "google/antigravity-claude-opus-4-6-thinking", "variant": "low" },
-        "mech-executor": { "model": "google/antigravity-gemini-3.6-flash", "variant": "minimal" },
-        "executor": { "model": "google/antigravity-gemini-3.6-flash", "variant": "high" },
+        "mech-executor": { "model": "google/antigravity-gemini-3-flash", "variant": "minimal" },
+        "executor": { "model": "google/antigravity-gemini-3-flash", "variant": "high" },
         "verifier": { "model": "google/antigravity-gemini-3.1-pro", "variant": "high" },
         "security-executor": { "model": "google/antigravity-gemini-3.1-pro", "variant": "high" }
       }

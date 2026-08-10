@@ -49,7 +49,9 @@ function realProviderPlugins() {
 function copyProviderAccounts(configDir) {
   for (const name of ["antigravity-accounts.json"]) {
     const source = join(REAL_CONFIG_DIR, name);
-    if (existsSync(source)) symlinkSync(source, join(configDir, name));
+    const target = join(configDir, name);
+    // inheritGlobal already copied it; do not shadow the copy with a link.
+    if (existsSync(source) && !existsSync(target)) symlinkSync(source, target);
   }
 }
 
@@ -71,7 +73,34 @@ function mergeAgents(base, preset) {
   return merged;
 }
 
-export function createFixture({ preset = "chatgpt", auth = true, plugin = true } = {}) {
+// Provider auth plugins only register their models inside a config directory
+// that already carries their installed dependencies and account state. For live
+// provider scenarios, clone the user's real global config and overlay Pilotfish
+// onto the copy; the real directory is never written to.
+function inheritGlobalConfig(configDir) {
+  cpSync(REAL_CONFIG_DIR, configDir, {
+    recursive: true,
+    // Backups and prior install state belong to the real installation only.
+    filter: (source) => !source.includes("/pilotfish/backups") && !source.endsWith("install-state.json"),
+  });
+  for (const name of ["opencode.jsonc", "opencode.json", "config.json"]) {
+    const path = join(REAL_CONFIG_DIR, name);
+    if (existsSync(path)) {
+      const config = parseJsonc(readFileSync(path, "utf8"));
+      // MCP servers would launch real external processes from a test run.
+      delete config.mcp;
+      return config;
+    }
+  }
+  return {};
+}
+
+export function createFixture({
+  preset = "chatgpt",
+  auth = true,
+  plugin = true,
+  inheritGlobal = false,
+} = {}) {
   const root = mkdtempSync(join(tmpdir(), "pilotfish-fixture-"));
   const configHome = join(root, "config");
   const dataHome = join(root, "data");
@@ -81,10 +110,16 @@ export function createFixture({ preset = "chatgpt", auth = true, plugin = true }
   mkdirSync(join(dataHome, "opencode"), { recursive: true });
   mkdirSync(project, { recursive: true });
 
-  const config = mergeAgents(
+  const inherited = inheritGlobal ? inheritGlobalConfig(configDir) : {};
+  const pilotfish = mergeAgents(
     readTemplate("templates/opencode.base.jsonc"),
     readTemplate(`templates/presets/${preset}.jsonc`),
   );
+  const config = {
+    ...inherited,
+    ...pilotfish,
+    agent: { ...(inherited.agent ?? {}), ...pilotfish.agent },
+  };
   // Provider auth plugins must load before the router so its models exist.
   const providerPlugins = auth ? realProviderPlugins() : [];
   config.plugin = [
@@ -92,6 +127,9 @@ export function createFixture({ preset = "chatgpt", auth = true, plugin = true }
     ...(plugin ? [["./pilotfish/profile-router.mjs", { preset }]] : []),
   ];
   writeFileSync(join(configDir, "opencode.json"), `${JSON.stringify(config, null, 2)}\n`);
+  for (const stale of ["opencode.jsonc", "config.json"]) {
+    rmSync(join(configDir, stale), { force: true });
+  }
 
   // Byte-identical runtime artifacts, exactly as the install runbook requires.
   cpSync(join(REPO_ROOT, "templates/pilotfish"), join(configDir, "pilotfish"), {
@@ -168,7 +206,11 @@ async function main() {
   if (command === "create") {
     const presetIndex = rest.indexOf("--preset");
     const preset = presetIndex >= 0 ? rest[presetIndex + 1] : "chatgpt";
-    const fixture = createFixture({ preset, auth: !rest.includes("--no-auth") });
+    const fixture = createFixture({
+      preset,
+      auth: !rest.includes("--no-auth"),
+      inheritGlobal: rest.includes("--inherit-global"),
+    });
     process.stdout.write(`${fixture.root}\n`);
     return;
   }

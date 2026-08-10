@@ -41,7 +41,7 @@ The AntiGravity preset requires:
 ```text
 google/antigravity-claude-opus-4-6-thinking
 google/antigravity-gemini-3.1-pro
-google/antigravity-gemini-3.6-flash
+google/antigravity-gemini-3-flash
 ```
 
 The installer will not modify provider authentication. It stops before writing if the version is older than `1.18.10`, cannot be identified, or a chosen preset's exact models and variants are unavailable.

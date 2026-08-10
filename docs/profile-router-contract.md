@@ -63,6 +63,7 @@ These are known, bounded, and must not be addressed by adding router complexity.
 - **Router state is process-local** apart from the recovered pin. Nothing else survives a restart by design.
 - **Module load and syntax errors precede factory protection.** Configuration JSON alone cannot prove enforcement, so plugin-loading smoke tests remain mandatory.
 - **No automatic model fallback.** OpenCode exposes one model per agent and no ordered fallback field.
+- **Listed is not entitled.** `opencode models --verbose` lists every model a provider plugin registers, including ones the account cannot call. `google/antigravity-gemini-3.5-flash` and `-3.6-flash` are listed but return provider `404` on this account, while `-3-flash` serves. Installer preflight checks presence and variants only; a profile's models must be exercised once against the real provider before it is approved.
 
 ## Threat model
 
