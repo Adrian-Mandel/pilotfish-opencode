@@ -40,6 +40,7 @@ The AntiGravity preset requires:
 
 ```text
 google/antigravity-claude-opus-4-6-thinking
+google/antigravity-claude-sonnet-4-6
 google/antigravity-gemini-3.1-pro
 google/antigravity-gemini-3-flash
 ```

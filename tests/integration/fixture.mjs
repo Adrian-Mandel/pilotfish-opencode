@@ -194,6 +194,10 @@ export function destroyFixture(fixture) {
   rmSync(fixture.root, { recursive: true, force: true });
 }
 
+// `opencode debug config` truncates its own stdout at 64 KiB. Template-only
+// fixtures stay under that, but an inheritGlobal fixture does not: use
+// `debug agent <name>` to inspect individual bindings there.
+
 // Router rejections surface as a generic error on stdout (host fact H10); the
 // exact reason is only in the logs.
 export function routerReason(result) {
@@ -228,7 +232,9 @@ async function main() {
     const result = await runOpencode(fixture, args);
     process.stdout.write(result.stdout);
     process.stderr.write(result.stderr);
-    process.exit(result.code ?? 1);
+    // process.exit() would discard pending writes and silently truncate large
+    // output such as `debug config` at the pipe buffer.
+    process.exitCode = result.code ?? 1;
   }
   if (command === "destroy") {
     destroyFixture({ root: rest[0] });

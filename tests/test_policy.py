@@ -254,7 +254,7 @@ class PolicyContractTests(unittest.TestCase):
                 "security-reviewer": ("google/antigravity-claude-opus-4-6-thinking", "max"),
                 "mech-executor": ("google/antigravity-gemini-3-flash", "low"),
                 "executor": ("google/antigravity-gemini-3.1-pro", "high"),
-                "verifier": ("google/antigravity-claude-opus-4-6-thinking", "max"),
+                "verifier": ("google/antigravity-claude-sonnet-4-6", None),
                 "security-executor": ("google/antigravity-claude-opus-4-6-thinking", "max"),
             },
             "pro": {

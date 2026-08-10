@@ -30,8 +30,7 @@
       "variant": "high"
     },
     "verifier": {
-      "model": "google/antigravity-claude-opus-4-6-thinking",
-      "variant": "max"
+      "model": "google/antigravity-claude-sonnet-4-6"
     },
     "security-executor": {
       "model": "google/antigravity-claude-opus-4-6-thinking",

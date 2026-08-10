@@ -91,11 +91,11 @@ The persisted public mapping remains the Opus row.
 
 | Primary profile | `pilotfish` | `scout` | `Explore` | `plan-verifier` | `security-reviewer` | `mech-executor` | `executor` | `verifier` | `security-executor` |
 |---|---|---|---|---|---|---|---|---|---|
-| Opus | Opus/max | Flash/low | Flash/medium | Opus/max | Opus/max | Flash/low | Pro/high | Opus/max | Opus/max |
+| Opus | Opus/max | Flash/low | Flash/medium | Opus/max | Opus/max | Flash/low | Pro/high | Sonnet | Opus/max |
 | Pro | Pro/high | Flash/low | Flash/medium | Pro/high | Opus/max | Flash/low | Pro/high | Pro/high | Opus/low |
 | Flash | Flash/high | Flash/minimal | Flash/low | Pro/high | Opus/low | Flash/minimal | Flash/high | Pro/high | Pro/high |
 
-Opus, Pro, and Flash are `google/antigravity-claude-opus-4-6-thinking`, `google/antigravity-gemini-3.1-pro`, and `google/antigravity-gemini-3-flash`. Opus exposes only `low` and `max`, and Pro only `low` and `high`, so this preset's effort ladder is shorter than ChatGPT's.
+Opus, Pro, Flash, and Sonnet are `google/antigravity-claude-opus-4-6-thinking`, `google/antigravity-gemini-3.1-pro`, `google/antigravity-gemini-3-flash`, and `google/antigravity-claude-sonnet-4-6`. Sonnet exposes no variant, so its roles run at the provider default; it is a separate quota bucket from Opus, which is why the Opus profile's verifier uses it. Opus exposes only `low` and `max`, and Pro only `low` and `high`, so this preset's effort ladder is shorter than ChatGPT's.
 
 AntiGravity support targets the `google/antigravity-*` model IDs exposed by the user's existing OpenCode integration. Pilotfish does not install or configure that integration.
 
