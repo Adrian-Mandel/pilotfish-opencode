@@ -16,6 +16,8 @@ OpenCode creates sessions, calls providers, and executes tools.
 
 The required config-relative plugin `./pilotfish/profile-router.mjs` loads its adjacent `profiles.json` from the global Pilotfish directory. The router is required. It does not launch models, create worktrees, provide model fallback, or replace OpenCode permissions.
 
+The router's owned guarantees, the OpenCode behaviors it depends on, its accepted risks, and its threat model are fixed in the [profile router contract](./profile-router-contract.md). That document, not this one, governs whether a proposed change is in scope.
+
 ## Three Concerns
 
 | Concern | OpenCode mechanism | Changes when |

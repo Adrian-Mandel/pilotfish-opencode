@@ -234,6 +234,7 @@ Uninstall restores or removes only the nine touched agent keys and exact owned p
 ## Design and Research
 
 - [Design rationale](./docs/design.md)
+- [Profile router contract and threat model](./docs/profile-router-contract.md)
 - [OpenCode research](./docs/research.md)
 - [Artifact-routing evaluation](./docs/artifact-routing-evaluation.md)
 - [Upstream sync workflow](./docs/upstream-sync.md)
