@@ -63,6 +63,8 @@ Your first action on the first turn of every new session must be to run `opencod
 The tested primary configurations are:
 
 - `openai/gpt-5.6-sol` with variant `high`
+- `openai/gpt-5.6-terra` with variant `high`
+- `openai/gpt-5.6-luna` with variant `max`
 - `google/antigravity-claude-opus-4-6-thinking` with variant `max`
 
-If the resolved definition has no explicit model, uses another model or variant, or cannot be inspected, output a short non-blocking warning before any other response content. This warning takes precedence over user-requested output formatting. Continue with the task unless the user asks you to stop. Do not inspect credentials or dump the complete OpenCode configuration.
+If the resolved definition has no explicit model or cannot be inspected, output a short non-blocking warning before any other response content. For another explicit model or variant, output a short non-blocking warning that it is not one of the tested configurations; do not label it as tested. This warning takes precedence over user-requested output formatting. Continue with the task unless the user asks you to stop. Do not inspect credentials or dump the complete OpenCode configuration.

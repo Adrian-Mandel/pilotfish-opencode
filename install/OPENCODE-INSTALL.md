@@ -1,18 +1,20 @@
 # Pilotfish OpenCode Install Runbook
 
-This document is written for an OpenCode agent installing Pilotfish on a user's machine. Follow the steps in order. Do not write anything before the approval gate, and never replace unrelated configuration.
+This document is written for an OpenCode agent installing Pilotfish on a user's machine. Follow the steps in order. Do not write anything before the approval gate, never print secrets, and never replace unrelated configuration.
 
 ## What This Installs
 
-Pilotfish is an opt-in, multi-model primary agent for OpenCode. It remains configuration and prompts only; it installs no runtime plugin.
+Pilotfish is an opt-in, multi-model primary agent for OpenCode. It installs one persisted public primary, eight persisted public workers, their prompts, and a required runtime profile router. OpenCode creates sessions, calls providers, and enforces tool permissions; the router only pins approved session profiles and redirects Tasks to runtime-only internal workers.
 
 | Target | Change |
 |---|---|
-| Highest-precedence global JSON/JSONC config | Merge one primary agent and eight worker definitions into `agent` |
+| Highest-precedence global JSON/JSONC config | Merge one primary agent and eight worker definitions into `agent`, and manage one exact plugin tuple |
 | `~/.config/opencode/pilotfish/prompts/` | Install the nine model-neutral role prompts |
-| `~/.config/opencode/pilotfish/install-state.json` | Record the selected preset and prior touched values for safe uninstall |
+| `~/.config/opencode/pilotfish/profile-router.mjs` | Copy the router runtime source byte-identically |
+| `~/.config/opencode/pilotfish/profiles.json` | Copy the canonical profile data byte-identically |
+| `~/.config/opencode/pilotfish/install-state.json` | Record selected preset, prior touched values, and installed runtime hashes for safe uninstall |
 
-Pilotfish does not change the user's global `model`, `small_model`, `default_agent`, providers, plugins, permissions, or credentials. The user selects the `pilotfish` primary when orchestration is wanted.
+Pilotfish never changes global `model`, `small_model`, `default_agent`, providers, unrelated plugins, permissions, or credentials. The user selects the `pilotfish` primary when orchestration is wanted. `installedAgents` contains only the nine persisted public definitions: ChatGPT's 24 hidden clones are runtime-only.
 
 The source of truth is:
 
@@ -20,18 +22,35 @@ The source of truth is:
 - `templates/presets/chatgpt.jsonc`
 - `templates/presets/antigravity.jsonc`
 - `templates/pilotfish/prompts/*.md`
+- `templates/pilotfish/profile-router.mjs`
+- `templates/pilotfish/profiles.json`
 
 When running from a local clone, read those files directly. Otherwise, fetch every file from the same Git ref as this runbook. Never mix a pinned runbook with templates from `main`.
+
+The required config-relative plugin tuple is exactly one of:
+
+```json
+["./pilotfish/profile-router.mjs", {"preset":"chatgpt"}]
+["./pilotfish/profile-router.mjs", {"preset":"antigravity"}]
+```
+
+The router is required. Usage telemetry tracked by [issue #11](https://github.com/Adrian-Mandel/pilotfish-opencode/issues/11) is optional and independent.
+
+OpenCode skips a plugin factory that throws. Catchable factory initialization errors, including an invalid or missing preset option, are therefore deferred through protective hooks that block Pilotfish and internal-agent use while leaving unrelated sessions unchanged. Module syntax or load failures occur before those hooks can be returned and are installation failures.
 
 ## Supported Presets
 
 ### ChatGPT
 
-Requires these exact OpenCode model IDs:
+Requires these exact OpenCode model IDs and the variants in `profiles.json`:
 
 - `openai/gpt-5.6-sol`
 - `openai/gpt-5.6-terra`
 - `openai/gpt-5.6-luna`
+
+The first Pilotfish message pins the selected Sol, Terra, or Luna primary profile for that session. Sol/high, Terra/high, and Luna/max are tested primary recommendations rather than router gates: the selected model chooses the worker profile, while UI-selected effort remains under user control. The public primary model and variant are never changed. All public workers and hidden clones are subagents. The router creates 24 hidden internal clones (eight worker roles for each profile), and redirects each public worker Task to the selected profile's clone. The profile pin persists across agent switches, but Task remapping is active only while Pilotfish is the current successfully resolved agent. New Tasks receive a transient SHA-256 call marker and start unbound; only an exact later `session.created` event binds the new child ID, title, parent, agent, and profile. Resumed Tasks validate and bind the exact `task_id`, parent, and internal agent without marker mutation. Every authorization independently expires after 30 seconds; consume, after-hook cleanup, parent deletion, and disposal clear timers. `session.update` restores the clean title before provider execution, and `tool.execute.after` restores mutable description/result values and clears authorization. OpenCode `1.18.10` may retain the digest in already-captured raw tool-input events; it contains no prompt or credential data. Direct, root, sibling, mismatched, expired, and replayed internal chat is rejected. The supported foreground order is before hook → `session.created` → child chat → after hook; event races and experimental background timing fail closed. A primary-model/profile switch in the same session is rejected; changing effort on the same model does not change the profile. Unsupported or cross-preset models fail before assistant/provider execution.
+
+Expiry, parent deletion, and plugin disposal revoke first, then await best-effort restoration when the exact bound child title is still marked, and always remove authorization in `finally`. If OpenCode's child lookup or title update fails, the marker may require manual child-title cleanup, but it cannot authorize execution. Resumed Tasks never require marker restoration.
 
 ### AntiGravity
 
@@ -42,13 +61,15 @@ Requires these exact OpenCode model IDs:
 - `google/antigravity-gemini-3-flash`
 - `google/antigravity-gemini-3.1-pro`
 
-The installer does not configure provider authentication. If a required model is unavailable, stop before the approval gate and direct the user to connect or repair that provider first.
+AntiGravity is validated passthrough: its public worker mappings must match `profiles.json`, it creates no clones, and Task arguments remain public role names.
+
+The installer does not configure provider authentication. If a required model or variant is unavailable, stop before the approval gate and direct the user to connect or repair that provider first.
 
 ## Updating an Existing Install
 
 An update is an idempotent re-run of this install runbook. Before Step 1:
 
-1. Read `~/.config/opencode/pilotfish/install-state.json` and detect the recorded installed version. If state is missing but Pilotfish entries or prompt files exist, treat the install as unmanaged and ask before adopting it; do not invent prior values for uninstall.
+1. Read `~/.config/opencode/pilotfish/install-state.json` and detect the recorded installed version. If state is missing but Pilotfish entries, runtime files, plugin entries, or prompt files exist, treat the install as unmanaged and ask before adopting it; do not invent prior values for uninstall.
 2. Read this checkout's `VERSION` and `CHANGELOG.md` from the same pinned ref as this runbook. Never compare state from one ref with templates or changelog data from another ref.
 3. If the recorded version equals `VERSION`, report that Pilotfish is up to date and stop. Do not ask for a preset, present a write plan, or write any file.
 4. Otherwise, show the relevant changelog entries and proceed through normal Steps 1–4. A version update is not a separate mutation path: unchanged content is skipped and the normal approval, backup, validation, rollback, and state-last rules still apply.
@@ -56,7 +77,9 @@ An update is an idempotent re-run of this install runbook. Before Step 1:
 6. Preserve every existing entry in `previousAgents` and `previousPrompts` from the first managed install. Never replace an existing entry during an update, or uninstall would restore the previous Pilotfish release instead of the true pre-install state. When a newer release introduces a required agent key or prompt filename that is absent from those maps, treat only that name as newly touched: after approval and before any write, append its exact current pre-update state using the same rules as a first install. Do not infer that state from `installedAgents` or from an older template.
 7. Confirm the recorded `configPath` is still the highest-precedence active global config. If a new higher layer now exists, stop and ask the user to consolidate or remove the conflict before updating; do not silently migrate lifecycle state between files.
 
-During preflight, compare each current target-file agent entry with both `installedAgents[name]` and the desired definition, and compare each managed prompt with its desired template. Do not claim that old prompt hashes exist; this state schema does not store them.
+For the `0.1.0` first-touch migration, retain existing `previousAgents` and `previousPrompts`, then add missing `previousPlugin` and `previousRuntimeFiles` entries from their exact current tuple/bytes before any write. The first-touch migration is required. Capture durable pre-install runtime backups; never infer state from installed values.
+
+During preflight, compare each current target-file agent entry with both `installedAgents[name]` and the desired definition, and compare each managed prompt with its desired template. Do not claim that old prompt hashes exist; this state schema does not store them. Compare runtime files using SHA-256 values from current, installed, and desired bytes.
 
 | Agent state | Action |
 |---|---|
@@ -75,9 +98,9 @@ Preserved custom agents remain the installed values: set their `installedAgents`
 
 ### 1. Verify the OpenCode Version
 
-Run `opencode --version` and parse its semantic version. Pilotfish requires OpenCode `1.17.18` or newer, the verified baseline for its agent schema and permission enforcement.
+Run `opencode --version` and parse its semantic version. Pilotfish requires OpenCode `1.18.10` or newer, the verified baseline for router hooks, agent schema, and permission enforcement.
 
-If the command is unavailable, the version cannot be parsed, or the version is older, stop before presenting a write plan or changing anything. Ask the user to update OpenCode; do not install a prompt-only approximation of denied tools or Task boundaries.
+If the command is unavailable, the version cannot be parsed, or the version is older, stop before presenting a write plan or changing anything. Ask the user to update OpenCode; do not install a prompt-only approximation of denied tools, Task boundaries, or runtime profile routing.
 
 ### 2. Locate the Global Config
 
@@ -94,11 +117,11 @@ The target file receives Pilotfish entries at the highest active global layer. L
 
 ### 3. Check Model Availability
 
-Run `opencode models` and compare the output with both supported preset requirement lists.
+Run `opencode models --verbose` and compare the output with both supported preset requirement lists, including every exact required model **and variant**.
 
 Report each preset as available or unavailable. Offer only available presets. Do not accept a guessed alias or silently substitute another model.
 
-### 4. Check Agent Collisions
+### 4. Check Agent and Plugin Collisions
 
 Inspect the resolved global `agent` object, each of the three global config files, and `~/.config/opencode/agents/` or singular `agent/` directories for these exact names:
 
@@ -118,11 +141,11 @@ For an inline config collision, show its source and ask whether to override it i
 
 For a Markdown agent collision, stop and ask the user to relocate or remove that file before rerunning the installer. An inline entry cannot reliably replace a later-loaded Markdown agent. Skipping a required Pilotfish role produces an incomplete installation and is not supported.
 
-Project-level agent definitions may override this global installation in individual repositories. Note that fact when relevant; never edit project configuration during a global install.
+Inspect the config `plugin` array and every entry whose first element is `./pilotfish/profile-router.mjs`. Preserve unrelated entries and their order. Same-specifier entries are collisions: record their exact tuple in `previousPlugin`, then replace only after approval. Project-level agent definitions may override this global installation in individual repositories. Note that fact when relevant; never edit project configuration during a global install.
 
 ### 5. Inspect Existing Pilotfish Files
 
-If `~/.config/opencode/pilotfish/` exists, list its files and compare them with the templates. Flag unknown or customized files. Never delete or overwrite unknown content silently.
+If `~/.config/opencode/pilotfish/` exists, list its files and compare them with the templates. Flag unknown or customized files. Hash `profile-router.mjs` and `profiles.json` with SHA-256. Never delete or overwrite unknown content silently.
 
 ## Step 2: Approval Gate
 
@@ -130,11 +153,12 @@ For a fresh install, ask the user to choose an available preset: `ChatGPT` or `A
 
 Show a table containing:
 
-- The selected preset.
+- The selected preset and exact approved profile table from `profiles.json`.
 - Every role's exact model and variant.
+- The exact required plugin tuple.
 - The global config path.
 - Every agent key to create or replace.
-- Every prompt file to create, replace, or preserve.
+- Every prompt and runtime file to create, replace, or preserve, with hashes.
 - Backup and install-state paths.
 - Any collisions or customizations.
 
@@ -144,7 +168,7 @@ Explain that OpenCode must be restarted after installation. Do not write anythin
 
 ### 1. Back Up Existing State
 
-Create `~/.config/opencode/pilotfish/backups/` if needed. Before changing the target config, copy it to a timestamped backup when it exists. Back up customized Pilotfish prompt files before replacing them. On update, also back up the existing `install-state.json` before any write.
+Create `~/.config/opencode/pilotfish/backups/` if needed. Before changing the target config, copy it to a timestamped backup when it exists. Back up customized Pilotfish prompt files and runtime files before replacing them. On update, also back up the existing `install-state.json` before any write.
 
 Backups are recovery aids, not the uninstall mechanism. Uninstall uses key-level state so changes made after installation are preserved.
 
@@ -164,37 +188,35 @@ On the first managed install, record the pre-install value of every touched agen
   },
   "previousPrompts": {
     "pilotfish.md": { "present": false },
-    "scout.md": {
-      "present": true,
-      "backupPath": "backups/preinstall-prompts/scout.md"
-    }
+    "scout.md": { "present": true, "backupPath": "backups/preinstall-prompts/scout.md" }
+  },
+  "previousPlugin": { "present": false },
+  "installedPlugin": ["./pilotfish/profile-router.mjs", {"preset":"chatgpt"}],
+  "previousRuntimeFiles": {
+    "profile-router.mjs": { "present": false },
+    "profiles.json": { "present": false }
+  },
+  "installedRuntimeFiles": {
+    "profile-router.mjs": "<SHA-256>",
+    "profiles.json": "<SHA-256>"
   },
   "installedAgents": {}
 }
 ```
 
-Include all nine agent keys and all nine prompt filenames. For a present agent key, `value` must contain its complete pre-install target-file object. For a present prompt, copy its exact pre-install bytes to a durable path under `backups/preinstall-prompts/` and record that relative `backupPath`. `installedAgents` must contain the complete merged Pilotfish definitions actually written, including the selected model and variant.
+Include all nine agent keys and all nine prompt filenames. For a present agent key, `value` must contain its complete pre-install target-file object. For a present prompt or runtime file, copy its exact pre-install bytes to a durable path under `backups/preinstall-prompts/` or `backups/preinstall-runtime/` and record that relative `backupPath`. `installedAgents` must contain the complete merged Pilotfish public definitions actually written, including the selected model and variant.
 
-Replace `<VERSION>` with the exact contents of the repository `VERSION` file.
-Replace `<CONFIG_PATH>` with the exact target file selected during preflight.
+Replace `<VERSION>` with the exact contents of the repository `VERSION` file. Replace `<CONFIG_PATH>` with the exact target file selected during preflight. Do not store provider credentials, unrelated config, or resolved environment values in this file.
 
-Do not store provider credentials, unrelated config, or resolved environment values in this file.
+On update, preserve `configPath`, `configExisted`, and every existing entry in `previousAgents`, `previousPrompts`, `previousPlugin`, and `previousRuntimeFiles`. After approval and before changing config or prompts, extend the maps (and plugin/runtime ownership maps) with exact current values and durable backups. If any required current value or backup cannot be captured, stop without writing anything. Prepare the extended maps plus updated `version`, `preset`, `installedPlugin`, `installedRuntimeFiles`, and `installedAgents` in memory. Do not overwrite `install-state.json` until post-install validation succeeds.
 
-On update, preserve `configPath`, `configExisted`, and every existing entry in `previousAgents` and `previousPrompts`. After approval and before changing config or prompts, extend the maps for every newly introduced required name that is absent:
+### 3. Install Prompts and Runtime Files
 
-- For an absent agent-map entry, record whether that key is currently present in the target config and, when present, its complete current value.
-- For an absent prompt-map entry, record whether that prompt currently exists and, when present, copy its exact bytes to a new durable path under `backups/preinstall-prompts/` before recording the path.
-- If any required current value or prompt backup cannot be captured, stop without writing anything.
+Create `~/.config/opencode/pilotfish/prompts/` and write the nine files from `templates/pilotfish/prompts/` with identical filenames and content only when the approved plan requires it. Copy `profile-router.mjs` and `profiles.json` byte-identically from the same checkout and record their SHA-256 hashes.
 
-Prepare the extended maps plus updated `version`, `preset`, and `installedAgents` in memory. Do not overwrite `install-state.json` until post-install validation succeeds. This first-touch migration is required when upgrading a seven-agent `0.0.1` state to the nine-agent `0.1.0` graph; otherwise uninstall could not restore a pre-existing `plan-verifier` or `security-reviewer` definition.
+Skip an identical installed file. If an installed file differs, show the diff or hash comparison and follow the user's approved preserve-or-replace decision. A preserved custom prompt remains the installed prompt and must be called out in the final summary.
 
-### 3. Install Prompts
-
-Create `~/.config/opencode/pilotfish/prompts/` and write the nine files from `templates/pilotfish/prompts/` with identical filenames and content only when the approved plan requires it.
-
-Skip an identical installed file. If an installed file differs, show the diff and follow the user's approved preserve-or-replace decision. A preserved custom prompt remains the installed prompt and must be called out in the final summary.
-
-### 4. Merge Agent Configuration
+### 4. Merge Agent Configuration and Plugin
 
 Start with the nine definitions from `templates/opencode.base.jsonc`. Recursively merge the selected preset's matching `agent` entries so each role gains its model and optional variant.
 
@@ -212,24 +234,25 @@ Prompt references stay relative to the global config:
 {file:./pilotfish/prompts/<role>.md}
 ```
 
-If the config did not exist, create the minimal config containing `$schema` and the nine merged agent entries.
+Replace or append only the approved same-specifier plugin tuple; append it when absent. Preserve all unrelated plugin entries and their order. If the config did not exist, create the minimal config containing `$schema`, the nine merged agent entries, and the required plugin tuple.
 
 ## Step 4: Verify and Hand Off
 
 Run all of these checks with `OPENCODE_DISABLE_PROJECT_CONFIG=1` from a neutral directory so project config cannot override the global installation:
 
-1. `opencode debug config` succeeds.
+1. `opencode debug config` succeeds and proves the required plugin loads.
 2. `opencode debug agent pilotfish` reports `mode: primary`, the selected primary model and variant, and Task access to the eight Pilotfish worker roles.
 3. Inspect all eight workers with `opencode debug agent <name>`.
 4. Confirm `scout`, `Explore`, `plan-verifier`, and `security-reviewer` cannot use edit, bash, or Task tools; only `security-reviewer` may use `webfetch`.
 5. Confirm the three executors cannot use Task, and `security-executor` requires an approved stable contract in its prompt.
 6. Confirm `verifier` cannot use edit or Task but can use bash and read tools; confirm its verdict vocabulary differs from `plan-verifier`.
-7. Confirm the global `model` and `default_agent` values are unchanged.
-8. Confirm the prepared install state contains no credentials or unrelated config.
+7. Exercise router validation: ChatGPT creates exactly 24 hidden internal worker clones with `profiles.json` mappings and preserves the public primary model/variant; confirm all public workers and hidden clones are subagents, direct internal identities reaching chat or Task hooks are rejected, CLI `--agent` selection does not execute a hidden clone even if OpenCode falls back to its default primary, and Pilotfish-to-Build deactivates Task remapping without deleting the pin while a validated same-model switch back reactivates it. For a new foreground Task, prove before adds a unique marker but leaves authorization unbound, only a matching later `session.created` event binds the exact new child ID, and child chat racing that event fails closed. Prove the bound child title is restored before provider execution and after restores mutable args/result values and clears authorization. Accept that OpenCode may retain the digest in raw tool-input history, and verify it contains no prompt or credential data. Prove two concurrent same-role Tasks bind their own children, a pre-existing sibling retitled to a marker cannot steal authorization, and a failed bound Task with no after hook becomes unusable after the 30-second expiry while cleanup restores its marked title. Force that update to fail and prove authorization is still revoked without an unhandled rejection; also exercise expiry races with child chat and after. For resume, prove only the exact suitable `task_id` is accepted without description mutation. Confirm parent deletion and plugin disposal clear timers and restore any still-marked bound child title. Confirm an invalid preset returns protective hooks that block raw/resolved Pilotfish chat and internal Task targets without mutating config; AntiGravity validates its canonical public mappings, creates no clones, and passes Tasks through. Do not substitute an experimental background Task for this foreground sequence.
+8. Confirm a primary/profile switch in one session is rejected and unsupported or cross-preset primary models fail before assistant/provider execution. Check `--print-logs` for the exact router reason because OpenCode `1.18.10` may expose only `Unexpected server error` on its standard JSON surface. Restart OpenCode, resume that same session with a different primary model, and confirm persisted-history recovery rejects it before assistant/provider execution.
+9. Confirm the global `model` and `default_agent` values are unchanged and the prepared install state contains no credentials or unrelated config.
 
-If validation fails, restore the target config backup, prompts, and previous install state; remove newly created files, report the exact failure, and stop. Never leave OpenCode with an invalid global config or mismatched lifecycle state.
+If validation fails, restore the target config and plugin entry, prompts, runtime files, and previous install state; remove newly created files, report the exact failure, and stop. Never leave OpenCode with an invalid global config or mismatched lifecycle state.
 
-After every check succeeds, write `install-state.json` as the final installation step. Its `installedAgents` values must match the validated target config, including every preserved custom agent value. If writing state fails, roll back the config and prompts. On update, restore the previous state backup; on first install, remove any partial state file. Never leave an unmanaged or mismatched installation.
+After every check succeeds, write `install-state.json` as the final installation step. Write `install-state.json` last. Its `installedAgents` values must match the validated target config, including every preserved custom agent value. If writing state fails, roll back the config and prompts, plus the plugin entry and runtime files. On update, restore the previous state backup; on first install, remove any partial state file. Never leave an unmanaged or mismatched installation.
 
 Tell the user to quit and restart OpenCode. After restart, `pilotfish` should be available as a primary agent through the normal agent switcher. It is opt-in and does not replace Build or Plan.
 
@@ -241,30 +264,31 @@ Reverse this installation in phases. Never replace the entire config with a back
 
 ### Phase 1: Inspect and classify (read-only)
 
-1. Read `previousAgents`, `previousPrompts`, and `installedAgents` from `install-state.json`; inspect the target config, all three global config layers, both global Markdown-agent directories, and managed prompts.
+1. Read `previousAgents`, `previousPrompts`, `installedAgents`, `previousPlugin`, `installedPlugin`, `previousRuntimeFiles`, and `installedRuntimeFiles` from `install-state.json`; inspect the target config, all three global config layers, both global Markdown-agent directories, managed prompts, plugin entry, and runtime files.
 2. For each of the nine touched agent keys, compare the current target-file entry with `installedAgents`; classify any difference as a customization. For each managed prompt, compare its current bytes with this checkout's template. Because state stores no installed prompt hashes, classify a difference only as potentially customized; show its diff and ask before acting.
-3. If a higher-precedence file or Markdown agent added after installation defines a Pilotfish name, stop and show the dependency. Require the user to remove, relocate, or explicitly handle it before agent references or prompts can be removed.
-4. If state is missing, offer a conservative manual-removal plan limited to explicitly selected current Pilotfish entries and prompts. Say plainly that overwritten pre-install values cannot be reconstructed without state; do not infer them.
+3. Compare the exact same-specifier plugin tuple and runtime SHA-256 values against installed state. Preserve unrelated or later plugin entries and runtime changes; show differences and require an approved restore/remove decision.
+4. If a higher-precedence file or Markdown agent added after installation defines a Pilotfish name, stop and show the dependency. Require the user to remove, relocate, or explicitly handle it before agent references or prompts can be removed.
+5. If state is missing, offer a conservative manual-removal plan limited to explicitly selected current Pilotfish entries and prompts. Say plainly that overwritten pre-install values cannot be reconstructed without state; do not infer them.
 
 ### Phase 2: Present one restoration plan and get approval
 
-Show one exact plan for all nine agent keys and all managed prompts: restore the recorded value or remove an entry recorded as absent. Show diffs for every customized agent or potentially customized prompt and ask for approval of the corresponding restore/remove action. A customized agent must still be restored or removed, or uninstall must abort; do not preserve a Pilotfish agent while deleting the prompt it references. Do not write anything until the user approves this plan.
+Show one exact plan for all nine agent keys, all managed prompts, the plugin tuple, and runtime files: restore the recorded value or remove an entry/file recorded as absent. Show diffs for every customized agent, potentially customized prompt, plugin entry, or runtime file and ask for approval of the corresponding restore/remove action. A customized agent must still be restored or removed, or uninstall must abort; do not preserve a Pilotfish agent while deleting the prompt it references. Do not write anything until the user approves this plan.
 
 ### Phase 3: Back up before writes
 
-Back up the current target config, managed prompts, and `install-state.json` to timestamped backup paths. Keep these backups after a successful uninstall.
+Back up the current target config, managed prompts, runtime files, plugin state, and `install-state.json` to timestamped backup paths. Keep these backups after a successful uninstall.
 
-### Phase 4: Restore or remove agents
+### Phase 4: Restore or remove agents and plugin
 
-Restore or remove only the nine touched agent keys in the target file. When `previousAgents[name].present` is true, restore its complete recorded target-file value; when false, remove that key so a lower-layer value can reappear naturally. Preserve all unrelated config keys and agents.
+Restore or remove only the nine touched agent keys in the target file. When `previousAgents[name].present` is true, restore its complete recorded target-file value; when false, remove that key so a lower-layer value can reappear naturally. Restore or remove the exact owned plugin tuple while preserving unrelated config keys, agents, plugin entries, and plugin order. Remove the config reference **before** deleting runtime files.
 
-### Phase 5: Restore or remove prompts
+### Phase 5: Restore or remove prompts and runtime files
 
-Only after agent references are gone, restore prompts recorded as present in `previousPrompts` from their durable pre-install backups or remove prompts recorded as absent. For a potentially customized prompt, apply only the approved restore/remove decision after showing its diff.
+Only after agent references are gone, restore prompts recorded as present in `previousPrompts` from their durable pre-install backups or remove prompts recorded as absent. For a potentially customized prompt, apply only the approved restore/remove decision after showing its diff. Restore byte-identical runtime files from durable backups when previously present; otherwise remove only files whose current hash is the installed hash.
 
 ### Phase 6: Validate, roll back, and clean up
 
-Run `OPENCODE_DISABLE_PROJECT_CONFIG=1 opencode debug config` from a neutral directory. If validation fails, restore the config, prompts, and install state from the uninstall backups and stop. Only after validation succeeds, remove `install-state.json` and any now-empty Pilotfish directories; keep backups. Never auto-delete the global config, even if only its schema declaration remains. Tell the user to restart OpenCode.
+Run `OPENCODE_DISABLE_PROJECT_CONFIG=1 opencode debug config` from a neutral directory. If validation fails, restore the config, plugin entry, runtime files, prompts, and install state from the uninstall backups and stop. Only after validation succeeds, remove `install-state.json` and any now-empty Pilotfish directories; keep backups. Never auto-delete the global config, even if only its schema declaration remains. Tell the user to restart OpenCode.
 
 ## Known OpenCode Limitations
 
@@ -273,4 +297,4 @@ Run `OPENCODE_DISABLE_PROJECT_CONFIG=1 opencode debug config` from a neutral dir
 - Pilotfish therefore serializes writing workers and does not promise automatic model failover.
 - Background subagents and worktree APIs exist experimentally in OpenCode but are not Phase 1 dependencies.
 
-These limitations are documented behavior, not installer errors. Pilotfish remains configuration and instructions rather than adding a runtime orchestration plugin.
+These limitations are documented behavior, not installer errors. The required router is a narrow OpenCode runtime adapter, not a provider gateway or replacement session/tool host.

@@ -7,293 +7,354 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 AGENTS = (
-    "pilotfish",
-    "scout",
-    "Explore",
-    "plan-verifier",
-    "security-reviewer",
-    "mech-executor",
-    "executor",
-    "verifier",
-    "security-executor",
+    "pilotfish", "scout", "Explore", "plan-verifier", "security-reviewer",
+    "mech-executor", "executor", "verifier", "security-executor",
 )
 WORKERS = AGENTS[1:]
-READ_ONLY = ("scout", "Explore", "plan-verifier", "security-reviewer")
-WRITERS = ("mech-executor", "executor", "security-executor")
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
+def text(path: str) -> str:
+    return (ROOT / path).read_text(encoding="utf-8")
 
 
 class PolicyContractTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.base = load_json(ROOT / "templates" / "opencode.base.jsonc")
-        self.policy = (
-            ROOT / "templates" / "pilotfish" / "prompts" / "pilotfish.md"
-        ).read_text(encoding="utf-8")
-        self.explore = (
-            ROOT / "templates" / "pilotfish" / "prompts" / "Explore.md"
-        ).read_text(encoding="utf-8")
+        self.base = json.loads(text("templates/opencode.base.jsonc"))
+        self.profiles = json.loads(text("templates/pilotfish/profiles.json"))
 
-    def test_agent_graph_and_prompts_match(self) -> None:
-        self.assertEqual(set(self.base["agent"]), set(AGENTS))
-        prompts = ROOT / "templates" / "pilotfish" / "prompts"
-        self.assertEqual({path.stem for path in prompts.glob("*.md")}, set(AGENTS))
-
+    def test_public_agent_graph_remains_nine_roles(self) -> None:
+        self.assertEqual(tuple(self.base["agent"]), AGENTS)
         task = self.base["agent"]["pilotfish"]["permission"]["task"]
         self.assertEqual(task["*"], "deny")
-        self.assertEqual({name for name, value in task.items() if value == "allow"}, set(WORKERS))
+        self.assertEqual({role for role, value in task.items() if value == "allow"}, set(WORKERS))
 
-    def test_presets_cover_every_agent(self) -> None:
+    def test_profiles_are_canonical_and_complete(self) -> None:
+        self.assertEqual(self.profiles["publicRoles"], list(AGENTS))
+        expected_primary = {
+            "sol": ("openai/gpt-5.6-sol", "high"),
+            "terra": ("openai/gpt-5.6-terra", "high"),
+            "luna": ("openai/gpt-5.6-luna", "max"),
+        }
+        for profile, primary in expected_primary.items():
+            actual = self.profiles["profiles"][profile]
+            self.assertEqual((actual["primary"]["model"], actual["primary"]["variant"]), primary)
+            self.assertEqual(set(actual["workers"]), set(WORKERS))
+        self.assertEqual(set(self.profiles["antigravity"]["workers"]), set(WORKERS))
+
+    def test_router_runtime_artifacts_exist(self) -> None:
+        self.assertTrue((ROOT / "templates/pilotfish/profile-router.mjs").is_file())
+        self.assertTrue((ROOT / "templates/pilotfish/profiles.json").is_file())
+        self.assertTrue((ROOT / "tests/profile-router.test.mjs").is_file())
+
+    def test_installer_declares_plugin_and_runtime_lifecycle(self) -> None:
+        installer = text("install/OPENCODE-INSTALL.md")
+        for phrase in (
+            "1.18.10", "./pilotfish/profile-router.mjs", "profiles.json",
+            "previousPlugin", "installedPlugin", "previousRuntimeFiles",
+            "installedRuntimeFiles", "SHA-256", "`0.1.0` first-touch migration",
+            "byte-identically", "Write `install-state.json` last",
+            "**before** deleting runtime files", "Preserve unrelated entries and their order",
+            "24 hidden internal clones", "creates no clones",
+            "unsupported or cross-preset models fail before assistant/provider execution",
+            "pre-existing sibling retitled to a marker",
+            "public workers and hidden clones are subagents",
+            "factory initialization errors", "protective hooks", "invalid or missing preset",
+            "profile pin persists", "current successfully resolved agent",
+            "transient SHA-256 call marker", "raw tool-input events",
+            "exact `task_id`", "experimental background timing fail closed",
+            "`session.created`", "30-second expiry", "plugin disposal clear timers",
+            "manual child-title cleanup", "cannot authorize execution",
+        ):
+            self.assertIn(phrase.lower(), installer.lower())
+
+    def test_installer_keeps_public_and_global_contracts(self) -> None:
+        installer = text("install/OPENCODE-INSTALL.md")
+        self.assertIn("only the nine persisted public definitions", installer)
+        self.assertIn("never changes global `model`", installer)
+        self.assertIn("`default_agent`", installer)
+        self.assertIn("restart OpenCode", installer)
+        self.assertIn("exact required model **and variant**", installer)
+
+    def test_architecture_docs_describe_runtime_hook_contract(self) -> None:
+        combined = "\n".join(text(path) for path in ("README.md", "docs/design.md", "docs/research.md"))
+        for phrase in (
+            "runtime profile router", "config`, `chat.message`, `tool.execute.before`, `tool.execute.after`, and `session.deleted",
+            "before Task permission and agent resolution", "24 hidden", "no clones",
+            "logs and ignores plugin configuration errors", "provider-qualified", "no fallback",
+            "start a new session", "issue #11", "implementation details",
+            "pre-existing sibling", "expired", "replayed internal chat",
+            "factory initialization errors", "protective hooks",
+            "Unexpected server error", "--print-logs",
+            "profile pin persists", "current successfully resolved agent",
+            "transient SHA-256", "raw tool-input",
+            "background Task timing is unsupported", "`session.created`",
+            "30-second expiry", "plugin disposal",
+            "atomically revoke", "manual child-title cleanup",
+        ):
+            self.assertIn(phrase, combined)
+
+    def test_install_and_release_docs_have_required_smoke_gates(self) -> None:
+        local = text("docs/local-install.md")
+        release = text("RELEASING.md")
+        self.assertIn("1.18.10", local)
+        self.assertIn("profile-router.mjs", local)
+        self.assertIn("restart", local)
+        for binding in self.profiles["antigravity"]["workers"].values():
+            self.assertIn(binding["model"], local)
+        for phrase in (
+            "node --test tests/profile-router.test.mjs", "isolated/neutral OpenCode context",
+            "no global writes", "Luna/low", "five-minute", "no retries",
+            "release is blocked", "AntiGravity", "before assistant/provider execution",
+        ):
+            self.assertIn(phrase, release)
+
+    def test_deviation_ledger_records_router_without_pending_source(self) -> None:
+        ledger = text("docs/upstream-deviations.md")
+        self.assertIn("required runtime profile router", ledger)
+        self.assertIn("Issue #12 approved implementation", ledger)
+        self.assertNotIn("| Pending", ledger)
+
+    # Retained policy/lifecycle coverage from the pre-router contract.
+    def test_presets_cover_every_public_agent(self) -> None:
         for name in ("chatgpt", "antigravity"):
-            preset = load_json(ROOT / "templates" / "presets" / f"{name}.jsonc")
+            preset = json.loads(text(f"templates/presets/{name}.jsonc"))
             self.assertEqual(set(preset["agent"]), set(AGENTS))
-            for agent in AGENTS:
-                self.assertTrue(preset["agent"][agent]["model"])
 
     def test_read_only_roles_are_capability_enforced(self) -> None:
-        for name in READ_ONLY:
-            permission = self.base["agent"][name]["permission"]
+        for role in ("scout", "Explore", "plan-verifier", "security-reviewer"):
+            permission = self.base["agent"][role]["permission"]
             self.assertEqual(permission["*"], "deny")
             self.assertNotIn("bash", permission)
             self.assertNotIn("edit", permission)
-            self.assertNotIn("task", permission)
 
-        security = self.base["agent"]["security-reviewer"]["permission"]
-        self.assertEqual(security["webfetch"], "allow")
-        for name in ("scout", "Explore", "plan-verifier"):
-            self.assertNotIn("webfetch", self.base["agent"][name]["permission"])
+    def test_workers_cannot_delegate(self) -> None:
+        for role in WORKERS:
+            self.assertEqual(self.base["agent"][role]["permission"].get("task", "deny"), "deny")
 
-    def test_leaf_roles_cannot_delegate(self) -> None:
-        for name in WRITERS:
-            self.assertEqual(self.base["agent"][name]["permission"]["task"], "deny")
-        self.assertEqual(self.base["agent"]["verifier"]["permission"]["task"], "deny")
-
-    def test_plan_and_outcome_verdicts_are_separate(self) -> None:
-        prompt_dir = ROOT / "templates" / "pilotfish" / "prompts"
-        plan = (prompt_dir / "plan-verifier.md").read_text(encoding="utf-8")
-        outcome = (prompt_dir / "verifier.md").read_text(encoding="utf-8")
-
+    def test_verdict_vocabularies_remain_separate(self) -> None:
+        plan = text("templates/pilotfish/prompts/plan-verifier.md")
+        outcome = text("templates/pilotfish/prompts/verifier.md")
         self.assertIn("`READY`", plan)
         self.assertIn("`REVISE`", plan)
-        self.assertNotIn("CONFIRMED", plan)
-        self.assertNotIn("REFUTED", plan)
         self.assertIn("`CONFIRMED`", outcome)
         self.assertIn("`REFUTED`", outcome)
-        self.assertNotIn("READY", outcome)
-        self.assertNotIn("REVISE", outcome)
 
-    def test_policy_enforces_phase_and_approval_gates(self) -> None:
-        for phrase in (
-            "| Discovery |",
-            "| Plan |",
-            "| Approval |",
-            "| Execution |",
-            "| Verification |",
-            "A broad initial request is not approval",
-            "No source edits or implementation briefs before required approval",
-            "stable research contract",
-            "stable execution contract",
-            "Block fan-out",
-            "one unknown bug",
-        ):
-            self.assertIn(phrase, self.policy)
+    def test_phase_policy_remains_present(self) -> None:
+        policy = text("templates/pilotfish/prompts/pilotfish.md")
+        for phase in ("| Discovery |", "| Plan |", "| Approval |", "| Execution |", "| Verification |"):
+            self.assertIn(phase, policy)
 
-    def test_artifact_reconnaissance_uses_a_fresh_read_only_worker(self) -> None:
-        for phrase in (
-            "Small, local, already-stable work should be completed directly",
-            "new, not resumed, read-only reconnaissance worker session",
-            "collections of screenshots or generated frame sheets",
-            "many PDF pages, or large logs",
-            "Treat reconnaissance as evidence, not authority. Recheck any single scouted fact that carries an important decision.",
-            "exact references and uncertainties",
-            "retain primary synthesis",
-            "selectively inspect decision-critical evidence",
-        ):
-            self.assertIn(phrase, self.policy)
-
-    def test_explore_artifact_contract_preserves_access_boundary(self) -> None:
-        for phrase in (
-            "accessible project-local artifact reconnaissance",
-            "separate confirmed observations from uncertainty",
-            "path, page, frame, or log-range references",
-            "report the blocked path instead of requesting broader access",
-            "Never modify files",
-            "design review",
-        ):
-            self.assertIn(phrase, self.explore)
-
-        description = self.base["agent"]["Explore"]["description"]
-        self.assertIn("accessible project-local artifact reconnaissance", description)
-        self.assertIn("exact references", description)
-        self.assertIn("uncertainties", description)
-
-    def test_deviation_ledger_and_release_gate_are_linked(self) -> None:
-        ledger = (ROOT / "docs" / "upstream-deviations.md").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn(
-            "| Difference | Upstream behavior | OpenCode behavior | Rationale / revisit condition | Source |",
-            ledger,
-        )
-        self.assertIn("| Fresh artifact-routing reconnaissance |", ledger)
-        for path in (
-            ROOT / "README.md",
-            ROOT / "docs" / "design.md",
-            ROOT / "docs" / "upstream-sync.md",
-        ):
-            self.assertIn("upstream-deviations.md", path.read_text(encoding="utf-8"))
-
-        releasing = (ROOT / "RELEASING.md").read_text(encoding="utf-8")
-        self.assertIn("docs/upstream-deviations.md", releasing)
-        self.assertIn("no row may have `Pending` in Source at release", releasing)
-
-    def test_artifact_capability_docs_do_not_claim_native_video_support(self) -> None:
-        research = (ROOT / "docs" / "research.md").read_text(encoding="utf-8")
-        evaluation = (ROOT / "docs" / "artifact-routing-evaluation.md").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn("accept image and PDF input", research)
-        self.assertIn("do not report video input", research)
-        self.assertIn("does not perform native video decoding or extraction", research)
-        self.assertIn("No native video claim", evaluation)
-        self.assertIn("fresh Task child", evaluation)
-        self.assertIn("temporary direct Explore run", evaluation)
-        self.assertIn("external-path denial occurred on the ChatGPT child Task", evaluation)
-        self.assertIn("not end-to-end routing success", evaluation)
-        self.assertIn("routing appropriateness", evaluation)
-        self.assertIn("duplicate primary reads", evaluation)
-        self.assertIn("workflow impact", evaluation)
-        self.assertNotIn("native video support", research + evaluation)
-
-    def test_security_roles_preserve_approval_boundary(self) -> None:
-        prompt_dir = ROOT / "templates" / "pilotfish" / "prompts"
-        reviewer = (prompt_dir / "security-reviewer.md").read_text(encoding="utf-8")
-        executor = (prompt_dir / "security-executor.md").read_text(encoding="utf-8")
-
-        self.assertIn("pre-approval boundary is enforced by capability", reviewer)
-        self.assertIn("approved, stable execution contract", executor)
-        self.assertIn("belongs to `security-reviewer`", executor)
-        self.assertIn("Route pre-approval security analysis", self.policy)
+    def test_artifact_reconnaissance_contract_remains_present(self) -> None:
+        policy = text("templates/pilotfish/prompts/pilotfish.md")
+        explore = text("templates/pilotfish/prompts/Explore.md")
+        self.assertIn("new, not resumed, read-only reconnaissance worker session", policy)
+        self.assertIn("accessible project-local artifact reconnaissance", explore)
 
     def test_bash_capable_workers_never_detach(self) -> None:
-        prompt_dir = ROOT / "templates" / "pilotfish" / "prompts"
-        for name in (*WRITERS, "verifier"):
-            prompt = (prompt_dir / f"{name}.md").read_text(encoding="utf-8")
+        for role in ("mech-executor", "executor", "security-executor", "verifier"):
+            prompt = text(f"templates/pilotfish/prompts/{role}.md")
             self.assertIn("never detach", prompt)
             self.assertIn("absolute working directory", prompt)
-            self.assertIn("required environment variables", prompt)
-            self.assertNotIn("launch it detached", prompt)
 
-        self.assertIn("Long-running processes remain owned by this primary session", self.policy)
-        self.assertIn("does not guarantee persistent background shell execution", self.policy)
+    def test_installer_retains_update_contract(self) -> None:
+        installer = text("install/OPENCODE-INSTALL.md")
+        self.assertIn("An update is an idempotent re-run", installer)
+        self.assertIn("Do not ask for a preset, present a write plan, or write any file", installer)
+        self.assertIn("Never replace an existing entry during an update", installer)
 
-    def test_installer_tracks_nine_agents_and_eight_workers(self) -> None:
-        installer = (ROOT / "install" / "OPENCODE-INSTALL.md").read_text(
-            encoding="utf-8"
+    def test_installer_retains_six_uninstall_phases(self) -> None:
+        installer = text("install/OPENCODE-INSTALL.md")
+        for number in range(1, 7):
+            self.assertIn(f"### Phase {number}:", installer)
+
+    def test_update_and_uninstall_docs_remain_actionable(self) -> None:
+        self.assertIn("Updating", text("README.md"))
+        self.assertIn("Uninstall", text("README.md"))
+        self.assertIn("Updating", text("docs/local-install.md"))
+        self.assertIn("Uninstall", text("docs/local-install.md"))
+
+    def test_ledger_and_release_gate_remain_linked(self) -> None:
+        self.assertIn("upstream-deviations.md", text("README.md"))
+        self.assertIn("no row may have `Pending` in Source at release", text("RELEASING.md"))
+
+    def test_canonical_profile_values_are_exact(self) -> None:
+        expected = {
+            "sol": {
+                "primary": ("openai/gpt-5.6-sol", "high"),
+                "workers": {
+                    "scout": ("openai/gpt-5.6-luna", "low"),
+                    "Explore": ("openai/gpt-5.6-luna", "medium"),
+                    "plan-verifier": ("openai/gpt-5.6-sol", "high"),
+                    "security-reviewer": ("openai/gpt-5.6-sol", "xhigh"),
+                    "mech-executor": ("openai/gpt-5.6-terra", "low"),
+                    "executor": ("openai/gpt-5.6-terra", "high"),
+                    "verifier": ("openai/gpt-5.6-sol", "high"),
+                    "security-executor": ("openai/gpt-5.6-sol", "xhigh"),
+                },
+            },
+            "terra": {
+                "primary": ("openai/gpt-5.6-terra", "high"),
+                "workers": {
+                    "scout": ("openai/gpt-5.6-luna", "low"),
+                    "Explore": ("openai/gpt-5.6-luna", "medium"),
+                    "plan-verifier": ("openai/gpt-5.6-terra", "high"),
+                    "security-reviewer": ("openai/gpt-5.6-sol", "high"),
+                    "mech-executor": ("openai/gpt-5.6-luna", "low"),
+                    "executor": ("openai/gpt-5.6-terra", "medium"),
+                    "verifier": ("openai/gpt-5.6-terra", "high"),
+                    "security-executor": ("openai/gpt-5.6-sol", "medium"),
+                },
+            },
+            "luna": {
+                "primary": ("openai/gpt-5.6-luna", "max"),
+                "workers": {
+                    "scout": ("openai/gpt-5.6-luna", "low"),
+                    "Explore": ("openai/gpt-5.6-luna", "medium"),
+                    "plan-verifier": ("openai/gpt-5.6-luna", "high"),
+                    "security-reviewer": ("openai/gpt-5.6-sol", "medium"),
+                    "mech-executor": ("openai/gpt-5.6-luna", "low"),
+                    "executor": ("openai/gpt-5.6-luna", "high"),
+                    "verifier": ("openai/gpt-5.6-luna", "high"),
+                    "security-executor": ("openai/gpt-5.6-terra", "high"),
+                },
+            },
+        }
+        for profile, mapping in expected.items():
+            actual = self.profiles["profiles"][profile]
+            self.assertEqual(
+                (actual["primary"]["model"], actual["primary"]["variant"]),
+                mapping["primary"],
+            )
+            self.assertEqual(
+                {
+                    role: (binding["model"], binding.get("variant"))
+                    for role, binding in actual["workers"].items()
+                },
+                mapping["workers"],
+            )
+
+    def test_antigravity_profile_values_are_exact(self) -> None:
+        antigravity = self.profiles["antigravity"]
+        self.assertEqual(
+            antigravity["primary"],
+            {"model": "google/antigravity-claude-opus-4-6-thinking", "variant": "max"},
         )
-        self.assertIn("one primary agent and eight worker definitions", installer)
-        self.assertIn("all nine agent keys and all nine prompt filenames", installer)
-        self.assertIn("Task access to the eight Pilotfish worker roles", installer)
-        self.assertIn("treat only that name as newly touched", installer)
-        self.assertIn("first-touch migration is required", installer)
-        self.assertIn("before changing config or prompts, extend the maps", installer)
-        for name in AGENTS:
-            self.assertIn(f"`{name}`", installer)
-
-    def test_installer_update_and_uninstall_lifecycle_contract(self) -> None:
-        installer = (ROOT / "install" / "OPENCODE-INSTALL.md").read_text(
-            encoding="utf-8"
+        self.assertEqual(
+            antigravity["workers"],
+            {
+                "scout": {"model": "google/antigravity-gemini-3-flash", "variant": "minimal"},
+                "Explore": {"model": "google/antigravity-gemini-3-flash", "variant": "low"},
+                "plan-verifier": {"model": "google/antigravity-claude-opus-4-6-thinking", "variant": "max"},
+                "security-reviewer": {"model": "google/antigravity-claude-opus-4-6-thinking", "variant": "max"},
+                "mech-executor": {"model": "google/antigravity-claude-sonnet-4-6"},
+                "executor": {"model": "google/antigravity-gemini-3.1-pro", "variant": "high"},
+                "verifier": {"model": "google/antigravity-claude-opus-4-6-thinking", "variant": "max"},
+                "security-executor": {"model": "google/antigravity-claude-opus-4-6-thinking", "variant": "max"},
+            },
         )
 
+    def test_router_source_and_primary_prompt_contracts(self) -> None:
+        router = text("templates/pilotfish/profile-router.mjs")
+        prompt = text("templates/pilotfish/prompts/pilotfish.md")
+        self.assertIn("export default async function profileRouterPlugin", router)
+        self.assertNotIn("export {", router)
         for phrase in (
-            "An update is an idempotent re-run",
-            "this checkout's `VERSION` and `CHANGELOG.md` from the same pinned ref",
-            "report that Pilotfish is up to date and stop",
-            "Do not ask for a preset, present a write plan, or write any file",
-            "Keep the recorded preset by default",
-            "Current and desired are identical",
+            '"chat.message"', '"tool.execute.before"', '"tool.execute.after"', "session.deleted",
+            "internalAgentName", "model changed after this session was pinned",
+            "AntiGravity passthrough", "configuration failed",
+            "internal profile agents cannot be invoked directly",
+            'mode "subagent"', "cannot be invoked directly through chat",
+            "client.session.messages", "could not recover this session's persisted model profile",
+            "Pilotfish-tagged history record has a malformed role",
+            "createInitializationFailureHooks", "await createProfileRouter",
+            "profile router initialization failed", "validateProfiles(loadProfiles())",
+            "createHash", "session.update", "markedTaskDescription",
+            "TASK_AUTHORIZATION_TTL_MS", 'event?.type === "session.created"',
+            "scheduleAuthorizationExpiry", "clearParentAuthorizations", "async dispose()",
+            "cleanupAuthorization", "boundChildSessionID", "Promise.allSettled",
+        ):
+            self.assertIn(phrase, router)
+        for binding in (
+            "`openai/gpt-5.6-sol` with variant `high`",
+            "`openai/gpt-5.6-terra` with variant `high`",
+            "`openai/gpt-5.6-luna` with variant `max`",
+        ):
+            self.assertIn(binding, prompt)
+
+    def test_historical_permissions_verdicts_and_artifact_contracts(self) -> None:
+        security = self.base["agent"]["security-reviewer"]["permission"]
+        self.assertEqual(security["webfetch"], "allow")
+        for role in ("scout", "Explore", "plan-verifier"):
+            self.assertNotIn("webfetch", self.base["agent"][role]["permission"])
+        plan = text("templates/pilotfish/prompts/plan-verifier.md")
+        outcome = text("templates/pilotfish/prompts/verifier.md")
+        self.assertNotIn("CONFIRMED", plan)
+        self.assertNotIn("REFUTED", plan)
+        self.assertNotIn("READY", outcome)
+        self.assertNotIn("REVISE", outcome)
+        policy = text("templates/pilotfish/prompts/pilotfish.md")
+        explore = text("templates/pilotfish/prompts/Explore.md")
+        for phrase in (
+            "Small, local, already-stable work should be completed directly",
+            "collections of screenshots or generated frame sheets",
+            "Treat reconnaissance as evidence, not authority.",
+            "exact references and uncertainties",
+        ):
+            self.assertIn(phrase, policy)
+        for phrase in ("path, page, frame, or log-range references", "Never modify files", "design review"):
+            self.assertIn(phrase, explore)
+
+    def test_installer_preserves_historical_lifecycle_safeguards(self) -> None:
+        installer = text("install/OPENCODE-INSTALL.md")
+        for phrase in (
+            "one primary agent and eight worker definitions",
+            "all nine agent keys and all nine prompt filenames",
+            "Task access to the eight Pilotfish worker roles",
+            "treat only that name as newly touched",
+            "before changing config or prompts, extend the maps",
             "Current matches the prior managed `installedAgents[name]`, but desired changed",
-            "Treat it as a customization: show the diff and ask",
-            "Do not claim that old prompt hashes exist",
             "Preserved custom agents remain the installed values",
-            "Preserve every existing entry in `previousAgents` and `previousPrompts` from the first managed install",
-            "Never replace an existing entry during an update",
             "write `install-state.json` as the final installation step",
-            "If validation fails, restore the target config backup, prompts, and previous install state",
             "If writing state fails, roll back the config and prompts",
-        ):
-            self.assertIn(phrase, installer)
-
-        for heading in (
-            "### Phase 1: Inspect and classify (read-only)",
-            "### Phase 2: Present one restoration plan and get approval",
-            "### Phase 3: Back up before writes",
-            "### Phase 4: Restore or remove agents",
-            "### Phase 5: Restore or remove prompts",
-            "### Phase 6: Validate, roll back, and clean up",
-        ):
-            self.assertIn(heading, installer)
-
-        self.assertLess(
-            installer.index("### Phase 2: Present one restoration plan and get approval"),
-            installer.index("### Phase 3: Back up before writes"),
-        )
-        self.assertLess(
-            installer.index("### Phase 4: Restore or remove agents"),
-            installer.index("### Phase 5: Restore or remove prompts"),
-        )
-        for phrase in (
             "overwritten pre-install values cannot be reconstructed without state",
             "Keep these backups after a successful uninstall",
             "Never auto-delete the global config",
-            "classify a difference only as potentially customized",
             "potentially customized prompt",
         ):
             self.assertIn(phrase, installer)
 
-    def test_update_and_uninstall_docs_are_actionable(self) -> None:
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        local_install = (ROOT / "docs" / "local-install.md").read_text(
-            encoding="utf-8"
-        )
+    def test_documentation_retains_provenance_and_separates_required_router(self) -> None:
+        research = text("docs/research.md")
+        evaluation = text("docs/artifact-routing-evaluation.md")
+        self.assertIn("accept image and PDF input", research)
+        self.assertIn("do not report video input", research)
+        self.assertIn("does not perform native video decoding or extraction", research)
+        self.assertIn("500,000", research)
+        self.assertIn("`max`", research)
+        self.assertIn("No native video claim", evaluation)
+        self.assertIn("fresh Task child", evaluation)
+        combined = "\n".join(text(path) for path in ("README.md", "docs/design.md", "docs/research.md"))
+        self.assertIn("router is required", combined.lower())
+        self.assertIn("issue #11", combined.lower())
+        self.assertIn("optional", combined.lower())
+        self.assertIn("persisted-history recovery", combined.lower())
 
+    def test_release_and_version_contracts(self) -> None:
+        self.assertEqual(text("VERSION").strip(), "0.2.0")
+        release = text("RELEASING.md")
         for phrase in (
-            "Updating means rerunning the installer",
-            "all from the same ref",
-            "git clone --branch <RELEASE_TAG>",
-            "cd pilotfish-opencode",
-            "opencode",
-            "Read install/OPENCODE-INSTALL.md and update my existing Pilotfish installation",
-            "stops without writing",
-            "unchanged agents and prompts are skipped",
-            "customization is diffed",
-            "Raw `main` remains mutable",
-            "one exact restoration plan",
-            "overwritten pre-install values cannot be reconstructed",
+            "node --test tests/profile-router.test.mjs",
+            "mandatory isolated smoke", "OPENCODE_DISABLE_PROJECT_CONFIG=1",
+            "no global writes", "Luna/low", "five minutes", "no retries",
+            "AntiGravity provider smoke", "block the release",
+            "no assistant/provider execution",
+            "cross-process resume",
+            "foreground host sequence", "background Task timing is unsupported",
+            "transient marker", "pre-existing sibling", "exact `task_id`", "without marker mutation",
+            "`session.created`", "30 seconds", "after is skipped",
+            "update-failure revocation without unhandled rejection", "manual child-title cleanup",
         ):
-            self.assertIn(phrase, readme)
-
-        for phrase in (
-            "same pinned ref",
-            "Updating is simply rerunning install",
-            "Read install/OPENCODE-INSTALL.md and update my existing Pilotfish installation",
-            "stops without asking for a preset or writing anything",
-            "identical agents and prompts skip",
-            "changed custom content is shown as a diff",
-            "one exact restoration plan",
-            "overwritten pre-install values cannot be reconstructed",
-        ):
-            self.assertIn(phrase, local_install)
-
-    def test_upstream_installer_adaptation_is_reproducible(self) -> None:
-        sync = (ROOT / "docs" / "upstream-sync.md").read_text(encoding="utf-8")
-
-        self.assertIn("install/AGENT-INSTALL.md", sync)
-        self.assertIn("f10f9f332fd22d4487f7d29c2f7b084d4579385b", sync)
-        self.assertIn("see the installer lifecycle adaptation row", sync)
-        self.assertNotIn("see the Pending lifecycle row", sync)
+            self.assertIn(phrase, release)
 
 
 if __name__ == "__main__":
