@@ -119,6 +119,23 @@ Confirmed at 2,053 words in 560 lines, injected into all nine agents. Two proble
 
 This file is user configuration at `~/.config/opencode/AGENTS.md`, outside anything the installer owns, so it is not fixed here. The recommendation is to scope the delegation section to the primary and delete the appended directives; the measurement above is what makes it worth doing.
 
+## Revised success criteria
+
+Two of the issue's five targets measure verification *volume*, which the P1 evidence showed is the wrong axis: reaching them by verifying less is the degradation the issue itself rules out. They are restated here against chain depth, which is what actually ran away.
+
+| metric | baseline | original target | revised target |
+|---|---|---|---|
+| verifier share of generation | 19.5% | < 12% | *withdrawn* — a share that falls because defects ship is a loss, not a win |
+| verifier:executor step ratio | 2.06 | < 1.2 | *withdrawn* — same reason; 2.06 is what a 72% refute rate looks like |
+| max verifier runs against one claim | 19 | — | **≤ 3** |
+| verifier runs per parent session, p95 | 19 | — | **≤ 4** |
+| REFUTED rate | 72% | (implicit floor) | **no material fall** — the gate must keep finding what it finds |
+| pilotfish `task` wait | 9.64h | −25% wall clock | unchanged |
+| max repeated identical command per session | 47 | < 10 | unchanged |
+| steps ≥60s as share of wall clock | 74.1% | < 50% | unchanged |
+
+The two withdrawn rows are not replaced by a cheaper proxy. If verification cost must be reported as a single number, report chain depth: it falls only when work converges, and it cannot be gamed by skipping the gate.
+
 ## Reproducing the timing figures
 
 ```bash
