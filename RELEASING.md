@@ -7,7 +7,7 @@ Pilotfish for OpenCode starts a new experimental version line at `0.0.1`.
 1. Update `VERSION`.
 2. Add a matching entry at the top of `CHANGELOG.md`.
 3. Confirm the installer reads the version from `VERSION`; do not add independent version stamps to prompts.
-4. Run `python3 -m unittest discover -s tests -v`, `node --test tests/profile-router.test.mjs`, and `git diff --check`.
+4. Run `python3 -m unittest discover -s tests -v`, `node --test tests/profile-router.test.mjs`, `node --test tests/integration/config-generation.test.mjs`, and `git diff --check`. The integration test resolves the real OpenCode binary against an isolated fixture and makes no provider request.
 5. Validate JSON syntax for `templates/opencode.base.jsonc`, both preset fragments, and `templates/pilotfish/profiles.json`.
 6. Resolve the base plus each preset with the current supported OpenCode release.
 7. Inspect all nine public agents with `opencode debug agent <name>`.
