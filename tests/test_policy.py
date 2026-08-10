@@ -316,12 +316,18 @@ class PolicyContractTests(unittest.TestCase):
             "clearParent(", "cleanupAuthorization", "boundChildSessionID", "Promise.allSettled",
         ):
             self.assertIn(phrase, router)
+        # The tested-configuration assertion belongs to the installer, which
+        # runs once, rather than to the prompt, which paid a first-turn
+        # round-trip on every session to re-derive an install-time fact.
+        runbook = text("install/OPENCODE-INSTALL.md")
         for binding in (
             "`openai/gpt-5.6-sol` with variant `high`",
             "`openai/gpt-5.6-terra` with variant `high`",
             "`openai/gpt-5.6-luna` with variant `max`",
+            "`google/antigravity-claude-opus-4-6-thinking` with variant `max`",
         ):
-            self.assertIn(binding, prompt)
+            self.assertIn(binding, runbook)
+        self.assertNotIn("opencode debug agent pilotfish`. Do this before", prompt)
 
     def test_historical_permissions_verdicts_and_artifact_contracts(self) -> None:
         security = self.base["agent"]["security-reviewer"]["permission"]

@@ -12,8 +12,13 @@ Tested with OpenCode `1.18.10`.
 - Session-pinned Task routing to hidden capability-preserving worker clones, plus focused executable router contracts.
 - A profile router contract fixing the router's guarantees, its OpenCode `1.18.10` couplings, its accepted risks, and its threat model.
 - An isolated OpenCode integration fixture and a host-level config-generation test that needs no provider request.
+- Per-role `steps` backstops and a `doom_loop` deny on all eight subagents, where an `ask` has nobody attached to answer it and stalls instead of breaking the loop.
+- `question` permission for the `pilotfish` primary, which OpenCode denies globally and re-allows only for its own built-in primaries.
+- Measured evidence that the verification gate refutes 72% of the time and its cost is concentrated in non-converging re-verification chains, in `docs/verification-gate-evidence.md`.
 
 ### Changed
+
+- The primary prompt no longer spends a first-turn round-trip re-deriving its own resolved model; the installer asserts the tested configurations once, at install time.
 
 - Profiles are data: `profiles.json` defines each profile and groups them into named presets, so adding a provider or model tier no longer changes router code.
 - AntiGravity routes like every other preset instead of validating public bindings and passing Tasks through unchanged.

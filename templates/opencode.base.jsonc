@@ -5,7 +5,9 @@
       "description": "Opt-in multi-model orchestrator. Plans and reviews in the primary session, delegates execution by role, and independently verifies non-trivial work.",
       "mode": "primary",
       "prompt": "{file:./pilotfish/prompts/pilotfish.md}",
+      "steps": 300,
       "permission": {
+        "question": "allow",
         "task": {
           "*": "deny",
           "scout": "allow",
@@ -23,8 +25,10 @@
       "description": "Narrow read-only reconnaissance for locating files, symbols, usages, configuration values, and direct answers with file references.",
       "mode": "subagent",
       "prompt": "{file:./pilotfish/prompts/scout.md}",
+      "steps": 15,
       "permission": {
         "*": "deny",
+        "doom_loop": "deny",
         "read": {
           "*": "allow",
           "*.env": "deny",
@@ -40,8 +44,10 @@
       "description": "Broad read-only codebase or accessible project-local artifact reconnaissance; returns concise locations, exact references, and uncertainties.",
       "mode": "subagent",
       "prompt": "{file:./pilotfish/prompts/Explore.md}",
+      "steps": 30,
       "permission": {
         "*": "deny",
+        "doom_loop": "deny",
         "read": {
           "*": "allow",
           "*.env": "deny",
@@ -57,8 +63,10 @@
       "description": "Read-only fresh-context challenge of a material Plan before approval; returns READY or REVISE without planning, editing, or executing commands.",
       "mode": "subagent",
       "prompt": "{file:./pilotfish/prompts/plan-verifier.md}",
+      "steps": 30,
       "permission": {
         "*": "deny",
+        "doom_loop": "deny",
         "read": {
           "*": "allow",
           "*.env": "deny",
@@ -74,8 +82,10 @@
       "description": "Read-only pre-approval security analysis of trust boundaries, controls, vulnerabilities, and remediation evidence.",
       "mode": "subagent",
       "prompt": "{file:./pilotfish/prompts/security-reviewer.md}",
+      "steps": 40,
       "permission": {
         "*": "deny",
+        "doom_loop": "deny",
         "read": {
           "*": "allow",
           "*.env": "deny",
@@ -92,7 +102,9 @@
       "description": "Executes fully specified mechanical work such as pattern refactors, conventional tests, documentation, bulk edits, and focused test runs.",
       "mode": "subagent",
       "prompt": "{file:./pilotfish/prompts/mech-executor.md}",
+      "steps": 50,
       "permission": {
+        "doom_loop": "deny",
         "task": "deny"
       }
     },
@@ -100,7 +112,9 @@
       "description": "Implements features, bug fixes, integrations, and design-sensitive refactors that require local engineering judgment.",
       "mode": "subagent",
       "prompt": "{file:./pilotfish/prompts/executor.md}",
+      "steps": 120,
       "permission": {
+        "doom_loop": "deny",
         "task": "deny"
       }
     },
@@ -108,7 +122,9 @@
       "description": "Fresh-context adversarial outcome verification after implementation; reproduces evidence and returns CONFIRMED or REFUTED without planning, editing, or fixing.",
       "mode": "subagent",
       "prompt": "{file:./pilotfish/prompts/verifier.md}",
+      "steps": 60,
       "permission": {
+        "doom_loop": "deny",
         "edit": "deny",
         "task": "deny",
         "bash": {
@@ -132,7 +148,9 @@
       "description": "Handles approved security-sensitive implementation involving authentication, authorization, secrets, crypto, validation, hardening, or vulnerabilities.",
       "mode": "subagent",
       "prompt": "{file:./pilotfish/prompts/security-executor.md}",
+      "steps": 250,
       "permission": {
+        "doom_loop": "deny",
         "task": "deny"
       }
     }

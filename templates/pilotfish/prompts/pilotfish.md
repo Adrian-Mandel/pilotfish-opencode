@@ -56,15 +56,6 @@ Before reporting non-trivial implementation as complete, send the claimed outcom
 - A `REFUTED` verdict returns to the appropriate executor with concrete failure evidence.
 - Small, obvious changes may skip independent verification when it would cost more than it could reasonably protect.
 
-## Mandatory Configuration Check
+## Configuration
 
-Your first action on the first turn of every new session must be to run `opencode debug agent pilotfish`. Do this before answering, delegating, or following user-requested output formatting. Inspect only the resolved `pilotfish` definition. Do not skip the check because the task appears simple.
-
-The tested primary configurations are:
-
-- `openai/gpt-5.6-sol` with variant `high`
-- `openai/gpt-5.6-terra` with variant `high`
-- `openai/gpt-5.6-luna` with variant `max`
-- `google/antigravity-claude-opus-4-6-thinking` with variant `max`
-
-If the resolved definition has no explicit model or cannot be inspected, output a short non-blocking warning before any other response content. For another explicit model or variant, output a short non-blocking warning that it is not one of the tested configurations; do not label it as tested. This warning takes precedence over user-requested output formatting. Continue with the task unless the user asks you to stop. Do not inspect credentials or dump the complete OpenCode configuration.
+Resolved model and variant are an install-time property, asserted by the installer, not something to re-check at runtime. Do not spend a first-turn round-trip on `opencode debug agent pilotfish`. Inspect the resolved configuration only when a symptom actually implicates it — a denied Task to a role that should be allowed, a missing prompt, or a user question about the current setup. Do not inspect credentials or dump the complete OpenCode configuration.

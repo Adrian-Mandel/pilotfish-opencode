@@ -242,6 +242,17 @@ Run all of these checks with `OPENCODE_DISABLE_PROJECT_CONFIG=1` from a neutral 
 
 1. `opencode debug config` succeeds and proves the required plugin loads.
 2. `opencode debug agent pilotfish` reports `mode: primary`, the selected primary model and variant, and Task access to the eight Pilotfish worker roles.
+
+   This is the only place the resolved primary configuration is asserted. The prompt deliberately does not re-check it at runtime, so a warning skipped here is never raised again. The tested primary configurations are:
+
+   - `openai/gpt-5.6-sol` with variant `high`
+   - `openai/gpt-5.6-terra` with variant `high`
+   - `openai/gpt-5.6-luna` with variant `max`
+   - `google/antigravity-claude-opus-4-6-thinking` with variant `max`
+
+   If the resolved definition has no explicit model, or resolves to any other model or variant, do not label it tested: report it to the user as an untested configuration and continue. This is a warning, not an installation failure.
+
+   Also confirm each of the nine roles resolves its `steps` backstop and that every subagent resolves `doom_loop` to `deny`; `tests/integration/agent-budgets.test.mjs` covers both against the real host.
 3. Inspect all eight workers with `opencode debug agent <name>`.
 4. Confirm `scout`, `Explore`, `plan-verifier`, and `security-reviewer` cannot use edit, bash, or Task tools; only `security-reviewer` may use `webfetch`.
 5. Confirm the three executors cannot use Task, and `security-executor` requires an approved stable contract in its prompt.
