@@ -83,7 +83,7 @@ Only `pilotfish` is bound in the persisted config. The eight public workers are 
 | Terra | Terra/high | Luna/low | Luna/medium | Terra/high | Sol/high | Luna/low | Terra/medium | Terra/high | Sol/medium |
 | Luna | Luna/max | Luna/low | Luna/medium | Luna/high | Sol/medium | Luna/low | Luna/high | Luna/high | Terra/high |
 
-Sol, Terra, and Luna are `openai/gpt-5.6-sol`, `openai/gpt-5.6-terra`, and `openai/gpt-5.6-luna`. The primary variants shown in the `pilotfish` column are tested recommendations, not router gates. The selected primary model chooses the worker profile; primary effort remains under direct user control and may change within a model-pinned session without changing its worker profile.
+Each profile is named for its primary model, so the Sol, Terra, and Luna rows above are the profiles `openai/gpt-5.6-sol`, `openai/gpt-5.6-terra`, and `openai/gpt-5.6-luna`. The primary variants shown in the `pilotfish` column are tested recommendations, not router gates. The selected primary model chooses the worker profile; primary effort remains under direct user control and may change within a model-pinned session without changing its worker profile.
 
 ### AntiGravity runtime profiles
 
