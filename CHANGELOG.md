@@ -12,9 +12,17 @@ Tested with OpenCode `1.18.10`.
 - Session-pinned Task routing to hidden capability-preserving worker clones, plus focused executable router contracts.
 - A profile router contract fixing the router's guarantees, its OpenCode `1.18.10` couplings, its accepted risks, and its threat model.
 - An isolated OpenCode integration fixture and a host-level config-generation test that needs no provider request.
+- Per-role `steps` backstops and a `doom_loop` deny on all eight subagents, where an `ask` has nobody attached to answer it and stalls instead of breaking the loop.
+- `question` permission for the `pilotfish` primary, which OpenCode denies globally and re-allows only for its own built-in primaries.
+- Measured evidence for issue #16 in `docs/issue-16-evidence.md`: the verification gate refutes 72% of the time and its cost is re-verification depth rather than gate frequency, read-only delegation runs serially 78% of the time, and inline reconnaissance costs round-trips rather than tool time.
+- An install-time advisory that `small_model` is unset, with a suggested value per preset. Pilotfish does not write or own the key; the observation is that compaction otherwise runs on the selected primary at a 22.1s median.
 
 ### Changed
 
+- The primary prompt no longer spends a first-turn round-trip re-deriving its own resolved model; the installer asserts the tested configurations once, at install time.
+- The Completion Gate bounds the verification chain instead of only the run: verification answers whether a claim holds rather than auditing the surrounding code, findings outside the claim return as observations, and the primary takes the work back after a second refutation.
+- Read-only delegation is parallel by default, and the serialization rule now says explicitly that it covers writing roles only.
+- Reconnaissance delegation has a concrete trigger measured in round-trips rather than in context size.
 - Profiles are data: `profiles.json` defines each profile and groups them into named presets, so adding a provider or model tier no longer changes router code.
 - AntiGravity routes like every other preset instead of validating public bindings and passing Tasks through unchanged.
 - Extended install, update, rollback, and uninstall ownership to the required router plugin tuple and hash-tracked runtime files.

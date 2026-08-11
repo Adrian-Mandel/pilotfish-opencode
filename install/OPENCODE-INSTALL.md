@@ -14,7 +14,9 @@ Pilotfish is an opt-in, multi-model primary agent for OpenCode. It installs one 
 | `~/.config/opencode/pilotfish/profiles.json` | Copy the canonical profile data byte-identically |
 | `~/.config/opencode/pilotfish/install-state.json` | Record selected preset, prior touched values, and installed runtime hashes for safe uninstall |
 
-Pilotfish never changes global `model`, `small_model`, `default_agent`, providers, unrelated plugins, permissions, or credentials. The user selects the `pilotfish` primary when orchestration is wanted. `installedAgents` contains only the nine persisted public definitions: ChatGPT's 24 hidden clones are runtime-only.
+Pilotfish never changes global `model`, `small_model`, `default_agent`, providers, unrelated plugins, permissions, or credentials.
+
+The user selects the `pilotfish` primary when orchestration is wanted. `installedAgents` contains only the nine persisted public definitions: ChatGPT's 24 hidden clones are runtime-only.
 
 The source of truth is:
 
@@ -242,19 +244,38 @@ Run all of these checks with `OPENCODE_DISABLE_PROJECT_CONFIG=1` from a neutral 
 
 1. `opencode debug config` succeeds and proves the required plugin loads.
 2. `opencode debug agent pilotfish` reports `mode: primary`, the selected primary model and variant, and Task access to the eight Pilotfish worker roles.
+
+   This is the only place the resolved primary configuration is asserted. The prompt deliberately does not re-check it at runtime, so a warning skipped here is never raised again. The tested primary configurations are:
+
+   - `openai/gpt-5.6-sol` with variant `high`
+   - `openai/gpt-5.6-terra` with variant `high`
+   - `openai/gpt-5.6-luna` with variant `max`
+   - `google/antigravity-claude-opus-4-6-thinking` with variant `max`
+
+   If the resolved definition has no explicit model, or resolves to any other model or variant, do not label it tested: report it to the user as an untested configuration and continue. This is a warning, not an installation failure.
+
+   Also confirm each of the nine roles resolves its `steps` backstop and that every subagent resolves `doom_loop` to `deny`; `tests/integration/agent-budgets.test.mjs` covers both against the real host.
 3. Inspect all eight workers with `opencode debug agent <name>`.
 4. Confirm `scout`, `Explore`, `plan-verifier`, and `security-reviewer` cannot use edit, bash, or Task tools; only `security-reviewer` may use `webfetch`.
 5. Confirm the three executors cannot use Task, and `security-executor` requires an approved stable contract in its prompt.
 6. Confirm `verifier` cannot use edit or Task but can use bash and read tools; confirm its verdict vocabulary differs from `plan-verifier`.
 7. Exercise router validation: ChatGPT creates exactly 24 hidden internal worker clones with `profiles.json` mappings and preserves the public primary model/variant; confirm all public workers and hidden clones are subagents, direct internal identities reaching chat or Task hooks are rejected, CLI `--agent` selection does not execute a hidden clone even if OpenCode falls back to its default primary, and Pilotfish-to-Build deactivates Task remapping without deleting the pin while a validated same-model switch back reactivates it. For a new foreground Task, prove before adds a unique marker but leaves authorization unbound, only a matching later `session.created` event binds the exact new child ID, and child chat racing that event fails closed. Prove the bound child title is restored before provider execution and after restores mutable args/result values and clears authorization. Accept that OpenCode may retain the digest in raw tool-input history, and verify it contains no prompt or credential data. Prove two concurrent same-role Tasks bind their own children, a pre-existing sibling retitled to a marker cannot steal authorization, and a failed bound Task with no after hook becomes unusable after the 30-second expiry while cleanup restores its marked title. Force that update to fail and prove authorization is still revoked without an unhandled rejection; also exercise expiry races with child chat and after. For resume, prove only the exact suitable `task_id` is accepted without description mutation. Confirm parent deletion and plugin disposal clear timers and restore any still-marked bound child title. Confirm an invalid preset returns protective hooks that block raw/resolved Pilotfish chat and internal Task targets without mutating config; AntiGravity validates its canonical public mappings, creates clones only for its own profiles, and passes Tasks through. Do not substitute an experimental background Task for this foreground sequence.
 8. Confirm a primary/profile switch in one session is rejected and unsupported or cross-preset primary models fail before assistant/provider execution. Check `--print-logs` for the exact router reason because OpenCode `1.18.10` may expose only `Unexpected server error` on its standard JSON surface. Restart OpenCode, resume that same session with a different primary model, and confirm persisted-history recovery rejects it before assistant/provider execution.
-9. Confirm the global `model` and `default_agent` values are unchanged and the prepared install state contains no credentials or unrelated config.
+9. Confirm the global `model`, `small_model`, and `default_agent` values are unchanged and the prepared install state contains no credentials or unrelated config.
 
 If validation fails, restore the target config and plugin entry, prompts, runtime files, and previous install state; remove newly created files, report the exact failure, and stop. Never leave OpenCode with an invalid global config or mismatched lifecycle state.
 
 After every check succeeds, write `install-state.json` as the final installation step. Write `install-state.json` last. Its `installedAgents` values must match the validated target config, including every preserved custom agent value. If writing state fails, roll back the config and prompts, plus the plugin entry and runtime files. On update, restore the previous state backup; on first install, remove any partial state file. Never leave an unmanaged or mismatched installation.
 
 Tell the user to quit and restart OpenCode. After restart, `pilotfish` should be available as a primary agent through the normal agent switcher. It is opt-in and does not replace Build or Plan.
+
+### Suggest a `small_model`
+
+Pilotfish does not manage this key, and this step writes nothing. Raise it once, as advice, and leave the decision and the edit to the user.
+
+OpenCode uses `small_model` for background chores — session titles and context compaction. When the key is unset those run on whichever primary is selected, where compaction had a 22.1s median. There is no per-agent form, so the setting is global and applies to Build and Plan as well.
+
+If the key is already set, say nothing. Otherwise report that it is unset, name a cheap model from the installed preset as a starting point — `openai/gpt-5.6-luna` for ChatGPT, `google/antigravity-gemini-3-flash` for AntiGravity — and state the trade honestly: faster and cheaper titles and compaction, against a weaker summariser producing the context the session continues from. Do not set it, and do not record it in install state.
 
 Summarize the selected preset, created and replaced files, preserved customizations, validation results, and backup location.
 

@@ -22,7 +22,12 @@ const WORKERS = PROFILES.publicRoles.slice(1);
 const ACTIVE = PROFILES.presets.chatgpt;
 
 async function resolvedConfig(fixture) {
-  const result = await runOpencode(fixture, ["debug", "config"]);
+  // The resolved config inlines all nine prompts and every hidden clone, which
+  // puts it over the 64 KiB a pipe delivers. Capture to a file instead, or the
+  // parse fails the moment a prompt grows.
+  const result = await runOpencode(fixture, ["debug", "config"], {
+    stdoutFile: join(fixture.root, "resolved-config.json"),
+  });
   assert.equal(result.timedOut, false, "opencode debug config timed out");
   const start = result.stdout.indexOf("{");
   assert.ok(start >= 0, `no JSON in output: ${result.stdout}\n${result.stderr}`);
