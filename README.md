@@ -73,9 +73,9 @@ OpenCode `1.18.10` replaces plugin-hook exceptions with `Unexpected server error
 
 The `0.2.0` installer offers two tested presets. It verifies that every required model and variant exists in `opencode models --verbose` before changing configuration.
 
-### ChatGPT public defaults and runtime profiles
+### ChatGPT runtime profiles
 
-The persisted public mapping remains the Sol row. The router's canonical profile mapping is `templates/pilotfish/profiles.json`:
+Only `pilotfish` is bound in the persisted config. The eight public workers are installed with no model, so outside a Pilotfish session they inherit the invoking primary and stay on the provider that session selected. The rows below are applied by the router to its hidden clones; the canonical mapping is `templates/pilotfish/profiles.json`:
 
 | Primary profile | `pilotfish` | `scout` | `Explore` | `plan-verifier` | `security-reviewer` | `mech-executor` | `executor` | `verifier` | `security-executor` |
 |---|---|---|---|---|---|---|---|---|---|
@@ -85,9 +85,9 @@ The persisted public mapping remains the Sol row. The router's canonical profile
 
 Sol, Terra, and Luna are `openai/gpt-5.6-sol`, `openai/gpt-5.6-terra`, and `openai/gpt-5.6-luna`. The primary variants shown in the `pilotfish` column are tested recommendations, not router gates. The selected primary model chooses the worker profile; primary effort remains under direct user control and may change within a model-pinned session without changing its worker profile.
 
-### AntiGravity public defaults and runtime profiles
+### AntiGravity runtime profiles
 
-The persisted public mapping remains the Opus row.
+Only `pilotfish` is bound in the persisted config; the eight public workers are installed unbound and inherit the invoking primary.
 
 | Primary profile | `pilotfish` | `scout` | `Explore` | `plan-verifier` | `security-reviewer` | `mech-executor` | `executor` | `verifier` | `security-executor` |
 |---|---|---|---|---|---|---|---|---|---|

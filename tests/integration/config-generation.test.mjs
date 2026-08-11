@@ -70,14 +70,24 @@ describe("profile router config generation in OpenCode", () => {
     }
   });
 
-  test("public worker bindings are left under user control", () => {
+  test("public workers stay unbound so they inherit the invoking primary", () => {
+    // A preset must bind the public primary and nothing else. A model baked onto
+    // a public worker outlives Task remapping, which is active only while
+    // Pilotfish is the resolved primary agent: under any other primary the
+    // worker would run on the preset's provider instead of the session's own,
+    // spending a quota the session never selected.
     const preset = JSON.parse(
       readFileSync(join(REPO_ROOT, "templates/presets/chatgpt.jsonc"), "utf8")
         .replace(/^\s*\/\/.*$/gm, ""),
     );
+    assert.deepEqual(
+      Object.keys(preset.agent),
+      ["pilotfish"],
+      "a preset may bind only the public primary",
+    );
     for (const role of WORKERS) {
-      assert.equal(config.agent[role].model, preset.agent[role].model, `${role} model`);
-      assert.equal(config.agent[role].variant, preset.agent[role].variant, `${role} variant`);
+      assert.equal(config.agent[role].model, undefined, `${role} must carry no model`);
+      assert.equal(config.agent[role].variant, undefined, `${role} must carry no variant`);
       assert.notEqual(config.agent[role].hidden, true, `${role} must stay visible`);
     }
   });
