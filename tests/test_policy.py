@@ -28,19 +28,39 @@ class PolicyContractTests(unittest.TestCase):
         self.assertEqual(task["*"], "deny")
         self.assertEqual({role for role, value in task.items() if value == "allow"}, set(WORKERS))
 
+    # The naming rule is fixed in docs/profile-router-contract.md. It is tested
+    # rather than merely documented because the failure it prevents is silent: a
+    # name that no longer matches its binding still routes correctly and still
+    # reads as authoritative, so nothing surfaces the drift.
+    def test_profile_names_are_derived_from_their_primary_model(self) -> None:
+        for name, mapping in self.profiles["profiles"].items():
+            provider, _, model_id = mapping["primary"]["model"].partition("/")
+            self.assertTrue(model_id, f"{name} primary model has no provider prefix")
+            # Providers such as OpenRouter repeat a vendor inside the model ID;
+            # that segment duplicates the provider and carries no routing
+            # meaning, so only the final segment names the profile.
+            self.assertEqual(name, f"{provider}/{model_id.rsplit('/', 1)[-1]}")
+
+    def test_agent_names_never_carry_profile_slashes(self) -> None:
+        router = text("templates/pilotfish/profile-router.mjs")
+        self.assertIn('profile.replaceAll("/", "--")', router)
+        self.assertIn("flatten to the same internal agent name", router)
+        flattened = [name.replace("/", "--") for name in self.profiles["profiles"]]
+        self.assertEqual(len(set(flattened)), len(flattened))
+
     def test_profiles_are_canonical_and_complete(self) -> None:
         self.assertEqual(self.profiles["publicRoles"], list(AGENTS))
         expected_primary = {
-            "sol": ("openai/gpt-5.6-sol", "high"),
-            "terra": ("openai/gpt-5.6-terra", "high"),
-            "luna": ("openai/gpt-5.6-luna", "max"),
-            "opus": ("google/antigravity-claude-opus-4-6-thinking", "max"),
-            "pro": ("google/antigravity-gemini-3.1-pro", "high"),
-            "flash": ("google/antigravity-gemini-3-flash", "high"),
+            "openai/gpt-5.6-sol": ("openai/gpt-5.6-sol", "high"),
+            "openai/gpt-5.6-terra": ("openai/gpt-5.6-terra", "high"),
+            "openai/gpt-5.6-luna": ("openai/gpt-5.6-luna", "max"),
+            "google/antigravity-claude-opus-4-6-thinking": ("google/antigravity-claude-opus-4-6-thinking", "max"),
+            "google/antigravity-gemini-3.1-pro": ("google/antigravity-gemini-3.1-pro", "high"),
+            "google/antigravity-gemini-3-flash": ("google/antigravity-gemini-3-flash", "high"),
             # Reasoning-effort variants are a gpt-5.6 and AntiGravity concept.
             # The OpenRouter profiles omit them, which the schema allows.
-            "qwen": ("openrouter/qwen/qwen3.6-27b", None),
-            "deepseek": ("openrouter/deepseek/deepseek-v4-pro", None),
+            "openrouter/qwen3.6-27b": ("openrouter/qwen/qwen3.6-27b", None),
+            "openrouter/deepseek-v4-pro": ("openrouter/deepseek/deepseek-v4-pro", None),
         }
         for profile, primary in expected_primary.items():
             actual = self.profiles["profiles"][profile]
@@ -51,9 +71,17 @@ class PolicyContractTests(unittest.TestCase):
         self.assertEqual(
             self.profiles["presets"],
             {
-                "chatgpt": ["sol", "terra", "luna"],
-                "antigravity": ["opus", "pro", "flash"],
-                "openrouter": ["qwen", "deepseek"],
+                "chatgpt": [
+                    "openai/gpt-5.6-sol",
+                    "openai/gpt-5.6-terra",
+                    "openai/gpt-5.6-luna",
+                ],
+                "antigravity": [
+                    "google/antigravity-claude-opus-4-6-thinking",
+                    "google/antigravity-gemini-3.1-pro",
+                    "google/antigravity-gemini-3-flash",
+                ],
+                "openrouter": ["openrouter/qwen3.6-27b", "openrouter/deepseek-v4-pro"],
             },
         )
         for members in self.profiles["presets"].values():
@@ -120,7 +148,7 @@ class PolicyContractTests(unittest.TestCase):
         self.assertIn("1.18.10", local)
         self.assertIn("profile-router.mjs", local)
         self.assertIn("restart", local)
-        for binding in self.profiles["profiles"]["opus"]["workers"].values():
+        for binding in self.profiles["profiles"]["google/antigravity-claude-opus-4-6-thinking"]["workers"].values():
             self.assertIn(binding["model"], local)
         for phrase in (
             "node --test tests/profile-router.test.mjs", "isolated/neutral OpenCode context",
@@ -210,7 +238,7 @@ class PolicyContractTests(unittest.TestCase):
 
     def test_canonical_profile_values_are_exact(self) -> None:
         expected = {
-            "sol": {
+            "openai/gpt-5.6-sol": {
                 "primary": ("openai/gpt-5.6-sol", "high"),
                 "workers": {
                     "scout": ("openai/gpt-5.6-luna", "low"),
@@ -223,7 +251,7 @@ class PolicyContractTests(unittest.TestCase):
                     "security-executor": ("openai/gpt-5.6-sol", "xhigh"),
                 },
             },
-            "terra": {
+            "openai/gpt-5.6-terra": {
                 "primary": ("openai/gpt-5.6-terra", "high"),
                 "workers": {
                     "scout": ("openai/gpt-5.6-luna", "low"),
@@ -236,7 +264,7 @@ class PolicyContractTests(unittest.TestCase):
                     "security-executor": ("openai/gpt-5.6-sol", "medium"),
                 },
             },
-            "luna": {
+            "openai/gpt-5.6-luna": {
                 "primary": ("openai/gpt-5.6-luna", "max"),
                 "workers": {
                     "scout": ("openai/gpt-5.6-luna", "low"),
@@ -266,7 +294,7 @@ class PolicyContractTests(unittest.TestCase):
 
     def test_antigravity_profile_values_are_exact(self) -> None:
         expected = {
-            "opus": {
+            "google/antigravity-claude-opus-4-6-thinking": {
                 "primary": ("google/antigravity-claude-opus-4-6-thinking", "max"),
                 "scout": ("google/antigravity-gemini-3-flash", "low"),
                 "Explore": ("google/antigravity-gemini-3-flash", "medium"),
@@ -277,7 +305,7 @@ class PolicyContractTests(unittest.TestCase):
                 "verifier": ("google/antigravity-claude-sonnet-4-6", None),
                 "security-executor": ("google/antigravity-claude-opus-4-6-thinking", "max"),
             },
-            "pro": {
+            "google/antigravity-gemini-3.1-pro": {
                 "primary": ("google/antigravity-gemini-3.1-pro", "high"),
                 "scout": ("google/antigravity-gemini-3-flash", "low"),
                 "Explore": ("google/antigravity-gemini-3-flash", "medium"),
@@ -288,7 +316,7 @@ class PolicyContractTests(unittest.TestCase):
                 "verifier": ("google/antigravity-gemini-3.1-pro", "high"),
                 "security-executor": ("google/antigravity-claude-opus-4-6-thinking", "low"),
             },
-            "flash": {
+            "google/antigravity-gemini-3-flash": {
                 "primary": ("google/antigravity-gemini-3-flash", "high"),
                 "scout": ("google/antigravity-gemini-3-flash", "minimal"),
                 "Explore": ("google/antigravity-gemini-3-flash", "low"),
@@ -322,8 +350,8 @@ class PolicyContractTests(unittest.TestCase):
     # and execution.
     def test_openrouter_profile_values_are_exact(self) -> None:
         strong_cheap = {
-            "qwen": ("openrouter/qwen/qwen3.6-27b", "openrouter/qwen/qwen3.6-35b-a3b"),
-            "deepseek": (
+            "openrouter/qwen3.6-27b": ("openrouter/qwen/qwen3.6-27b", "openrouter/qwen/qwen3.6-35b-a3b"),
+            "openrouter/deepseek-v4-pro": (
                 "openrouter/deepseek/deepseek-v4-pro",
                 "openrouter/deepseek/deepseek-v4-flash-0731",
             ),

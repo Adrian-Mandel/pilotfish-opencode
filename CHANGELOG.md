@@ -8,7 +8,7 @@ Tested with OpenCode `1.18.10`.
 
 ### Added
 
-- Canonical Sol, Terra, and Luna ChatGPT profiles and Opus, Pro, and Flash AntiGravity profiles, with a dependency-free runtime profile router.
+- Canonical ChatGPT, AntiGravity, and OpenRouter profiles, with a dependency-free runtime profile router. Each profile is named for its primary model identifier — `openai/gpt-5.6-sol`, `openrouter/qwen3.6-27b`, and so on — so a name states which orchestrator it selects rather than a vendor family that ships many models. Provider slashes are flattened to `--` when a profile name becomes a hidden agent name, and two profiles that would flatten together are refused.
 - Session-pinned Task routing to hidden capability-preserving worker clones, plus focused executable router contracts.
 - A profile router contract fixing the router's guarantees, its OpenCode `1.18.10` couplings, its accepted risks, and its threat model.
 - An isolated OpenCode integration fixture and a host-level config-generation test that needs no provider request.

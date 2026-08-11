@@ -6,15 +6,25 @@ import profileRouterPlugin from "../templates/pilotfish/profile-router.mjs";
 const profiles = JSON.parse(
   readFileSync(new URL("../templates/pilotfish/profiles.json", import.meta.url), "utf8"),
 );
+// Profile names are the primary model identifiers; aliased here for readability.
+const SOL = "openai/gpt-5.6-sol";
+const TERRA = "openai/gpt-5.6-terra";
+const LUNA = "openai/gpt-5.6-luna";
+const OPUS = "google/antigravity-claude-opus-4-6-thinking";
+const PRO = "google/antigravity-gemini-3.1-pro";
+const FLASH = "google/antigravity-gemini-3-flash";
+const QWEN = "openrouter/qwen3.6-27b";
+const DEEPSEEK = "openrouter/deepseek-v4-pro";
+
 const workers = profiles.publicRoles.slice(1);
-const AG_PRIMARY = profiles.profiles.opus.primary.model;
+const AG_PRIMARY = profiles.profiles[OPUS].primary.model;
 
 function clone(value) {
   return structuredClone(value);
 }
 
 function internalAgentName(profile, role) {
-  return `pilotfish-profile-${profile}-${role}`;
+  return `pilotfish-profile-${profile.replaceAll("/", "--")}-${role}`;
 }
 
 function historyClient({
@@ -311,17 +321,17 @@ test("ChatGPT configuration preserves unrelated custom Task allow and deny rules
   assert.equal(task["custom-agent?"], "deny");
   assert.equal(task["pilotfish-profile-sol\\executo?"], "deny");
   assert.equal(task["pilotfish-profile-sol-executor.?"], "deny");
-  assert.equal(task[internalAgentName("sol", "executor")], "allow");
+  assert.equal(task[internalAgentName(SOL, "executor")], "allow");
 });
 
 test("ChatGPT configuration rejects Task rules that can match internal profile agents atomically", async () => {
   for (const [pattern, action] of [
     ["pilotfish-profile-*", "deny"],
-    [internalAgentName("sol", "executor"), "deny"],
+    [internalAgentName(SOL, "executor"), "deny"],
     ["pilotfish-*", "allow"],
-    ["pilotfish-profile-sol-executo?", "deny"],
+    [`${internalAgentName(SOL, "executor").slice(0, -1)}?`, "deny"],
     ["pilotfish-profile-*-executo?", "allow"],
-    ["pilotfish-profile-sol-executor *", "deny"],
+    [`${internalAgentName(SOL, "executor")} *`, "deny"],
   ]) {
     const config = chatgptConfig();
     config.agent.pilotfish.permission.task[pattern] = action;
@@ -337,7 +347,7 @@ test("ChatGPT configuration rejects Task rules that can match internal profile a
 
 test("ChatGPT Task pattern matching follows platform case behavior", async () => {
   const config = chatgptConfig();
-  const pattern = internalAgentName("sol", "executor").toUpperCase();
+  const pattern = internalAgentName(SOL, "executor").toUpperCase();
   config.agent.pilotfish.permission.task[pattern] = "deny";
 
   if (process.platform === "win32") {
@@ -352,7 +362,7 @@ test("ChatGPT Task pattern matching follows platform case behavior", async () =>
   hooks.config(config);
   assert.equal(config.agent.pilotfish.permission.task[pattern], "deny");
   assert.equal(
-    config.agent.pilotfish.permission.task[internalAgentName("sol", "executor")],
+    config.agent.pilotfish.permission.task[internalAgentName(SOL, "executor")],
     "allow",
   );
 });
@@ -384,7 +394,7 @@ test("ChatGPT sessions pin their primary profile, allow variant changes, and pre
     args: { description: "execute work", subagent_type: "executor", prompt: "work" },
   };
   await hooks["tool.execute.before"]({ tool: "task", sessionID: "sol", callID: "sol-task" }, task);
-  assert.equal(task.args.subagent_type, internalAgentName("sol", "executor"));
+  assert.equal(task.args.subagent_type, internalAgentName(SOL, "executor"));
   assert.match(task.args.description, /^execute work \[pilotfish-task:[a-f0-9]{64}\]$/);
   assert.equal(task.args.prompt, "work");
 
@@ -393,7 +403,7 @@ test("ChatGPT sessions pin their primary profile, allow variant changes, and pre
     { tool: "task", sessionID: "terra", callID: "terra-task" },
     other,
   );
-  assert.equal(other.args.subagent_type, internalAgentName("terra", "executor"));
+  assert.equal(other.args.subagent_type, internalAgentName(TERRA, "executor"));
   await assert.rejects(
     hooks["chat.message"](message("sol", "openai/gpt-5.6-terra")),
     /model changed.*new session/i,
@@ -424,16 +434,16 @@ test("OpenRouter sessions select their profile from the primary model alone", as
   // models with no configuration change between them.
   const fromQwen = { args: { description: "verify", subagent_type: "verifier", prompt: "work" } };
   await hooks["tool.execute.before"]({ tool: "task", sessionID: "q", callID: "q-1" }, fromQwen);
-  assert.equal(fromQwen.args.subagent_type, internalAgentName("qwen", "verifier"));
+  assert.equal(fromQwen.args.subagent_type, internalAgentName(QWEN, "verifier"));
 
   const fromDeepSeek = { args: { description: "verify", subagent_type: "verifier" } };
   await hooks["tool.execute.before"]({ tool: "task", sessionID: "d", callID: "d-1" }, fromDeepSeek);
-  assert.equal(fromDeepSeek.args.subagent_type, internalAgentName("deepseek", "verifier"));
+  assert.equal(fromDeepSeek.args.subagent_type, internalAgentName(DEEPSEEK, "verifier"));
 
   // Cheap roles route to the cheap model in the same session.
   const recon = { args: { description: "scout", subagent_type: "scout" } };
   await hooks["tool.execute.before"]({ tool: "task", sessionID: "q", callID: "q-2" }, recon);
-  assert.equal(recon.args.subagent_type, internalAgentName("qwen", "scout"));
+  assert.equal(recon.args.subagent_type, internalAgentName(QWEN, "scout"));
 
   // A session stays pinned to the profile it started on.
   await assert.rejects(
@@ -469,7 +479,7 @@ test("resolved Pilotfish default Sol pins and remaps when the raw model is omitt
     { tool: "task", sessionID: "resolved-sol", callID: "resolved-sol-task" },
     task,
   );
-  assert.equal(task.args.subagent_type, internalAgentName("sol", "executor"));
+  assert.equal(task.args.subagent_type, internalAgentName(SOL, "executor"));
 });
 
 test("resolved Pilotfish agent pins when the raw agent is omitted", async () => {
@@ -484,7 +494,7 @@ test("resolved Pilotfish agent pins when the raw agent is omitted", async () => 
     { tool: "task", sessionID: "resolved-agent", callID: "resolved-agent-task" },
     task,
   );
-  assert.equal(task.args.subagent_type, internalAgentName("terra", "executor"));
+  assert.equal(task.args.subagent_type, internalAgentName(TERRA, "executor"));
 });
 
 test("resolved Pilotfish messages pin when both raw routing fields are omitted", async () => {
@@ -499,7 +509,7 @@ test("resolved Pilotfish messages pin when both raw routing fields are omitted",
     { tool: "task", sessionID: "resolved-luna", callID: "resolved-luna-task" },
     task,
   );
-  assert.equal(task.args.subagent_type, internalAgentName("luna", "executor"));
+  assert.equal(task.args.subagent_type, internalAgentName(LUNA, "executor"));
 });
 
 test("resolved non-Pilotfish messages are no-ops when the raw agent is omitted", async () => {
@@ -526,7 +536,7 @@ test("resolved chat routing fields override conflicting raw prompt fields", asyn
     { tool: "task", sessionID: "resolved-wins", callID: "resolved-wins-task" },
     task,
   );
-  assert.equal(task.args.subagent_type, internalAgentName("terra", "executor"));
+  assert.equal(task.args.subagent_type, internalAgentName(TERRA, "executor"));
 });
 
 test("unrelated calls and unpinned sessions are no-ops", async () => {
@@ -542,14 +552,14 @@ test("unrelated calls and unpinned sessions are no-ops", async () => {
   assert.deepEqual(unrelated.args, { subagent_type: "custom", task_id: "custom" });
 
   const nonTaskInternal = {
-    args: { subagent_type: internalAgentName("sol", "executor"), task_id: "not-a-task" },
+    args: { subagent_type: internalAgentName(SOL, "executor"), task_id: "not-a-task" },
   };
   await hooks["tool.execute.before"](
     { tool: "bash", sessionID: "not-pilotfish" },
     nonTaskInternal,
   );
   assert.deepEqual(nonTaskInternal.args, {
-    subagent_type: internalAgentName("sol", "executor"),
+    subagent_type: internalAgentName(SOL, "executor"),
     task_id: "not-a-task",
   });
 
@@ -566,11 +576,11 @@ test("direct internal profile requests fail closed before routing in every sessi
   });
 
   for (const [sessionID, subagentType] of [
-    ["luna", internalAgentName("luna", "executor")],
-    ["luna", internalAgentName("sol", "security-executor")],
-    ["luna", internalAgentName("terra", "Explore")],
-    ["missing", internalAgentName("sol", "scout")],
-    ["not-pilotfish", internalAgentName("terra", "verifier")],
+    ["luna", internalAgentName(LUNA, "executor")],
+    ["luna", internalAgentName(SOL, "security-executor")],
+    ["luna", internalAgentName(TERRA, "Explore")],
+    ["missing", internalAgentName(SOL, "scout")],
+    ["not-pilotfish", internalAgentName(TERRA, "verifier")],
   ]) {
     await assertDirectInvocationRejected(hooks, sessionID, subagentType);
   }
@@ -580,23 +590,23 @@ test("direct internal profile chat requests fail closed for absent and mapped se
   const chatgpt = await router({ preset: "chatgpt" });
   await assertDirectChatRejected(chatgpt, {
     ...message("chatgpt-absent", "openai/gpt-5.6-sol"),
-    agent: internalAgentName("sol", "executor"),
+    agent: internalAgentName(SOL, "executor"),
   });
   await chatgpt["chat.message"](message("chatgpt-mapped", "openai/gpt-5.6-luna", "max"));
   await assertDirectChatRejected(chatgpt, {
     ...message("chatgpt-mapped", "openai/gpt-5.6-luna", "max"),
-    agent: internalAgentName("luna", "executor"),
+    agent: internalAgentName(LUNA, "executor"),
   });
 
   const antigravity = await router({ preset: "antigravity" });
   await assertDirectChatRejected(antigravity, {
     ...message("ag-absent", AG_PRIMARY),
-    agent: internalAgentName("sol", "scout"),
+    agent: internalAgentName(SOL, "scout"),
   });
   await antigravity["chat.message"](message("ag-mapped", AG_PRIMARY));
   await assertDirectChatRejected(antigravity, {
     ...message("ag-mapped", AG_PRIMARY),
-    agent: internalAgentName("terra", "verifier"),
+    agent: internalAgentName(TERRA, "verifier"),
   });
 });
 
@@ -605,13 +615,13 @@ test("raw and resolved internal chat identities reject independently of routing 
   await assertDirectChatRejected(
     hooks,
     { ...message("resolved-internal", "openai/gpt-5.6-sol"), agent: "build" },
-    resolvedMessage(internalAgentName("sol", "executor"), "openai/gpt-5.6-sol"),
+    resolvedMessage(internalAgentName(SOL, "executor"), "openai/gpt-5.6-sol"),
   );
   await assertDirectChatRejected(
     hooks,
     {
       ...message("raw-internal", "openai/gpt-5.6-sol"),
-      agent: internalAgentName("sol", "executor"),
+      agent: internalAgentName(SOL, "executor"),
     },
     resolvedMessage("build", "openai/gpt-5.6-sol"),
   );
@@ -653,7 +663,7 @@ test("invalid preset initialization resolves to atomic fail-closed protective ho
     hooks,
     {
       ...message("protective-internal", "openai/gpt-5.6-sol"),
-      agent: internalAgentName("sol", "executor"),
+      agent: internalAgentName(SOL, "executor"),
     },
     resolvedMessage("build", "openai/gpt-5.6-sol"),
   );
@@ -661,7 +671,7 @@ test("invalid preset initialization resolves to atomic fail-closed protective ho
   await assertDirectInvocationRejected(
     hooks,
     "protective-task",
-    internalAgentName("terra", "executor"),
+    internalAgentName(TERRA, "executor"),
   );
   const publicTask = { args: { subagent_type: "executor", task_id: "blocked-session" } };
   await hooks["tool.execute.before"]({ tool: "task", sessionID: "raw-pilotfish" }, publicTask);
@@ -689,7 +699,7 @@ test("Pilotfish Task routing deactivates for Build while preserving and reactiva
     { tool: "task", sessionID, callID: "reactivated-task" },
     reactivatedTask,
   );
-  assert.equal(reactivatedTask.args.subagent_type, internalAgentName("sol", "executor"));
+  assert.equal(reactivatedTask.args.subagent_type, internalAgentName(SOL, "executor"));
 
   await hooks["chat.message"]({ ...message(sessionID, "openai/gpt-5.6-sol"), agent: "build" });
   await assert.rejects(
@@ -722,7 +732,7 @@ test("a restarted router stays inactive for Build-first and later recovers the P
     { tool: "task", sessionID, callID: "restart-pilotfish-task" },
     pilotfishTask,
   );
-  assert.equal(pilotfishTask.args.subagent_type, internalAgentName("terra", "executor"));
+  assert.equal(pilotfishTask.args.subagent_type, internalAgentName(TERRA, "executor"));
   assert.equal(history.calls.length, 1);
 });
 
@@ -775,7 +785,7 @@ test("a later Build chat supersedes pending Pilotfish recovery without deleting 
     { tool: "task", sessionID, callID: "recovery-reactivated-task" },
     reactivatedTask,
   );
-  assert.equal(reactivatedTask.args.subagent_type, internalAgentName("sol", "executor"));
+  assert.equal(reactivatedTask.args.subagent_type, internalAgentName(SOL, "executor"));
   assert.equal(history.calls.length, 1);
 });
 
@@ -792,7 +802,7 @@ test("AntiGravity remaps Tasks only while Pilotfish is the active agent", async 
   await hooks["chat.message"](message(sessionID, AG_PRIMARY, "low"));
   const pilotfishTask = { args: { subagent_type: "executor", description: "routed task" } };
   await hooks["tool.execute.before"]({ tool: "task", sessionID, callID: "ag-routed" }, pilotfishTask);
-  assert.equal(pilotfishTask.args.subagent_type, internalAgentName("opus", "executor"));
+  assert.equal(pilotfishTask.args.subagent_type, internalAgentName(OPUS, "executor"));
 
   await hooks["chat.message"]({ ...message(sessionID, AG_PRIMARY), agent: "build" });
   await assert.rejects(
@@ -805,7 +815,7 @@ test("foreground Task authorization allows one exact internal child before tool 
   const parentID = "authorized-parent";
   const childID = "authorized-child";
   const secondChildID = "authorized-second-child";
-  const expectedAgent = internalAgentName("sol", "executor");
+  const expectedAgent = internalAgentName(SOL, "executor");
   const sessionsByID = {
     [childID]: { id: childID, parentID, agent: expectedAgent },
     [secondChildID]: {
@@ -864,7 +874,7 @@ test("foreground Task authorization allows one exact internal child before tool 
     resolvedMessage(expectedAgent, "openai/gpt-5.6-terra"),
   );
   const cleanupTask = await authorizeTask(hooks, parentID, "cleanup-call", "scout");
-  const cleanupAgent = internalAgentName("sol", "scout");
+  const cleanupAgent = internalAgentName(SOL, "scout");
   assert.equal(cleanupTask.args.subagent_type, cleanupAgent);
   sessionsByID[secondChildID].title = `${cleanupTask.args.description} (@${cleanupAgent} subagent)`;
   sessionsByID[secondChildID].agent = cleanupAgent;
@@ -897,7 +907,7 @@ test("concurrent same-role Tasks bind to their own collision-resistant child mar
   const parentID = "concurrent-task-parent";
   const firstChildID = "concurrent-task-child-one";
   const secondChildID = "concurrent-task-child-two";
-  const expectedAgent = internalAgentName("sol", "executor");
+  const expectedAgent = internalAgentName(SOL, "executor");
   const sessionsByID = {
     [firstChildID]: { id: firstChildID, parentID, agent: expectedAgent },
     [secondChildID]: { id: secondChildID, parentID, agent: expectedAgent },
@@ -961,7 +971,7 @@ test("session.created binds only a matching post-authorization child event", asy
   const timing = fakeTiming();
   const parentID = "created-event-parent";
   const childID = "created-event-child";
-  const expectedAgent = internalAgentName("sol", "executor");
+  const expectedAgent = internalAgentName(SOL, "executor");
   const sessionsByID = { [childID]: { id: childID, parentID, agent: expectedAgent } };
   const host = historyClient({ sessionsByID });
   const hooks = await router(
@@ -1000,7 +1010,7 @@ test("stale authorization expires without tool after and cannot bind later", asy
   const timing = fakeTiming();
   const parentID = "expired-parent";
   const childID = "expired-child";
-  const expectedAgent = internalAgentName("sol", "executor");
+  const expectedAgent = internalAgentName(SOL, "executor");
   const sessionsByID = { [childID]: { id: childID, parentID, agent: expectedAgent } };
   const host = historyClient({ sessionsByID });
   const hooks = await router(
@@ -1030,7 +1040,7 @@ test("bound child title is restored when Task fails before child chat and after 
   const timing = fakeTiming();
   const parentID = "bound-expiry-parent";
   const childID = "bound-expiry-child";
-  const expectedAgent = internalAgentName("sol", "executor");
+  const expectedAgent = internalAgentName(SOL, "executor");
   const sessionsByID = { [childID]: { id: childID, parentID, agent: expectedAgent } };
   const host = historyClient({ sessionsByID });
   const hooks = await router(
@@ -1060,7 +1070,7 @@ test("expiry update failure still revokes without rejecting its timer callback",
   const timing = fakeTiming();
   const parentID = "failed-expiry-parent";
   const childID = "failed-expiry-child";
-  const expectedAgent = internalAgentName("sol", "executor");
+  const expectedAgent = internalAgentName(SOL, "executor");
   const sessionsByID = { [childID]: { id: childID, parentID, agent: expectedAgent } };
   const host = historyClient({
     sessionsByID,
@@ -1098,7 +1108,7 @@ test("expiry atomically wins races with child chat and tool after", async () => 
   const timing = fakeTiming();
   const parentID = "expiry-race-parent";
   const childID = "expiry-race-child";
-  const expectedAgent = internalAgentName("sol", "executor");
+  const expectedAgent = internalAgentName(SOL, "executor");
   const sessionsByID = { [childID]: { id: childID, parentID, agent: expectedAgent } };
   let releaseUpdate;
   const updateGate = new Promise((resolve) => {
@@ -1154,7 +1164,7 @@ test("expiry atomically wins races with child chat and tool after", async () => 
 test("child title restoration failure blocks execution and remains safely cleanable", async () => {
   const parentID = "restoration-parent";
   const childID = "restoration-child";
-  const expectedAgent = internalAgentName("sol", "executor");
+  const expectedAgent = internalAgentName(SOL, "executor");
   const sessionsByID = { [childID]: { id: childID, parentID, agent: expectedAgent } };
   let updateAttempts = 0;
   const host = historyClient({
@@ -1198,7 +1208,7 @@ test("child title restoration failure blocks execution and remains safely cleana
 
 test("resumed Tasks authorize only the exact suitable child without marker mutation", async () => {
   const parentID = "resume-parent";
-  const expectedAgent = internalAgentName("sol", "executor");
+  const expectedAgent = internalAgentName(SOL, "executor");
   const sessionsByID = {
     "resume-good": {
       id: "resume-good",
@@ -1214,7 +1224,7 @@ test("resumed Tasks authorize only the exact suitable child without marker mutat
     "resume-wrong-agent": {
       id: "resume-wrong-agent",
       parentID,
-      agent: internalAgentName("terra", "executor"),
+      agent: internalAgentName(TERRA, "executor"),
     },
     "resume-wrong-id": {
       id: "different-id",
@@ -1288,7 +1298,7 @@ test("resumed Task authorization expires independently without mutating descript
   const timing = fakeTiming();
   const parentID = "expired-resume-parent";
   const childID = "expired-resume-child";
-  const expectedAgent = internalAgentName("sol", "executor");
+  const expectedAgent = internalAgentName(SOL, "executor");
   const sessionsByID = {
     [childID]: { id: childID, parentID, agent: expectedAgent, title: "existing child" },
   };
@@ -1325,7 +1335,7 @@ test("internal child authorization rejects malformed Task and child identities",
   const childID = "authorization-child";
   const wrongParentChildID = "wrong-parent-child";
   const rootID = "root-internal";
-  const expectedAgent = internalAgentName("sol", "executor");
+  const expectedAgent = internalAgentName(SOL, "executor");
   const sessionsByID = {
     [childID]: { id: childID, parentID, agent: expectedAgent },
     [wrongParentChildID]: {
@@ -1379,8 +1389,8 @@ test("internal child authorization rejects malformed Task and child identities",
   });
 
   for (const [callID, attemptedAgent, attemptedChild] of [
-    ["wrong-profile", internalAgentName("terra", "executor"), childID],
-    ["wrong-role", internalAgentName("sol", "scout"), childID],
+    ["wrong-profile", internalAgentName(TERRA, "executor"), childID],
+    ["wrong-role", internalAgentName(SOL, "scout"), childID],
     ["wrong-parent", expectedAgent, wrongParentChildID],
     ["root", expectedAgent, rootID],
   ]) {
@@ -1405,7 +1415,7 @@ test("internal child authorization rejects malformed Task and child identities",
   await emitSessionCreated(hooks, sessionsByID[childID]);
   await assertDirectChatRejected(
     hooks,
-    { sessionID: childID, agent: internalAgentName("sol", "scout") },
+    { sessionID: childID, agent: internalAgentName(SOL, "scout") },
     resolvedMessage(expectedAgent, "openai/gpt-5.6-terra"),
   );
   await hooks["tool.execute.after"]({
@@ -1460,7 +1470,7 @@ test("internal child authorization rejects session lookup failures", async () =>
     const hooks = await router({ preset: "chatgpt" }, entry.client);
     await hooks["chat.message"](message(parentID, "openai/gpt-5.6-sol"));
     const task = await authorizeTask(hooks, parentID, `call-${entry.name}`);
-    const expectedAgent = internalAgentName("sol", "executor");
+    const expectedAgent = internalAgentName(SOL, "executor");
     await emitSessionCreated(hooks, {
       id: childID,
       parentID,
@@ -1484,7 +1494,7 @@ test("parent session deletion clears unconsumed internal child authorization", a
   const timing = fakeTiming();
   const parentID = "deleted-authorization-parent";
   const childID = "deleted-authorization-child";
-  const expectedAgent = internalAgentName("sol", "executor");
+  const expectedAgent = internalAgentName(SOL, "executor");
   const sessionsByID = { [childID]: { id: childID, parentID, agent: expectedAgent } };
   const host = historyClient({ sessionsByID });
   const hooks = await router(
@@ -1518,7 +1528,7 @@ test("router disposal clears authorization timers and restores transient descrip
   const timing = fakeTiming();
   const parentID = "disposed-parent";
   const childID = "disposed-child";
-  const expectedAgent = internalAgentName("sol", "executor");
+  const expectedAgent = internalAgentName(SOL, "executor");
   const sessionsByID = { [childID]: { id: childID, parentID, agent: expectedAgent } };
   const host = historyClient({ sessionsByID });
   const hooks = await router(
@@ -1554,7 +1564,7 @@ test("session deletion only cleans the deleted session", async () => {
     two,
   );
   assert.equal(one.args.subagent_type, "executor");
-  assert.equal(two.args.subagent_type, internalAgentName("terra", "executor"));
+  assert.equal(two.args.subagent_type, internalAgentName(TERRA, "executor"));
 });
 
 test("cross-preset primary models fail before routing", async () => {
@@ -1596,18 +1606,18 @@ test("each preset activates only its own profiles", async () => {
   await hooks["chat.message"](message("ag", AG_PRIMARY, "max"));
   const task = { args: { subagent_type: "executor", description: "routed" } };
   await hooks["tool.execute.before"]({ tool: "task", sessionID: "ag", callID: "ag-only" }, task);
-  assert.equal(task.args.subagent_type, internalAgentName("opus", "executor"));
+  assert.equal(task.args.subagent_type, internalAgentName(OPUS, "executor"));
 
   await assertDirectInvocationRejected(
     hooks,
     "ag",
-    internalAgentName("luna", "security-reviewer"),
+    internalAgentName(LUNA, "security-reviewer"),
   );
 });
 
 test("configuration errors are deferred without partial mutation and spare non-Pilotfish sessions", async () => {
   const collision = chatgptConfig();
-  collision.agent[internalAgentName("sol", "executor")] = {};
+  collision.agent[internalAgentName(SOL, "executor")] = {};
   const collisionBefore = clone(collision);
   const collisionHooks = await router({ preset: "chatgpt" });
   collisionHooks.config(collision);
@@ -1636,8 +1646,8 @@ test("configuration errors are deferred without partial mutation and spare non-P
   );
   assert.equal(customizedAntigravity.agent.executor.variant, "max");
   assert.equal(
-    customizedAntigravity.agent[internalAgentName("opus", "executor")].variant,
-    profiles.profiles.opus.workers.executor.variant,
+    customizedAntigravity.agent[internalAgentName(OPUS, "executor")].variant,
+    profiles.profiles[OPUS].workers.executor.variant,
   );
 });
 
@@ -1661,7 +1671,7 @@ test("a restarted ChatGPT router recovers the first persisted Pilotfish model", 
 
   assert.equal(history.calls.length, 1);
   assert.deepEqual(history.calls[0], { path: { id: sessionID } });
-  assert.equal(task.args.subagent_type, internalAgentName("sol", "executor"));
+  assert.equal(task.args.subagent_type, internalAgentName(SOL, "executor"));
 });
 
 test("recovered profiles reject model changes but allow effort changes", async () => {
@@ -1702,7 +1712,7 @@ test("recovery orders history by creation time and ignores non-Pilotfish message
     task,
   );
 
-  assert.equal(task.args.subagent_type, internalAgentName("luna", "executor"));
+  assert.equal(task.args.subagent_type, internalAgentName(LUNA, "executor"));
 });
 
 test("recovery fails closed for malformed history and history API failures", async () => {
@@ -1782,7 +1792,7 @@ test("recovery rejects malformed Pilotfish roles while ignoring valid assistant 
     { tool: "task", sessionID, callID: "assistant-history-task" },
     task,
   );
-  assert.equal(task.args.subagent_type, internalAgentName("terra", "executor"));
+  assert.equal(task.args.subagent_type, internalAgentName(TERRA, "executor"));
 });
 
 test("recovery validates Pilotfish user time and ignores unrelated malformed records", async () => {
@@ -1901,5 +1911,5 @@ test("an omitted preset activates every defined profile", async () => {
   await hooks["chat.message"](message(sessionID, AG_PRIMARY, "max"));
   const task = { args: { subagent_type: "scout", description: "routed" } };
   await hooks["tool.execute.before"]({ tool: "task", sessionID, callID: "all" }, task);
-  assert.equal(task.args.subagent_type, internalAgentName("opus", "scout"));
+  assert.equal(task.args.subagent_type, internalAgentName(OPUS, "scout"));
 });

@@ -34,6 +34,12 @@ async function resolvedConfig(fixture) {
   return JSON.parse(result.stdout.slice(start));
 }
 
+// Mirrors the router: profile names are model identifiers, so provider slashes
+// are flattened before they become agent names.
+function internalAgentName(profile, role) {
+  return `pilotfish-profile-${profile.replaceAll("/", "--")}-${role}`;
+}
+
 describe("profile router config generation in OpenCode", () => {
   let fixture;
   let config;
@@ -62,7 +68,7 @@ describe("profile router config generation in OpenCode", () => {
     for (const profile of ACTIVE) {
       const mapping = PROFILES.profiles[profile];
       for (const role of WORKERS) {
-        const clone = config.agent[`pilotfish-profile-${profile}-${role}`];
+        const clone = config.agent[internalAgentName(profile, role)];
         assert.ok(clone, `missing clone for ${profile}/${role}`);
         assert.equal(clone.model, mapping.workers[role].model, `${profile}/${role} model`);
         assert.equal(clone.variant, mapping.workers[role].variant, `${profile}/${role} variant`);
@@ -99,7 +105,7 @@ describe("profile router config generation in OpenCode", () => {
     for (const role of WORKERS) assert.equal(task[role], "allow", `${role} must stay allowed`);
     for (const profile of ACTIVE) {
       for (const role of WORKERS) {
-        assert.equal(task[`pilotfish-profile-${profile}-${role}`], "allow");
+        assert.equal(task[internalAgentName(profile, role)], "allow");
       }
     }
     const unexpected = entries

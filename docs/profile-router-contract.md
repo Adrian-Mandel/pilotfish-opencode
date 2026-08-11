@@ -10,7 +10,26 @@ Pinned host: OpenCode `1.18.10`. A host upgrade invalidates every claim below un
 
 Profiles are data. `profiles.json` defines one entry per profile and groups them into named presets; the router contains no profile-specific code, so adding a provider or a model tier is a data edit. Two profiles may never claim the same primary model, and a preset activates only its own profiles.
 
-Current profiles: `sol`, `terra`, `luna` (ChatGPT preset) and `opus`, `pro`, `flash` (AntiGravity preset).
+## Profile naming
+
+A profile is named for the orchestrator it selects. The name is:
+
+```
+<providerID>/<final segment of the primary modelID>
+```
+
+So `openai/gpt-5.6-sol` names the profile whose primary model is `openai/gpt-5.6-sol`, and `openrouter/qwen3.6-27b` names the profile whose primary model is `openrouter/qwen/qwen3.6-27b`. The provider is kept because it is part of the model's identity: the same weights served by two providers are two profiles with different pricing, limits, and tool-call behavior, and routing already keys on the full model string. Only the vendor segment that some providers repeat inside their slugs is dropped, because it duplicates the provider and carries no routing meaning.
+
+This exists because a short family label — `qwen`, `deepseek`, `pro` — names a lineup, not a model. Every provider ships several, they change often, and a reader cannot tell from the label which one a session is about to spend money on.
+
+Two rules follow, and both are enforced rather than documented alone:
+
+- **`model` values are never abbreviated.** A profile name is a label; `primary.model` and every worker `model` stay the provider's exact slug, vendor segment included. `tests/test_policy.py` derives each profile name from its own `primary.model` and fails if they disagree, so a name cannot drift from its binding.
+- **Slashes never reach an agent name.** `internalAgentName` flattens `/` to `--` when building `pilotfish-profile-<profile>-<role>`, because agent names are OpenCode config keys and Task permission patterns and must not be path-shaped. Config generation refuses two active profiles that would flatten to the same agent name.
+
+Adding a profile is therefore still a pure data edit: add the entry under `profiles` keyed by this rule, list it in a preset, and the router needs no change.
+
+Current profiles: `openai/gpt-5.6-sol`, `openai/gpt-5.6-terra`, `openai/gpt-5.6-luna` (ChatGPT preset); `google/antigravity-claude-opus-4-6-thinking`, `google/antigravity-gemini-3.1-pro`, `google/antigravity-gemini-3-flash` (AntiGravity preset); `openrouter/qwen3.6-27b`, `openrouter/deepseek-v4-pro` (OpenRouter preset).
 
 ## Why hidden clones exist
 
@@ -22,7 +41,7 @@ The only remaining mechanism is to generate profile-specific agents at config ti
 
 | ID | Guarantee |
 |---|---|
-| G1 | Exactly one visible Pilotfish primary. Generated workers are `hidden` and named `pilotfish-profile-<profile>-<role>`. |
+| G1 | Exactly one visible Pilotfish primary. Generated workers are `hidden` and named `pilotfish-profile-<profile>-<role>`, where the profile's provider slashes are flattened to `--` so an agent name is never path-shaped. Two active profiles that would flatten to the same agent name are refused. |
 | G2 | The profile is selected from the primary **model** alone. The user's selected effort/variant is never read for routing and never overridden. |
 | G3 | The profile pin is immutable for the life of the session. A different primary model raises an error; it never silently reroutes or mixes profiles. |
 | G4 | Routing is active only while `pilotfish` is the current successfully resolved and pinned agent in that session. After an agent switch, Task calls pass through untouched. |

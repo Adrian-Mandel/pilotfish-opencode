@@ -50,8 +50,11 @@ function historyTimestamp(value) {
   return undefined;
 }
 
+// Profile names are model identifiers, so they carry provider slashes. Agent
+// names are OpenCode config keys and Task permission patterns, so the slash is
+// flattened to "--" rather than left for the host to interpret as a path.
 function internalAgentName(profile, role) {
-  return `${INTERNAL_PREFIX}${profile}-${role}`;
+  return `${INTERNAL_PREFIX}${profile.replaceAll("/", "--")}-${role}`;
 }
 
 function isInternalAgentName(agent) {
@@ -297,8 +300,21 @@ function configureProfiles(config, data, profileNames) {
   validatePublicWorkers(agents, workers);
 
   const cloneNames = [];
+  const claimedCloneNames = new Set();
   for (const profile of profileNames) {
-    for (const role of workers) cloneNames.push(internalAgentName(profile, role));
+    for (const role of workers) {
+      const name = internalAgentName(profile, role);
+      // Two distinct profile names can only flatten to one agent name if a
+      // profile is literally named with "--"; refuse rather than let one
+      // profile's clone silently overwrite another's.
+      if (claimedCloneNames.has(name)) {
+        throw new Error(
+          `Pilotfish profile router refuses internal agent collision at "${name}"; two active profiles flatten to the same internal agent name.`,
+        );
+      }
+      claimedCloneNames.add(name);
+      cloneNames.push(name);
+    }
   }
   for (const name of cloneNames) {
     if (Object.hasOwn(agents, name)) {
