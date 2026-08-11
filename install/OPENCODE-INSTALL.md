@@ -67,16 +67,16 @@ Requires these exact OpenCode model IDs:
 
 ### OpenRouter
 
-Requires these exact OpenCode model IDs:
+Requires these exact OpenCode model IDs, and for the DeepSeek pair the variants in `profiles.json`:
 
-- `openrouter/qwen/qwen3.6-27b`
-- `openrouter/qwen/qwen3.6-35b-a3b`
-- `openrouter/deepseek/deepseek-v4-pro`
-- `openrouter/deepseek/deepseek-v4-flash-0731`
+- `openrouter/qwen/qwen3.6-27b` — exposes no variant
+- `openrouter/qwen/qwen3.6-35b-a3b` — exposes no variant
+- `openrouter/deepseek/deepseek-v4-pro` — `high`, `xhigh`
+- `openrouter/deepseek/deepseek-v4-flash-0731` — `low`, `high`, `max`
 
 Two profiles, `qwen` and `deepseek`, each built from two models rather than three tiers. Nothing requires a profile to span more than two: the strong model takes the primary plus `plan-verifier`, `security-reviewer`, `verifier`, and `security-executor`; the cheap model takes `scout`, `Explore`, `mech-executor`, and `executor`. The router creates 16 hidden clones for this preset.
 
-Neither profile sets `variant`. Reasoning-effort variants are a gpt-5.6 and AntiGravity concept and these models are not known to accept one; omission is supported, as the AntiGravity `opus` profile already shows. If a variant turns out to be honoured, adding it is a `profiles.json` edit and nothing else.
+Variant support differs between the two profiles, and `opencode models --verbose` is the authority. The Qwen pair exposes no variants, so the `qwen` profile sets none; omission is supported, as the AntiGravity `opus` profile already shows. The DeepSeek pair does expose them — `deepseek-v4-pro` accepts `high` and `xhigh`, `deepseek-v4-flash-0731` accepts `low`, `high`, and `max` — so the `deepseek` profile ladders effort the way the ChatGPT profiles do: `low` for reconnaissance and mechanical work, `high` for implementation and verification, `xhigh` for both security roles. Variants are a per-model capability, not a provider-family one; never assume a model lacks them without checking.
 
 Switching between the two profiles is one edit to `agent.pilotfish.model` — the profile is a pure function of the resolved primary model, so no reinstall or plugin change is involved. Like every preset, this one binds only the public primary; the eight public workers install unbound, and while Pilotfish is the resolved primary each Task is rewritten to the selected profile's clone.
 

@@ -17,6 +17,7 @@ Tested with OpenCode `1.18.10`.
 - Measured evidence for issue #16 in `docs/issue-16-evidence.md`: the verification gate refutes 72% of the time and its cost is re-verification depth rather than gate frequency, read-only delegation runs serially 78% of the time, and inline reconnaissance costs round-trips rather than tool time.
 - A verifier-correctness benchmark under `tests/bench/`, the first slice of issue #15. It runs `pilotfish` end-to-end against seeded-defect repositories inside the existing integration fixture and scores the verdict its own verifier returns against known ground truth, A/B against the pre-scope-change prompt. Measurement is in situ: no bench mode, no per-profile shim, and no change to production routing, permissions, or the authorization protocol. It exists because the failure mode of #16's narrowed verifier scope is a false `CONFIRMED`, which real telemetry cannot detect — the database records verdicts, never whether a verdict was right.
 - An install-time advisory that `small_model` is unset, with a suggested value per preset. Pilotfish does not write or own the key; the observation is that compaction otherwise runs on the selected primary at a 22.1s median.
+- An OpenRouter section in the README, which the preset shipped without.
 
 ### Changed
 
@@ -32,6 +33,7 @@ Tested with OpenCode `1.18.10`.
 ### Fixed
 
 - Presets no longer bake a model onto the eight public workers. Task remapping is active only while Pilotfish is the resolved primary, so under any other primary agent those pins were the only routing left and sent every worker to the preset's provider regardless of the model the session was running. An AntiGravity session in OpenCode's built-in plan agent would delegate reconnaissance to `openai/gpt-5.6-luna` and stall on an exhausted ChatGPT quota it never selected. Public workers now install unbound and inherit the invoking primary; worker tiering stays in `profiles.json`, applied by the router to its hidden clones.
+- The DeepSeek profile now ladders reasoning effort instead of running every role at the provider default. Both of its models accept variants — `deepseek-v4-pro` takes `high` and `xhigh`, `deepseek-v4-flash-0731` takes `low`, `high`, and `max` — but the profile set none, on the assumption that variants were a gpt-5.6 and AntiGravity concept. Variant support is a per-model capability, not a per-provider-family one. The Qwen profile correctly keeps none, because neither of its models exposes any.
 
 ## v0.1.0 - Unreleased
 

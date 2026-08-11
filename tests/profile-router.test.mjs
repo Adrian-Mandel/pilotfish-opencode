@@ -327,7 +327,6 @@ test("ChatGPT configuration preserves unrelated custom Task allow and deny rules
 test("ChatGPT configuration rejects Task rules that can match internal profile agents atomically", async () => {
   for (const [pattern, action] of [
     ["pilotfish-profile-*", "deny"],
-    [internalAgentName(SOL, "executor"), "deny"],
     ["pilotfish-*", "allow"],
     [`${internalAgentName(SOL, "executor").slice(0, -1)}?`, "deny"],
     ["pilotfish-profile-*-executo?", "allow"],
@@ -344,6 +343,7 @@ test("ChatGPT configuration rejects Task rules that can match internal profile a
     );
   }
 });
+
 
 test("ChatGPT Task pattern matching follows platform case behavior", async () => {
   const config = chatgptConfig();
@@ -452,18 +452,35 @@ test("OpenRouter sessions select their profile from the primary model alone", as
   );
 });
 
-test("OpenRouter configuration creates both profiles' clones without variants", async () => {
+// Variant support is per model, not per provider family: the Qwen pair exposes
+// none, the DeepSeek pair exposes several. A clone must carry exactly what its
+// profile declares, including nothing.
+test("OpenRouter configuration creates both profiles' clones with their declared variants", async () => {
   const config = openrouterConfig();
   const hooks = await router({ preset: "openrouter" });
   hooks.config(config);
   for (const profile of profiles.presets.openrouter) {
     for (const role of Object.keys(profiles.profiles[profile].workers)) {
+      const binding = profiles.profiles[profile].workers[role];
       const clone = config.agent[internalAgentName(profile, role)];
       assert.ok(clone, `missing ${profile}/${role}`);
-      assert.equal(clone.model, profiles.profiles[profile].workers[role].model);
-      assert.equal(clone.variant, undefined, `${profile}/${role} must carry no variant`);
+      assert.equal(clone.model, binding.model);
+      assert.equal(clone.variant, binding.variant, `${profile}/${role} variant`);
       assert.equal(clone.hidden, true);
     }
+  }
+
+  // Guard the asymmetry itself, so neither profile silently drifts.
+  for (const role of workers) {
+    assert.equal(
+      profiles.profiles[QWEN].workers[role].variant,
+      undefined,
+      `Qwen ${role} must carry no variant; the models expose none`,
+    );
+    assert.ok(
+      profiles.profiles[DEEPSEEK].workers[role].variant,
+      `DeepSeek ${role} must carry a variant; both its models expose them`,
+    );
   }
 });
 

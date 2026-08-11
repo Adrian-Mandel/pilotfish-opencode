@@ -71,7 +71,7 @@ OpenCode `1.18.10` replaces plugin-hook exceptions with `Unexpected server error
 
 ## Presets
 
-The `0.2.0` installer offers two tested presets. It verifies that every required model and variant exists in `opencode models --verbose` before changing configuration.
+The `0.2.0` installer offers three tested presets. It verifies that every required model and variant exists in `opencode models --verbose` before changing configuration.
 
 ### ChatGPT runtime profiles
 
@@ -98,6 +98,21 @@ Only `pilotfish` is bound in the persisted config; the eight public workers are 
 Opus, Pro, Flash, and Sonnet are `google/antigravity-claude-opus-4-6-thinking`, `google/antigravity-gemini-3.1-pro`, `google/antigravity-gemini-3-flash`, and `google/antigravity-claude-sonnet-4-6`. Sonnet exposes no variant, so its roles run at the provider default; it is a separate quota bucket from Opus, which is why the Opus profile's verifier uses it. Opus exposes only `low` and `max`, and Pro only `low` and `high`, so this preset's effort ladder is shorter than ChatGPT's.
 
 AntiGravity support targets the `google/antigravity-*` model IDs exposed by the user's existing OpenCode integration. Pilotfish does not install or configure that integration.
+
+### OpenRouter runtime profiles
+
+Two profiles built from two models each rather than three tiers. Only `pilotfish` is bound in the persisted config; the eight public workers are installed unbound and inherit the invoking primary.
+
+| Primary profile | `pilotfish` | `scout` | `Explore` | `plan-verifier` | `security-reviewer` | `mech-executor` | `executor` | `verifier` | `security-executor` |
+|---|---|---|---|---|---|---|---|---|---|
+| Qwen-27B | Qwen-27B | Qwen-35B | Qwen-35B | Qwen-27B | Qwen-27B | Qwen-35B | Qwen-35B | Qwen-27B | Qwen-27B |
+| Pro/high | Pro/high | Flash/low | Flash/low | Pro/high | Pro/xhigh | Flash/low | Flash/high | Pro/high | Pro/xhigh |
+
+Qwen-27B and Qwen-35B are `openrouter/qwen/qwen3.6-27b` and `openrouter/qwen/qwen3.6-35b-a3b`; Pro and Flash are `openrouter/deepseek/deepseek-v4-pro` and `openrouter/deepseek/deepseek-v4-flash-0731`.
+
+Variant support is a per-model capability, not a provider-family one. Neither Qwen model exposes a variant, so that profile sets none and its roles run at the provider default. Both DeepSeek models do — Pro accepts `high` and `xhigh`, Flash accepts `low`, `high`, and `max` — so that profile ladders effort like the ChatGPT profiles. Check `opencode models --verbose` rather than assuming.
+
+These are the first supported models whose IDs carry two slashes; the router rebuilds the selection key without assuming a segment count.
 
 ## Install
 
