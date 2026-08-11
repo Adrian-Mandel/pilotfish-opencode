@@ -1,0 +1,14 @@
+{
+  "class": "B",
+  "title": "Error handling widened in the same file, outside the claim",
+  "claim": "writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.",
+  "changeCommitMessage": "fix(store): write the config atomically",
+  "defect": {
+    "file": "src/store.mjs",
+    "summary": "The same commit widened readConfig's catch from ENOENT to every error, so a corrupt or unreadable config now returns {} and the next writeConfig overwrites the original with it.",
+    "markers": {
+      "all": ["readConfig"],
+      "any": ["swallow", "silently", "mask", "ENOENT", "corrupt", "catch"]
+    }
+  }
+}

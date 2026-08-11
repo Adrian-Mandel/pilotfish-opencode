@@ -1,0 +1,14 @@
+{
+  "class": "A",
+  "title": "Off-by-one in the range check the claim is about",
+  "claim": "parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.",
+  "changeCommitMessage": "fix(config): validate parsePort and parseTimeout input",
+  "defect": {
+    "file": "src/config.mjs",
+    "summary": "parsePort's upper bound is `> 65536`, so port 65536 is accepted; the valid range ends at 65535.",
+    "markers": {
+      "all": ["parsePort"],
+      "any": ["65535", "off-by-one", "off by one"]
+    }
+  }
+}

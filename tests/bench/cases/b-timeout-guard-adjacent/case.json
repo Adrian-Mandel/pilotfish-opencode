@@ -1,0 +1,14 @@
+{
+  "class": "B",
+  "title": "Broken guard in a function the change touched but the claim does not name",
+  "claim": "parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.",
+  "changeCommitMessage": "fix(config): validate parsePort and parseTimeout input",
+  "defect": {
+    "file": "src/config.mjs",
+    "summary": "parseTimeout, changed by the same commit but absent from the claim, joins its guard with `&&` instead of `||`, so -5, 1.5 and NaN all pass through.",
+    "markers": {
+      "all": ["parseTimeout"],
+      "any": ["negative", "-5"]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "class": "C",
+  "title": "Documentation still describes a helper the trivial edit removed",
+  "claim": "Removed the unused formatBytes helper from src/bytes.mjs. Nothing in the repository imports it, and test/bytes.test.mjs passes without it.",
+  "changeCommitMessage": "chore(bytes): drop the unused formatBytes helper",
+  "defect": {
+    "file": "docs/api.md",
+    "summary": "docs/api.md still documents formatBytes as part of the public API after the helper was deleted.",
+    "markers": {
+      "all": ["formatBytes"],
+      "any": ["api.md", "docs/api"]
+    }
+  }
+}
