@@ -23,6 +23,7 @@ The source of truth is:
 - `templates/opencode.base.jsonc`
 - `templates/presets/chatgpt.jsonc`
 - `templates/presets/antigravity.jsonc`
+- `templates/presets/openrouter.jsonc`
 - `templates/pilotfish/prompts/*.md`
 - `templates/pilotfish/profile-router.mjs`
 - `templates/pilotfish/profiles.json`
@@ -34,6 +35,7 @@ The required config-relative plugin tuple is exactly one of:
 ```json
 ["./pilotfish/profile-router.mjs", {"preset":"chatgpt"}]
 ["./pilotfish/profile-router.mjs", {"preset":"antigravity"}]
+["./pilotfish/profile-router.mjs", {"preset":"openrouter"}]
 ```
 
 The router is required. Usage telemetry tracked by [issue #11](https://github.com/Adrian-Mandel/pilotfish-opencode/issues/11) is optional and independent.
@@ -62,6 +64,23 @@ Requires these exact OpenCode model IDs:
 - `google/antigravity-claude-sonnet-4-6`
 - `google/antigravity-gemini-3-flash`
 - `google/antigravity-gemini-3.1-pro`
+
+### OpenRouter
+
+Requires these exact OpenCode model IDs:
+
+- `openrouter/qwen/qwen3.6-27b`
+- `openrouter/qwen/qwen3.6-35b-a3b`
+- `openrouter/deepseek/deepseek-v4-pro`
+- `openrouter/deepseek/deepseek-v4-flash-0731`
+
+Two profiles, `qwen` and `deepseek`, each built from two models rather than three tiers. Nothing requires a profile to span more than two: the strong model takes the primary plus `plan-verifier`, `security-reviewer`, `verifier`, and `security-executor`; the cheap model takes `scout`, `Explore`, `mech-executor`, and `executor`. The router creates 16 hidden clones for this preset.
+
+Neither profile sets `variant`. Reasoning-effort variants are a gpt-5.6 and AntiGravity concept and these models are not known to accept one; omission is supported, as the AntiGravity `opus` profile already shows. If a variant turns out to be honoured, adding it is a `profiles.json` edit and nothing else.
+
+Switching between the two profiles is one edit to `agent.pilotfish.model` — the profile is a pure function of the resolved primary model, so no reinstall or plugin change is involved. Like every preset, this one binds only the public primary; the eight public workers install unbound, and while Pilotfish is the resolved primary each Task is rewritten to the selected profile's clone.
+
+These are the first supported models whose IDs carry two slashes. The router rebuilds the selection key as `providerID` + `/` + `modelID` without assuming a segment count, so `openrouter` plus `qwen/qwen3.6-27b` round-trips correctly. `tests/profile-router.test.mjs` covers it.
 
 Every preset routes the same way: it creates hidden clones only for its own profiles, and Task arguments name public roles until the router rewrites them.
 
@@ -277,7 +296,7 @@ Pilotfish does not manage this key, and this step writes nothing. Raise it once,
 
 OpenCode uses `small_model` for background chores — session titles and context compaction. When the key is unset those run on whichever primary is selected, where compaction had a 22.1s median. There is no per-agent form, so the setting is global and applies to Build and Plan as well.
 
-If the key is already set, say nothing. Otherwise report that it is unset, name a cheap model from the installed preset as a starting point — `openai/gpt-5.6-luna` for ChatGPT, `google/antigravity-gemini-3-flash` for AntiGravity — and state the trade honestly: faster and cheaper titles and compaction, against a weaker summariser producing the context the session continues from. Do not set it, and do not record it in install state.
+If the key is already set, say nothing. Otherwise report that it is unset, name a cheap model from the installed preset as a starting point — `openai/gpt-5.6-luna` for ChatGPT, `google/antigravity-gemini-3-flash` for AntiGravity, and the selected profile's cheap model for OpenRouter (`openrouter/qwen/qwen3.6-35b-a3b` or `openrouter/deepseek/deepseek-v4-flash-0731`) — and state the trade honestly: faster and cheaper titles and compaction, against a weaker summariser producing the context the session continues from. Do not set it, and do not record it in install state.
 
 Summarize the selected preset, created and replaced files, preserved customizations, validation results, and backup location.
 

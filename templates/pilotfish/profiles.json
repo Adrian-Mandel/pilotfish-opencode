@@ -20,6 +20,10 @@
       "opus",
       "pro",
       "flash"
+    ],
+    "openrouter": [
+      "qwen",
+      "deepseek"
     ]
   },
   "profiles": {
@@ -259,6 +263,68 @@
         "security-executor": {
           "model": "google/antigravity-gemini-3.1-pro",
           "variant": "high"
+        }
+      }
+    },
+    "qwen": {
+      "primary": {
+        "model": "openrouter/qwen/qwen3.6-27b"
+      },
+      "workers": {
+        "scout": {
+          "model": "openrouter/qwen/qwen3.6-35b-a3b"
+        },
+        "Explore": {
+          "model": "openrouter/qwen/qwen3.6-35b-a3b"
+        },
+        "plan-verifier": {
+          "model": "openrouter/qwen/qwen3.6-27b"
+        },
+        "security-reviewer": {
+          "model": "openrouter/qwen/qwen3.6-27b"
+        },
+        "mech-executor": {
+          "model": "openrouter/qwen/qwen3.6-35b-a3b"
+        },
+        "executor": {
+          "model": "openrouter/qwen/qwen3.6-35b-a3b"
+        },
+        "verifier": {
+          "model": "openrouter/qwen/qwen3.6-27b"
+        },
+        "security-executor": {
+          "model": "openrouter/qwen/qwen3.6-27b"
+        }
+      }
+    },
+    "deepseek": {
+      "primary": {
+        "model": "openrouter/deepseek/deepseek-v4-pro"
+      },
+      "workers": {
+        "scout": {
+          "model": "openrouter/deepseek/deepseek-v4-flash-0731"
+        },
+        "Explore": {
+          "model": "openrouter/deepseek/deepseek-v4-flash-0731"
+        },
+        "plan-verifier": {
+          "model": "openrouter/deepseek/deepseek-v4-pro"
+        },
+        "security-reviewer": {
+          "model": "openrouter/deepseek/deepseek-v4-pro"
+        },
+        "mech-executor": {
+          "model": "openrouter/deepseek/deepseek-v4-flash-0731"
+        },
+        "executor": {
+          "model": "openrouter/deepseek/deepseek-v4-flash-0731"
+        },
+        "verifier": {
+          "model": "openrouter/deepseek/deepseek-v4-pro"
+        },
+        "security-executor": {
+          "model": "openrouter/deepseek/deepseek-v4-pro"
         }
       }
     }

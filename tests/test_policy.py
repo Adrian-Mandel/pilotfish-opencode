@@ -37,14 +37,24 @@ class PolicyContractTests(unittest.TestCase):
             "opus": ("google/antigravity-claude-opus-4-6-thinking", "max"),
             "pro": ("google/antigravity-gemini-3.1-pro", "high"),
             "flash": ("google/antigravity-gemini-3-flash", "high"),
+            # Reasoning-effort variants are a gpt-5.6 and AntiGravity concept.
+            # The OpenRouter profiles omit them, which the schema allows.
+            "qwen": ("openrouter/qwen/qwen3.6-27b", None),
+            "deepseek": ("openrouter/deepseek/deepseek-v4-pro", None),
         }
         for profile, primary in expected_primary.items():
             actual = self.profiles["profiles"][profile]
-            self.assertEqual((actual["primary"]["model"], actual["primary"]["variant"]), primary)
+            self.assertEqual(
+                (actual["primary"]["model"], actual["primary"].get("variant")), primary
+            )
             self.assertEqual(set(actual["workers"]), set(WORKERS))
         self.assertEqual(
             self.profiles["presets"],
-            {"chatgpt": ["sol", "terra", "luna"], "antigravity": ["opus", "pro", "flash"]},
+            {
+                "chatgpt": ["sol", "terra", "luna"],
+                "antigravity": ["opus", "pro", "flash"],
+                "openrouter": ["qwen", "deepseek"],
+            },
         )
         for members in self.profiles["presets"].values():
             for name in members:
@@ -131,7 +141,7 @@ class PolicyContractTests(unittest.TestCase):
         # active only while Pilotfish is the resolved primary. Under any other
         # primary agent that pin would route the worker to the preset's provider
         # instead of the session's own, spending an unselected quota.
-        for name in ("chatgpt", "antigravity"):
+        for name in ("chatgpt", "antigravity", "openrouter"):
             preset = json.loads(text(f"templates/presets/{name}.jsonc"))
             self.assertEqual(set(preset["agent"]), {"pilotfish"})
 
@@ -304,6 +314,33 @@ class PolicyContractTests(unittest.TestCase):
                     mapping[role],
                     f"{name}/{role}",
                 )
+
+    # Two models per profile rather than three tiers: a profile is a primary
+    # model plus eight worker bindings, and nothing requires the bindings to
+    # span more than two models. The strong model takes orchestration, planning
+    # challenge, verification, and security; the cheap one takes reconnaissance
+    # and execution.
+    def test_openrouter_profile_values_are_exact(self) -> None:
+        strong_cheap = {
+            "qwen": ("openrouter/qwen/qwen3.6-27b", "openrouter/qwen/qwen3.6-35b-a3b"),
+            "deepseek": (
+                "openrouter/deepseek/deepseek-v4-pro",
+                "openrouter/deepseek/deepseek-v4-flash-0731",
+            ),
+        }
+        strong_roles = {"plan-verifier", "security-reviewer", "verifier", "security-executor"}
+        cheap_roles = {"scout", "Explore", "mech-executor", "executor"}
+        self.assertEqual(strong_roles | cheap_roles, set(WORKERS))
+
+        for name, (strong, cheap) in strong_cheap.items():
+            profile = self.profiles["profiles"][name]
+            self.assertEqual(profile["primary"]["model"], strong, name)
+            self.assertNotIn("variant", profile["primary"], f"{name}/primary")
+            for role in WORKERS:
+                binding = profile["workers"][role]
+                expected = strong if role in strong_roles else cheap
+                self.assertEqual(binding["model"], expected, f"{name}/{role}")
+                self.assertNotIn("variant", binding, f"{name}/{role}")
 
     def test_router_source_and_primary_prompt_contracts(self) -> None:
         router = text("templates/pilotfish/profile-router.mjs")

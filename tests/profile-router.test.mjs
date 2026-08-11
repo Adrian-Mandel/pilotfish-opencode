@@ -85,6 +85,19 @@ function chatgptConfig() {
   return base;
 }
 
+function openrouterConfig() {
+  const base = JSON.parse(
+    readFileSync(new URL("../templates/opencode.base.jsonc", import.meta.url), "utf8"),
+  );
+  const preset = JSON.parse(
+    readFileSync(new URL("../templates/presets/openrouter.jsonc", import.meta.url), "utf8"),
+  );
+  for (const [name, binding] of Object.entries(preset.agent)) {
+    Object.assign(base.agent[name], binding);
+  }
+  return base;
+}
+
 function antigravityConfig() {
   const config = JSON.parse(
     readFileSync(new URL("../templates/opencode.base.jsonc", import.meta.url), "utf8"),
@@ -385,6 +398,63 @@ test("ChatGPT sessions pin their primary profile, allow variant changes, and pre
     hooks["chat.message"](message("sol", "openai/gpt-5.6-terra")),
     /model changed.*new session/i,
   );
+});
+
+// Switching profiles is the deliverable, and OpenRouter is the first preset
+// whose model IDs carry two slashes (`openrouter/qwen/qwen3.6-27b`). The router
+// rebuilds the key as `${providerID}/${modelID}` without assuming a segment
+// count, so the provider reports `openrouter` plus `qwen/qwen3.6-27b` and the
+// join round-trips -- this test fails if that ever stops being true.
+function openRouterMessage(sessionID, model) {
+  const slash = model.indexOf("/");
+  return {
+    sessionID,
+    agent: "pilotfish",
+    model: { providerID: model.slice(0, slash), modelID: model.slice(slash + 1) },
+    variant: undefined,
+  };
+}
+
+test("OpenRouter sessions select their profile from the primary model alone", async () => {
+  const hooks = await router({ preset: "openrouter" });
+  await hooks["chat.message"](openRouterMessage("q", "openrouter/qwen/qwen3.6-27b"));
+  await hooks["chat.message"](openRouterMessage("d", "openrouter/deepseek/deepseek-v4-pro"));
+
+  // The same public role, dispatched from two sessions, lands on two different
+  // models with no configuration change between them.
+  const fromQwen = { args: { description: "verify", subagent_type: "verifier", prompt: "work" } };
+  await hooks["tool.execute.before"]({ tool: "task", sessionID: "q", callID: "q-1" }, fromQwen);
+  assert.equal(fromQwen.args.subagent_type, internalAgentName("qwen", "verifier"));
+
+  const fromDeepSeek = { args: { description: "verify", subagent_type: "verifier" } };
+  await hooks["tool.execute.before"]({ tool: "task", sessionID: "d", callID: "d-1" }, fromDeepSeek);
+  assert.equal(fromDeepSeek.args.subagent_type, internalAgentName("deepseek", "verifier"));
+
+  // Cheap roles route to the cheap model in the same session.
+  const recon = { args: { description: "scout", subagent_type: "scout" } };
+  await hooks["tool.execute.before"]({ tool: "task", sessionID: "q", callID: "q-2" }, recon);
+  assert.equal(recon.args.subagent_type, internalAgentName("qwen", "scout"));
+
+  // A session stays pinned to the profile it started on.
+  await assert.rejects(
+    hooks["chat.message"](openRouterMessage("q", "openrouter/deepseek/deepseek-v4-pro")),
+    /model changed.*new session/i,
+  );
+});
+
+test("OpenRouter configuration creates both profiles' clones without variants", async () => {
+  const config = openrouterConfig();
+  const hooks = await router({ preset: "openrouter" });
+  hooks.config(config);
+  for (const profile of profiles.presets.openrouter) {
+    for (const role of Object.keys(profiles.profiles[profile].workers)) {
+      const clone = config.agent[internalAgentName(profile, role)];
+      assert.ok(clone, `missing ${profile}/${role}`);
+      assert.equal(clone.model, profiles.profiles[profile].workers[role].model);
+      assert.equal(clone.variant, undefined, `${profile}/${role} must carry no variant`);
+      assert.equal(clone.hidden, true);
+    }
+  }
 });
 
 test("resolved Pilotfish default Sol pins and remaps when the raw model is omitted", async () => {
