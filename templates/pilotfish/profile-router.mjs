@@ -274,7 +274,22 @@ function extendTaskPermission(pilotfish, cloneNames, workers) {
     );
   }
 
-  for (const [pattern] of entries.slice(1)) {
+  for (const [pattern, action] of entries.slice(1)) {
+    if (cloneNames.includes(pattern)) {
+      // Host fact H11: one process serves several project directories from one
+      // global config, rebuilding `config.agent` per instance but passing every
+      // instance this same nested `permission.task` object. The clone agents
+      // therefore look absent while the Task rules this function wrote on a
+      // previous instance are still present, so an exact clone key already set
+      // to "allow" is this router's own idempotent state, not foreign
+      // customization. Only a mismatched action means something else wrote it.
+      if (action !== "allow") {
+        throw new Error(
+          `Pilotfish profile router cannot extend agent.pilotfish.permission.task: internal profile agent "${pattern}" already has a customized Task rule ("${action}") that is not "allow". Remove or narrow that rule before starting Pilotfish; refusing to override customized Task permission.`,
+        );
+      }
+      continue;
+    }
     const matchedName = cloneNames.find((name) => taskPatternMatches(pattern, name));
     if (matchedName) {
       throw new Error(
@@ -330,7 +345,13 @@ function configureProfiles(config, data, profileNames) {
       const binding = mapping.workers[role];
       clone.hidden = true;
       clone.model = binding.model;
-      clone.variant = binding.variant;
+      // The binding is authoritative in both directions: a profile that
+      // declares no variant must clear whatever the public worker inherited
+      // from the user's preset, rather than leak one model's effort tier onto
+      // a model that exposes none. Remove the key instead of setting it to
+      // undefined so the host never sees a present-but-empty variant.
+      if (binding.variant === undefined) delete clone.variant;
+      else clone.variant = binding.variant;
       clones[internalAgentName(profile, role)] = clone;
     }
   }

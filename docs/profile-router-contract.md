@@ -68,6 +68,7 @@ Each row is a coupling point to OpenCode 1.18.10. If one changes upstream, the l
 | H8 | Task selects a named agent and exposes no per-call model override | Hidden clones are required at all |
 | H9 | Task permission patterns use OpenCode's wildcard semantics, last match wins | The router mirrors that matcher to validate customized permissions (G9) |
 | H10 | Standard CLI JSON replaces hook exceptions with a generic `Unexpected server error` | Exact router reasons require `--print-logs` |
+| H11 | One process serves several project directories from one global config, rebuilding `config.agent` per instance while passing every instance the **same nested `permission.task` object** | Config generation is idempotent against its own prior clone entries; from the second instance onward the router meets rules it wrote itself, and treating them as foreign customization killed every project after the first (G9) |
 
 ## Non-guarantees (accepted risk)
 
