@@ -4,37 +4,6 @@
     "pilotfish": {
       "model": "google/antigravity-claude-opus-4-6-thinking",
       "variant": "max"
-    },
-    "scout": {
-      "model": "google/antigravity-gemini-3-flash",
-      "variant": "low"
-    },
-    "Explore": {
-      "model": "google/antigravity-gemini-3-flash",
-      "variant": "medium"
-    },
-    "plan-verifier": {
-      "model": "google/antigravity-claude-opus-4-6-thinking",
-      "variant": "max"
-    },
-    "security-reviewer": {
-      "model": "google/antigravity-claude-opus-4-6-thinking",
-      "variant": "max"
-    },
-    "mech-executor": {
-      "model": "google/antigravity-gemini-3-flash",
-      "variant": "low"
-    },
-    "executor": {
-      "model": "google/antigravity-gemini-3.1-pro",
-      "variant": "high"
-    },
-    "verifier": {
-      "model": "google/antigravity-claude-sonnet-4-6"
-    },
-    "security-executor": {
-      "model": "google/antigravity-claude-opus-4-6-thinking",
-      "variant": "max"
     }
   }
 }

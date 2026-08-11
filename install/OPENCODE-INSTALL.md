@@ -220,7 +220,9 @@ Skip an identical installed file. If an installed file differs, show the diff or
 
 ### 4. Merge Agent Configuration and Plugin
 
-Start with the nine definitions from `templates/opencode.base.jsonc`. Recursively merge the selected preset's matching `agent` entries so each role gains its model and optional variant.
+Start with the nine definitions from `templates/opencode.base.jsonc`. Recursively merge the selected preset's matching `agent` entries. A preset binds only the public primary `pilotfish`; the eight public workers are installed unbound and must never gain a `model` or `variant`.
+
+Leaving the public workers unbound is deliberate. A subagent without a model inherits the invoking primary, so a worker always runs on the provider the session itself selected. Task remapping is active only while Pilotfish is the current successfully resolved agent, so under any other primary agent a baked-in worker model would be the only routing left — sending that worker to the preset's provider and its quota rather than the session's own. Worker tiering belongs to `profiles.json`, which the router applies to the hidden profile clones.
 
 Merge only the approved changed definitions into the existing global `agent` object. Skip identical entries, preserve approved custom entries as installed values, and preserve every unrelated top-level key and every unrelated agent. Do not rewrite the entire file merely to normalize formatting.
 

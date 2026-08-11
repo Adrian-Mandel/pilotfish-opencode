@@ -126,10 +126,20 @@ class PolicyContractTests(unittest.TestCase):
         self.assertNotIn("| Pending", ledger)
 
     # Retained policy/lifecycle coverage from the pre-router contract.
-    def test_presets_cover_every_public_agent(self) -> None:
+    def test_presets_bind_only_the_public_primary(self) -> None:
+        # A model baked onto a public worker outlives Task remapping, which is
+        # active only while Pilotfish is the resolved primary. Under any other
+        # primary agent that pin would route the worker to the preset's provider
+        # instead of the session's own, spending an unselected quota.
         for name in ("chatgpt", "antigravity"):
             preset = json.loads(text(f"templates/presets/{name}.jsonc"))
-            self.assertEqual(set(preset["agent"]), set(AGENTS))
+            self.assertEqual(set(preset["agent"]), {"pilotfish"})
+
+    def test_public_workers_stay_unbound(self) -> None:
+        for role in WORKERS:
+            definition = self.base["agent"][role]
+            self.assertNotIn("model", definition)
+            self.assertNotIn("variant", definition)
 
     def test_read_only_roles_are_capability_enforced(self) -> None:
         for role in ("scout", "Explore", "plan-verifier", "security-reviewer"):

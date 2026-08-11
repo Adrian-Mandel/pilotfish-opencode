@@ -28,6 +28,10 @@ Tested with OpenCode `1.18.10`.
 - Extended install, update, rollback, and uninstall ownership to the required router plugin tuple and hash-tracked runtime files.
 - Raised the verified OpenCode baseline to `1.18.10` for the runtime hook contract.
 
+### Fixed
+
+- Presets no longer bake a model onto the eight public workers. Task remapping is active only while Pilotfish is the resolved primary, so under any other primary agent those pins were the only routing left and sent every worker to the preset's provider regardless of the model the session was running. An AntiGravity session in OpenCode's built-in plan agent would delegate reconnaissance to `openai/gpt-5.6-luna` and stall on an exhausted ChatGPT quota it never selected. Public workers now install unbound and inherit the invoking primary; worker tiering stays in `profiles.json`, applied by the router to its hidden clones.
+
 ## v0.1.0 - Unreleased
 
 Tested with OpenCode `1.17.18`.
