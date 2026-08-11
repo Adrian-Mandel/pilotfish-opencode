@@ -1,0 +1,6 @@
+# Result files are large, contain full verdict transcripts, and are produced by
+# runs that cost real subscription quota. Keep the directory, commit a result
+# only when it is the evidence behind a decision -- with `git add -f` and a
+# commit message saying which decision.
+*
+!.gitignore

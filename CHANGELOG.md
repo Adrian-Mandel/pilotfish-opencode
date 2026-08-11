@@ -15,6 +15,7 @@ Tested with OpenCode `1.18.10`.
 - Per-role `steps` backstops and a `doom_loop` deny on all eight subagents, where an `ask` has nobody attached to answer it and stalls instead of breaking the loop.
 - `question` permission for the `pilotfish` primary, which OpenCode denies globally and re-allows only for its own built-in primaries.
 - Measured evidence for issue #16 in `docs/issue-16-evidence.md`: the verification gate refutes 72% of the time and its cost is re-verification depth rather than gate frequency, read-only delegation runs serially 78% of the time, and inline reconnaissance costs round-trips rather than tool time.
+- A verifier-correctness benchmark under `tests/bench/`, the first slice of issue #15. It runs `pilotfish` end-to-end against seeded-defect repositories inside the existing integration fixture and scores the verdict its own verifier returns against known ground truth, A/B against the pre-scope-change prompt. Measurement is in situ: no bench mode, no per-profile shim, and no change to production routing, permissions, or the authorization protocol. It exists because the failure mode of #16's narrowed verifier scope is a false `CONFIRMED`, which real telemetry cannot detect — the database records verdicts, never whether a verdict was right.
 - An install-time advisory that `small_model` is unset, with a suggested value per preset. Pilotfish does not write or own the key; the observation is that compaction otherwise runs on the selected primary at a 22.1s median.
 
 ### Changed

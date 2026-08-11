@@ -1,0 +1,7 @@
+{
+  "class": "D",
+  "title": "Correct change, no defect seeded",
+  "claim": "src/cache.mjs is now bounded: Cache takes a maxEntries option defaulting to 128 and evicts the least recently used key once the bound is exceeded. get() counts as a use. test/cache.test.mjs covers eviction and recency and passes.",
+  "changeCommitMessage": "feat(cache): bound the cache with LRU eviction",
+  "defect": null
+}
