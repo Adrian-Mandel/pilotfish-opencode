@@ -104,8 +104,21 @@
       "prompt": "{file:./pilotfish/prompts/mech-executor.md}",
       "steps": 50,
       "permission": {
+        "*": "deny",
         "doom_loop": "deny",
-        "task": "deny"
+        "task": "deny",
+        "bash": "allow",
+        "edit": "allow",
+        "read": {
+          "*": "allow",
+          "*.env": "deny",
+          "*.env.*": "deny",
+          "*.env.example": "allow"
+        },
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "skill": "allow"
       }
     },
     "executor": {
@@ -114,8 +127,22 @@
       "prompt": "{file:./pilotfish/prompts/executor.md}",
       "steps": 120,
       "permission": {
+        "*": "deny",
         "doom_loop": "deny",
-        "task": "deny"
+        "task": "deny",
+        "bash": "allow",
+        "edit": "allow",
+        "read": {
+          "*": "allow",
+          "*.env": "deny",
+          "*.env.*": "deny",
+          "*.env.example": "allow"
+        },
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "skill": "allow",
+        "webfetch": "allow"
       }
     },
     "verifier": {
@@ -124,9 +151,20 @@
       "prompt": "{file:./pilotfish/prompts/verifier.md}",
       "steps": 60,
       "permission": {
+        "*": "deny",
         "doom_loop": "deny",
         "edit": "deny",
         "task": "deny",
+        "read": {
+          "*": "allow",
+          "*.env": "deny",
+          "*.env.*": "deny",
+          "*.env.example": "allow"
+        },
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "skill": "allow",
         "bash": {
           "*": "allow",
           "git commit*": "deny",
@@ -150,8 +188,22 @@
       "prompt": "{file:./pilotfish/prompts/security-executor.md}",
       "steps": 250,
       "permission": {
+        "*": "deny",
         "doom_loop": "deny",
-        "task": "deny"
+        "task": "deny",
+        "bash": "allow",
+        "edit": "allow",
+        "read": {
+          "*": "allow",
+          "*.env": "deny",
+          "*.env.*": "deny",
+          "*.env.example": "allow"
+        },
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "skill": "allow",
+        "webfetch": "allow"
       }
     }
   }

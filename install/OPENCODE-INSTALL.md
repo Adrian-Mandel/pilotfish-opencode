@@ -168,6 +168,45 @@ Inspect the config `plugin` array and every entry whose first element is `./pilo
 
 If `~/.config/opencode/pilotfish/` exists, list its files and compare them with the templates. Flag unknown or customized files. Hash `profile-router.mjs` and `profiles.json` with SHA-256. Never delete or overwrite unknown content silently.
 
+### 6. Inspect MCP Servers and Worker Tool Scope
+
+The eight Pilotfish **workers** ship a closed tool scope: `"*": "deny"` followed by an allowlist of the OpenCode built-ins the role needs. A closed scope removes a tool from the request schema entirely rather than blocking it at call time, so it is the difference between paying for a tool schema on every turn and not paying for it.
+
+The `pilotfish` primary is deliberately left open. It is the agent the user drives interactively, and closing it would silently remove MCP servers from the session the user is actually sitting in. Offer to narrow it only if the user asks.
+
+This matters most for MCP. A single MCP server is commonly 10,000-14,000 tokens of tool schema, re-sent on every request of every agent that can see it. Measured against a real 44-tool GitHub MCP server, a closed worker scope removed 13,748 tokens per request.
+
+The closed scope also means **Pilotfish workers cannot see any MCP server unless this step grants it.** That is the correct default — it keeps a user's unrelated MCP servers out of Pilotfish's token budget — but it is a functional change for anyone whose workers currently use one.
+
+Read the resolved `mcp` object. For each enabled server, record its name and count its tools:
+
+```bash
+curl -s -X POST <url> -H "Authorization: <header>" \
+  -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+
+Estimate cost as `len(json.dumps(tools)) / 4` tokens. For a local (`"type": "local"`) server, run its command and speak the same two JSON-RPC lines over stdin.
+
+On a fresh install there is no usage history, and there is no way to know what a user will need. Do not guess and do not prompt for a decision they cannot yet make. Default every worker to **not granted**, state that plainly, and tell them the two things that make it safe: the `pilotfish` primary keeps its MCP servers, so nothing becomes unreachable — only delegated work loses them; and a grant is one line added to a worker's `permission` block, applied on the next restart.
+
+Then tell them to revisit it once they have real usage, using the query below against their own history. That turns a guess at install time into an evidence-based decision a week later.
+
+If the install is an update and prior sessions exist, report which roles actually used each server, so the grant decision is evidence-based rather than a guess:
+
+```bash
+sqlite3 ~/.local/share/opencode/opencode.db "
+SELECT s.agent, substr(json_extract(p.data,'\$.tool'),1,40) AS tool, COUNT(*) n
+FROM part p JOIN session s ON s.id = p.session_id
+WHERE json_extract(p.data,'\$.type')='tool'
+  AND json_extract(p.data,'\$.tool') LIKE '<server>_%'
+GROUP BY s.agent, tool ORDER BY n DESC;"
+```
+
+Do not assume the answer. Real installs have shown heavy MCP use by roles that look read-only on paper — `verifier` in particular, which uses a code host to check claims against merged history.
+
+Carry into the approval gate, for each enabled MCP server: its name, tool count, estimated tokens per request, and the observed per-role usage. Never enable a server for a role the user did not approve.
+
 ## Step 2: Approval Gate
 
 For a fresh install, ask the user to choose an available preset: `ChatGPT` or `AntiGravity`. For an update, use the available recorded preset unless the user asked to switch; ask only when the recorded preset is unavailable.
@@ -182,6 +221,13 @@ Show a table containing:
 - Every prompt and runtime file to create, replace, or preserve, with hashes.
 - Backup and install-state paths.
 - Any collisions or customizations.
+- Every enabled MCP server, its tool count, its estimated tokens per request, and the roles observed using it. State plainly that workers lose access to every server not granted here.
+
+Ask which MCP servers, if any, each Pilotfish worker should keep. Offer three shapes per server and name the cost of each:
+
+1. **Not granted** (default) — cheapest; the worker cannot call the server.
+2. **Whole server** — `"<server>_*": "allow"`; costs the server's full tool-schema budget on every request of that role.
+3. **Named tools** — `"<server>_<tool>": "allow"` per tool; costs only those schemas. MCP tools are always named `<server>_<tool>`, and the name must match exactly. Usage is typically a steep power law, so a handful of tools usually covers nearly all real calls: on one measured install, 8 of 44 GitHub tools were 91% of ~899 calls, and narrowing to those 8 saved 9,598 tokens per request while keeping the workflow intact.
 
 Explain that OpenCode must be restarted after installation. Do not write anything until the user approves this exact plan.
 
@@ -243,7 +289,11 @@ Start with the nine definitions from `templates/opencode.base.jsonc`. Recursivel
 
 Leaving the public workers unbound is deliberate. A subagent without a model inherits the invoking primary, so a worker always runs on the provider the session itself selected. Task remapping is active only while Pilotfish is the current successfully resolved agent, so under any other primary agent a baked-in worker model would be the only routing left — sending that worker to the preset's provider and its quota rather than the session's own. Worker tiering belongs to `profiles.json`, which the router applies to the hidden profile clones.
 
+Append the approved MCP grants from Step 2 to the `permission` object of each role that received one. Order is significant: OpenCode resolves a tool against the **last** matching rule, so every grant must sit after the `"*": "deny"` it overrides. Append, never reorder, and never insert a grant above the deny.
+
 Merge only the approved changed definitions into the existing global `agent` object. Skip identical entries, preserve approved custom entries as installed values, and preserve every unrelated top-level key and every unrelated agent. Do not rewrite the entire file merely to normalize formatting.
+
+Do not write a `provider`, `mcp`, or top-level `permission` block. Those belong to the user. Tool scope is applied only inside the nine Pilotfish agent entries, so a Pilotfish install never changes what any other OpenCode agent — `build`, `plan`, `general`, or the user's own — can see or do.
 
 Ensure the config has:
 
@@ -283,6 +333,13 @@ Run all of these checks with `OPENCODE_DISABLE_PROJECT_CONFIG=1` from a neutral 
 7. Exercise router validation: ChatGPT creates exactly 24 hidden internal worker clones with `profiles.json` mappings and preserves the public primary model/variant; confirm all public workers and hidden clones are subagents, direct internal identities reaching chat or Task hooks are rejected, CLI `--agent` selection does not execute a hidden clone even if OpenCode falls back to its default primary, and Pilotfish-to-Build deactivates Task remapping without deleting the pin while a validated same-model switch back reactivates it. For a new foreground Task, prove before adds a unique marker but leaves authorization unbound, only a matching later `session.created` event binds the exact new child ID, and child chat racing that event fails closed. Prove the bound child title is restored before provider execution and after restores mutable args/result values and clears authorization. Accept that OpenCode may retain the digest in raw tool-input history, and verify it contains no prompt or credential data. Prove two concurrent same-role Tasks bind their own children, a pre-existing sibling retitled to a marker cannot steal authorization, and a failed bound Task with no after hook becomes unusable after the 30-second expiry while cleanup restores its marked title. Force that update to fail and prove authorization is still revoked without an unhandled rejection; also exercise expiry races with child chat and after. For resume, prove only the exact suitable `task_id` is accepted without description mutation. Confirm parent deletion and plugin disposal clear timers and restore any still-marked bound child title. Confirm an invalid preset returns protective hooks that block raw/resolved Pilotfish chat and internal Task targets without mutating config; AntiGravity validates its canonical public mappings, creates clones only for its own profiles, and passes Tasks through. Do not substitute an experimental background Task for this foreground sequence.
 8. Confirm a primary/profile switch in one session is rejected and unsupported or cross-preset primary models fail before assistant/provider execution. Check `--print-logs` for the exact router reason because OpenCode `1.18.10` may expose only `Unexpected server error` on its standard JSON surface. Restart OpenCode, resume that same session with a different primary model, and confirm persisted-history recovery rejects it before assistant/provider execution.
 9. Confirm the global `model`, `small_model`, and `default_agent` values are unchanged and the prepared install state contains no credentials or unrelated config.
+10. Confirm the tool scope resolved as approved. `opencode debug agent <name>` reports built-in tools but **does not connect MCP servers**, so its `tools` map always shows zero MCP tools and cannot verify a grant either way. Verify MCP scope from real traffic instead — after the restart, run one short turn per role and read the recorded prefix:
+
+    ```bash
+    sqlite3 ~/.local/share/opencode/opencode.db "SELECT data FROM message WHERE session_id='<id>' ORDER BY time_created LIMIT 2;" | python3 -c "import sys,json;[print((json.loads(l).get('tokens') or {})) for l in sys.stdin if l.strip()]"
+    ```
+
+    On the first assistant message, `input + cache.read` is the prefix. A granted role should exceed an ungranted one by roughly the server's measured tool-schema budget. If the two are equal, the grant did not apply — check that it sits after `"*": "deny"` and that the tool name matches `<server>_<tool>` exactly.
 
 If validation fails, restore the target config and plugin entry, prompts, runtime files, and previous install state; remove newly created files, report the exact failure, and stop. Never leave OpenCode with an invalid global config or mismatched lifecycle state.
 
