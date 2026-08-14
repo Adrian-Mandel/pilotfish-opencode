@@ -22,10 +22,14 @@ the first request of a session is warm 18% of the time, later requests in the sa
 **93%** of the time, serving an average of 98,234 tokens from cache. There is no gap short enough to
 rely on a fresh session starting warm — 20% warm under five minutes, 5% beyond an hour.
 
-**Therefore every delegation pays a cold start.** A subagent invocation is a new session, so it begins
-with a full-price prefix and only benefits from caching on its remaining turns. A subagent that runs
-two turns pays roughly half its input at full price; one that runs nine turns pays an eighth. Fewer,
-longer delegations are cheaper than many short ones.
+**Therefore every *fresh* delegation pays a cold start.** A new subagent invocation is a new session, so
+it begins with a full-price prefix and only benefits from caching on its remaining turns. A subagent
+that runs two turns pays roughly half its input at full price; one that runs nine turns pays an eighth.
+Fewer, longer delegations are cheaper than many short ones — and a delegation continued through the
+Task tool's `task_id` parameter is not a new session at all, so it lands in the warm 93% instead of the
+cold 82%. The primary prompt now says when to continue a worker and when a fresh context is worth its
+cold start; the router already authorized resumed Tasks, but no prompt had ever mentioned the parameter,
+so effective policy was to start fresh every time.
 
 **The provider decides whether any of this matters.** On OpenAI, 90% of context is served from cache.
 On the OpenRouter endpoints price-routing selected, 19%. On a local LM Studio endpoint, 0%. The same
