@@ -474,9 +474,42 @@ class PolicyContractTests(unittest.TestCase):
             "Serialize writing roles, and only writing roles",
             "which own no files and cannot conflict",
             "Dispatch independent read-only questions together in one turn",
-            "three search or read round-trips",
         ):
             self.assertIn(phrase, policy)
+
+    def test_dispatch_is_gated_on_a_writable_brief_not_a_round_trip_count(self) -> None:
+        # Upstream's dispatch-brake benchmark cut model input tokens 61.9% on the
+        # same fixture with tests and the verifier verdict unchanged, and its
+        # positive controls show the saving comes from routing stable, bounded,
+        # repetitive work to a cheaper model, not from delegating per se. A
+        # round-trip threshold delegated exactly the shapes that lost.
+        policy = text("templates/pilotfish/prompts/pilotfish.md")
+        for phrase in (
+            "a complete, self-contained brief for the work can be written without doing the work first",
+            "the assigned role's model is capable of it",
+            "Recurrence qualifies through that brief, never through a round-trip count",
+            "Keep the work here when specifying it would require solving it first",
+            "keep small task-local scans inline however many round-trips they take",
+            "decides nothing when workers are free and local",
+        ):
+            self.assertIn(phrase, policy)
+        self.assertNotIn("three search or read round-trips", policy)
+
+    def test_worker_resumption_is_permitted_and_bounded(self) -> None:
+        # A session's first request is warm 18% of the time; later requests in
+        # the same session are warm 93% of the time. `task_id` was never named
+        # in any prompt, so effective policy was "always start fresh".
+        policy = text("templates/pilotfish/prompts/pilotfish.md")
+        for phrase in (
+            "Continue an existing worker by passing its `task_id`",
+            "genuinely new or redirected work on the same investigation",
+            "never resume merely to collect or restate a result already in hand",
+            "Resuming cannot widen a worker's reach",
+            "refuses a `task_id` that is not the exact child session of this parent for that same role",
+        ):
+            self.assertIn(phrase, policy)
+        # The artifact-inspection prohibition survives the new positive case.
+        self.assertIn("new, not resumed, read-only reconnaissance worker session", policy)
 
     def test_installer_preserves_historical_lifecycle_safeguards(self) -> None:
         installer = text("install/OPENCODE-INSTALL.md")

@@ -108,7 +108,9 @@ Pilotfish's own tool calls, with the execution time OpenCode recorded for them:
 
 `read` appears to be the exception at ~12.7s per call. **It is not** — see P5 below. The mean is carried by three permission-stalled calls; 515 of pilotfish's 520 reads complete in under 0.5s. Bulk reading is worth delegating for the same round-trip reason as everything else, not because reads are slow.
 
-The trigger added to the Dispatch Rules is therefore expressed in round-trips — more than about three, and the answer wanted is a conclusion — rather than in context size or file count.
+The trigger added to the Dispatch Rules was therefore expressed in round-trips — more than about three, and the answer wanted is a conclusion — rather than in context size or file count.
+
+**That trigger has since been withdrawn (issue #31).** The measurement above stands: inline reconnaissance does cost a model turn per cheap call, and that is still why bulk scanning is worth delegating. What does not follow is the threshold. Upstream ran the controls this evidence never had, and a small task-local read-only scan of about a dozen files — comfortably past three round-trips — cost 12.9% *more* delegated than inline and took 14.2% longer, while a stable 12-file mechanical edit cost 36.0% less delegated. Round-trip count does not separate those two cases; whether a complete brief can be written without doing the work first does. The Dispatch Rules now gate on that instead, which also matches upstream's own wording that recurrence qualifies through a stable one-shot brief rather than a numeric threshold. P3's mechanism survives as rationale; its threshold does not.
 
 ## P5: re-verification churn is not a Pilotfish problem
 
