@@ -82,6 +82,38 @@ function router(options, client = historyClient().client) {
   return profileRouterPlugin({ client }, options);
 }
 
+const NOTICE_DIRECTORY = "/workspace/first-project";
+
+// A host that also exposes the TUI toast channel, so a refusal notice can be
+// observed without changing what any guard does.
+function noticeClient({ toastFailure, toastRejection, withoutTui = false, ...rest } = {}) {
+  const host = historyClient(rest);
+  const toasts = [];
+  if (!withoutTui) {
+    host.client.tui = {
+      showToast(request) {
+        toasts.push(request);
+        if (toastFailure) throw toastFailure;
+        if (toastRejection) return Promise.reject(toastRejection);
+        return Promise.resolve({ data: true });
+      },
+    };
+  }
+  return { ...host, toasts };
+}
+
+function noticeRouter(options, client) {
+  return profileRouterPlugin({ client, directory: NOTICE_DIRECTORY }, options);
+}
+
+function assertRefusalNotice(toast, expectedMessage) {
+  assert.deepEqual(toast.query, { directory: NOTICE_DIRECTORY });
+  assert.equal(toast.body.variant, "error");
+  assert.equal(toast.body.title, "Pilotfish refused this request");
+  assert.equal(typeof toast.body.duration, "number");
+  assert.match(toast.body.message, expectedMessage);
+}
+
 function chatgptConfig() {
   const base = JSON.parse(
     readFileSync(new URL("../templates/opencode.base.jsonc", import.meta.url), "utf8"),
@@ -1980,4 +2012,158 @@ test("an omitted preset activates every defined profile", async () => {
   const task = { args: { subagent_type: "scout", description: "routed" } };
   await hooks["tool.execute.before"]({ tool: "task", sessionID, callID: "all" }, task);
   assert.equal(task.args.subagent_type, internalAgentName(OPUS, "scout"));
+});
+
+test("a pin refusal is noticed once, scoped to this plugin's directory", async () => {
+  const sessionID = "noticed-pin";
+  const host = noticeClient();
+  const hooks = await noticeRouter({ preset: "chatgpt" }, host.client);
+
+  await hooks["chat.message"](message(sessionID, SOL));
+  assert.equal(host.toasts.length, 0, "an accepted message must stay silent");
+
+  await assert.rejects(
+    hooks["chat.message"](message(sessionID, TERRA)),
+    /model changed.*new session/i,
+  );
+  assert.equal(host.toasts.length, 1);
+  assertRefusalNotice(host.toasts[0], /Pilotfish model changed after this session was pinned/);
+});
+
+test("a stored configuration failure is noticed on every message it silences", async () => {
+  const config = chatgptConfig();
+  config.agent.pilotfish.permission.task["pilotfish-profile-*"] = "deny";
+  const host = noticeClient();
+  const hooks = await noticeRouter({ preset: "chatgpt" }, host.client);
+  hooks.config(config);
+  assert.equal(host.toasts.length, 0, "the config hook itself defers, so it must not notice");
+
+  for (const attempt of ["first", "second"]) {
+    await assert.rejects(
+      hooks["chat.message"](message(`config-noticed-${attempt}`, SOL)),
+      /configuration failed.*can match internal profile agent/i,
+    );
+  }
+  assert.equal(host.toasts.length, 2, "each silent message is its own failure to explain");
+  assertRefusalNotice(host.toasts[1], /configuration failed.*Fix the Pilotfish configuration/i);
+
+  await assert.doesNotReject(
+    hooks["chat.message"]({ ...message("config-noticed-build", SOL), agent: "build" }),
+  );
+  assert.equal(host.toasts.length, 2, "a non-Pilotfish session was never refused");
+});
+
+test("both guard surfaces notice, and routed Tasks stay silent", async () => {
+  const sessionID = "noticed-task";
+  const host = noticeClient();
+  const hooks = await noticeRouter({ preset: "chatgpt" }, host.client);
+  await hooks["chat.message"](message(sessionID, SOL));
+
+  await authorizeTask(hooks, sessionID, "routed-call");
+  assert.equal(host.toasts.length, 0, "a routed Task must stay silent");
+
+  await assert.rejects(
+    hooks["tool.execute.before"](
+      { tool: "task", sessionID, callID: "background-call" },
+      { args: { subagent_type: "executor", description: "bg", background: true } },
+    ),
+    /does not authorize experimental background Tasks/i,
+  );
+  assertRefusalNotice(host.toasts[0], /background Tasks/i);
+
+  await assertDirectInvocationRejected(hooks, sessionID, internalAgentName(SOL, "executor"));
+  assertRefusalNotice(host.toasts[1], /cannot be invoked directly/i);
+
+  await assertDirectChatRejected(
+    hooks,
+    { sessionID: "noticed-direct-chat", agent: internalAgentName(SOL, "executor") },
+    resolvedMessage(internalAgentName(SOL, "executor"), SOL),
+  );
+  assertRefusalNotice(host.toasts[2], /cannot be invoked directly through chat/i);
+  assert.equal(host.toasts.length, 3);
+});
+
+test("an over-long guard reason is truncated and points at --print-logs", async () => {
+  const sessionID = "noticed-truncation";
+  const callID = `duplicate-${"c".repeat(600)}`;
+  const host = noticeClient();
+  const hooks = await noticeRouter({ preset: "chatgpt" }, host.client);
+  await hooks["chat.message"](message(sessionID, SOL));
+  await authorizeTask(hooks, sessionID, callID);
+
+  await assert.rejects(
+    hooks["tool.execute.before"](
+      { tool: "task", sessionID, callID },
+      { args: { subagent_type: "executor", description: "again" } },
+    ),
+    /refuses duplicate Task authorization/i,
+  );
+  const { message: noticed } = host.toasts[0].body;
+  assert.ok(noticed.startsWith("Pilotfish refuses duplicate Task authorization"));
+  assert.ok(noticed.length < 600, `notice was not truncated (${noticed.length} chars)`);
+  assert.match(noticed, /truncated; restart OpenCode with --print-logs/);
+});
+
+test("the notice channel cannot change any refusal", async () => {
+  const hosts = {
+    throwing: noticeClient({ toastFailure: new Error("toast exploded") }),
+    rejecting: noticeClient({ toastRejection: new Error("toast unreachable") }),
+    absent: noticeClient({ withoutTui: true }),
+  };
+
+  for (const [label, host] of Object.entries(hosts)) {
+    const hooks = await noticeRouter({ preset: "chatgpt" }, host.client);
+    const sessionID = `notice-${label}`;
+    await hooks["chat.message"](message(sessionID, SOL));
+    const task = { args: { subagent_type: "scout", description: "still routed" } };
+    await hooks["tool.execute.before"]({ tool: "task", sessionID, callID: `ok-${label}` }, task);
+    assert.equal(task.args.subagent_type, internalAgentName(SOL, "scout"));
+    await assert.rejects(
+      hooks["chat.message"](message(sessionID, LUNA)),
+      /model changed.*new session/i,
+      `${label} host lost the refusal`,
+    );
+  }
+  assert.equal(hosts.absent.toasts.length, 0);
+  assert.equal(hosts.throwing.toasts.length, 1);
+  assert.equal(hosts.rejecting.toasts.length, 1);
+  // Let the rejected toast settle so an unhandled rejection would surface here.
+  await new Promise((resolve) => setImmediate(resolve));
+});
+
+test("initialization failure hooks notice their own refusal", async () => {
+  const host = noticeClient();
+  const hooks = await noticeRouter({ preset: "not-a-preset" }, host.client);
+
+  await assert.rejects(
+    hooks["chat.message"](message("notice-init", SOL)),
+    /initialization failed.*restart OpenCode.*new session/i,
+  );
+  assertRefusalNotice(host.toasts[0], /Pilotfish profile router initialization failed/);
+});
+
+test("best-effort child title cleanup is excluded from the notice", async () => {
+  const parentID = "notice-cleanup-parent";
+  const childID = "notice-cleanup-child";
+  const expectedAgent = internalAgentName(SOL, "executor");
+  const sessionsByID = { [childID]: { id: childID, parentID, agent: expectedAgent } };
+  const host = noticeClient({
+    sessionsByID,
+    updateFailure: new Error("session.update is down"),
+  });
+  const hooks = await noticeRouter({ preset: "chatgpt" }, host.client);
+  await hooks["chat.message"](message(parentID, SOL));
+
+  const task = await authorizeTask(hooks, parentID, "cleanup-only-call");
+  sessionsByID[childID].title = `${task.args.description} (@${expectedAgent} subagent)`;
+  await emitSessionCreated(hooks, sessionsByID[childID]);
+
+  await assert.rejects(
+    hooks["tool.execute.after"](
+      { tool: "task", sessionID: parentID, callID: "cleanup-only-call", args: task.args },
+      { title: task.args.description, output: "done", metadata: {} },
+    ),
+    /child title restoration failed/i,
+  );
+  assert.equal(host.toasts.length, 0, "display-metadata cleanup is not a refusal");
 });

@@ -13,7 +13,8 @@
 //   3. Permission validation and config generation
 //   4. Session recovery across processes
 //   5. Child authorization store (state, timers, cleanup)
-//   6. Composition root and plugin entry
+//   6. User-visible refusal notice
+//   7. Composition root and plugin entry
 
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -23,6 +24,9 @@ const INTERNAL_PREFIX = "pilotfish-profile-";
 const TASK_MARKER_PREFIX = " [pilotfish-task:";
 const TASK_MARKER_SUFFIX = "]";
 const TASK_AUTHORIZATION_TTL_MS = 30_000;
+const NOTICE_TITLE = "Pilotfish refused this request";
+const NOTICE_DURATION_MS = 12_000;
+const NOTICE_MAX_LENGTH = 480;
 
 // ---------------------------------------------------------------------------
 // 1. Shared primitives
@@ -811,7 +815,79 @@ function createAuthorizationStore({ client, timing, getSessionState, getCurrentA
 }
 
 // ---------------------------------------------------------------------------
-// 6. Composition root and plugin entry
+// 6. User-visible refusal notice
+// ---------------------------------------------------------------------------
+
+// A guard message is the whole diagnosis, so it is sent verbatim wherever it
+// fits. Every path ends by naming --print-logs, because that is the only way
+// to read a reason the notice could not carry.
+function noticeMessage(error) {
+  const message = typeof error?.message === "string" ? error.message.trim() : "";
+  if (message.length === 0) {
+    return "Pilotfish stopped this request without a reason message. Restart OpenCode with --print-logs to read the router error from the server log.";
+  }
+  if (message.length <= NOTICE_MAX_LENGTH) return message;
+  return `${message.slice(0, NOTICE_MAX_LENGTH).trimEnd()}… (truncated; restart OpenCode with --print-logs for the full reason)`;
+}
+
+// Host facts H1 and H10 together mean a raised guard reaches the user as
+// silence or as a generic server error, so the more correctly the router
+// refuses, the more it reads as a broken provider. Host fact H12 gives the one
+// channel out of that: a server plugin's injected client can publish a TUI
+// toast. The notice is strictly additive to the throw it accompanies — it is
+// never awaited and never rejects, so it cannot alter a fail-closed outcome.
+function createRefusalNotice({ client, directory }) {
+  return function notify(error) {
+    if (typeof client?.tui?.showToast !== "function") return;
+    const request = {
+      body: {
+        title: NOTICE_TITLE,
+        message: noticeMessage(error),
+        variant: "error",
+        duration: NOTICE_DURATION_MS,
+      },
+    };
+    // Host fact H12: the TUI drops a toast whose workspace is not the one it
+    // is showing, and host fact H11 means one process serves several
+    // directories, so the plugin's own directory has to travel with it.
+    if (typeof directory === "string" && directory.length > 0) {
+      request.query = { directory };
+    }
+    try {
+      Promise.resolve(client.tui.showToast(request)).catch(() => {});
+    } catch {
+      // A host with no reachable TUI must never turn a refusal into a crash.
+    }
+  };
+}
+
+// Only the two guard surfaces are wrapped. G8 raises every refusal before any
+// assistant or provider request, and those raises all leave through
+// `chat.message` or `tool.execute.before`. `config` is excluded because host
+// fact H1 already defers its failure to the first Pilotfish message, where it
+// is noticed; `tool.execute.after`, `event`, and `dispose` are excluded because
+// their throws are the best-effort child-title cleanup the contract already
+// records as display metadata, not a refusal the user needs explained.
+const NOTICED_HOOKS = ["chat.message", "tool.execute.before"];
+
+function withRefusalNotice(hooks, notify) {
+  for (const name of NOTICED_HOOKS) {
+    const hook = hooks[name];
+    if (typeof hook !== "function") continue;
+    hooks[name] = async (...args) => {
+      try {
+        return await hook(...args);
+      } catch (error) {
+        notify(error);
+        throw error;
+      }
+    };
+  }
+  return hooks;
+}
+
+// ---------------------------------------------------------------------------
+// 7. Composition root and plugin entry
 // ---------------------------------------------------------------------------
 
 // Host fact H2: a plugin factory that throws is skipped silently, so
@@ -1120,9 +1196,16 @@ function createProfileRouter(options = {}) {
 }
 
 export default async function profileRouterPlugin(input, options) {
+  // Built before the router so an initialization failure — the case with the
+  // least other evidence available to the user — is noticed too.
+  const notify = createRefusalNotice({
+    client: input?.client,
+    directory: input?.directory,
+  });
   try {
-    return await createProfileRouter({ ...options, client: input?.client });
+    const router = await createProfileRouter({ ...options, client: input?.client });
+    return withRefusalNotice(router, notify);
   } catch {
-    return createInitializationFailureHooks();
+    return withRefusalNotice(createInitializationFailureHooks(), notify);
   }
 }
