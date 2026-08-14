@@ -344,6 +344,57 @@ test("ChatGPT configuration rejects Task rules that can match internal profile a
   }
 });
 
+// One OpenCode process serves several project directories from one global
+// config, and it rebuilds `config.agent` per instance while handing every
+// instance the SAME nested `permission.task` object. extendTaskPermission
+// writes the clone entries into that shared object, so from the second
+// instance onward the router meets its own prior writes. Those are idempotent
+// self-state, not foreign customization: the guard must let them through, or
+// every project after the first dies in the config hook before any provider
+// call is made. Regression test for that crash.
+test("configuration is idempotent when the host shares one permission.task object across instances", async () => {
+  const sharedTask = chatgptConfig().agent.pilotfish.permission.task;
+
+  for (const instance of [1, 2, 3]) {
+    const config = chatgptConfig();
+    config.agent.pilotfish.permission.task = sharedTask;
+    const hooks = await router({ preset: "chatgpt" });
+
+    hooks.config(config);
+
+    for (const profile of [SOL, TERRA, LUNA]) {
+      for (const role of workers) {
+        const name = internalAgentName(profile, role);
+        assert.ok(
+          config.agent[name],
+          `instance ${instance} must still configure clone agent ${name}`,
+        );
+        assert.equal(sharedTask[name], "allow", `instance ${instance} Task rule for ${name}`);
+      }
+    }
+    await assert.doesNotReject(
+      hooks["chat.message"](message(`shared-${instance}`, SOL)),
+      `instance ${instance} must not raise a stored configuration error`,
+    );
+  }
+});
+
+// The exact clone key carrying anything other than "allow" was not written by
+// this router, so it stays a refusal.
+test("configuration rejects a clone's own Task key when it does not resolve to allow", async () => {
+  const executorClone = internalAgentName(SOL, "executor");
+  const config = chatgptConfig();
+  config.agent.pilotfish.permission.task[executorClone] = "deny";
+
+  await assertChatGPTConfigurationRejected(
+    config,
+    new RegExp(
+      `configuration failed.*internal profile agent "${executorClone.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}".*already has a customized Task rule \\("deny"\\)`,
+      "i",
+    ),
+  );
+});
+
 
 test("ChatGPT Task pattern matching follows platform case behavior", async () => {
   const config = chatgptConfig();

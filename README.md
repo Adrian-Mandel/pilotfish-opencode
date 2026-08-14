@@ -201,6 +201,30 @@ OpenCode has experimental background-agent and worktree APIs, but Pilotfish does
 
 These gaps are tracked in [model fallback and ceilings](https://github.com/Adrian-Mandel/pilotfish-opencode/issues/1) and [Task worktree isolation](https://github.com/Adrian-Mandel/pilotfish-opencode/issues/2). Router usage telemetry is separately optional in [issue #11](https://github.com/Adrian-Mandel/pilotfish-opencode/issues/11).
 
+## Gotchas
+
+Behaviour that is working as designed but surprises people the first time. Everything here is observed, not theoretical.
+
+**A session's model is fixed once it pins.** The profile is selected from the primary model on the first Pilotfish message and cannot change for the life of that session — switching the model picker mid-session is refused. Reasoning effort and variant you *can* change freely; only the model is locked. Start a new session to switch. This exists so that a session's profile does not depend on whether the process happened to restart, since recovery re-pins from the first persisted message.
+
+**A refused session looks like a broken model.** Every router guard fails closed, and OpenCode logs plugin hook errors without surfacing them, so a refusal arrives as *no answer at all* rather than a message. If Pilotfish goes silent, suspect a guard before you suspect the provider, and re-run with `--print-logs` to see the actual reason. Tracked in [issue #24](https://github.com/Adrian-Mandel/pilotfish-opencode/issues/24).
+
+**It is one preset, or all profiles — presets do not combine.** The `preset` option takes a single name. There is no way to activate two presets. Omitting the option entirely activates every profile in `profiles.json`, which is the only configuration that supports concurrent sessions on different provider families.
+
+**The profile is chosen by the primary model alone.** Not by the preset, not by the effort. Selecting a model that no *active* profile claims is refused before any provider request, which is easy to hit right after narrowing the preset.
+
+**Every active profile costs tokens on every request.** Each one generates 8 hidden clones, and `hidden: true` removes a clone from the agent picker but not from the Task tool schema. Three profiles is 24 clones, all profiles is 64, and they ride along on every request including every subagent turn.
+
+**Clone overhead is not the main cost — prompt caching is.** The `pilotfish` primary carries a static system-and-tools prefix of roughly 53K tokens that is re-sent on every request. Providers that cache it charge almost nothing for it; providers that do not charge full price every time. The same delegated task can differ by more than an order of magnitude in cost between two providers doing identical work.
+
+**One model can be served by several upstreams.** On aggregators such as OpenRouter, consecutive requests for the same model may land on different upstream providers. Each keeps its own prompt cache, so rotation alone can drive the cache hit rate to near zero even when the model nominally supports caching. Pin a provider before concluding a model is expensive.
+
+**Config and plugin changes need a restart.** Plugins load at OpenCode startup. Nothing you edit in the global config takes effect until the server restarts.
+
+**A cheap worker can return nothing at all.** Observed on a flash-tier worker at low effort: it issued its tool call, received the result, then produced an empty final turn and stopped cleanly — no error, correct routing, zero output. Intermittent rather than systematic, but it means an empty worker result is a real outcome to design around, not an impossibility.
+
+**Delegation is the primary's judgment call, not a guarantee.** A small question gets answered directly. When testing whether routing works, ask for delegation explicitly, or you are measuring the primary's discretion rather than the plumbing.
+
 ## Tuning
 
 All persisted role assignments live together in the global `agent` map. Advanced users may change a role's `model` and `variant`, then restart OpenCode:
