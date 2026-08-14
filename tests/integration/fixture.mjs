@@ -11,6 +11,7 @@
 // attempt. Scenarios live in scenarios.mjs and reuse this file.
 //
 //   node tests/integration/fixture.mjs create [--preset chatgpt|antigravity]
+//                                             [--primary model[@variant]]
 //   node tests/integration/fixture.mjs exec <root> -- run "hello" --agent pilotfish
 //   node tests/integration/fixture.mjs destroy <root>
 
@@ -98,8 +99,21 @@ function inheritGlobalConfig(configDir) {
   return {};
 }
 
+// `provider/model` optionally suffixed `@variant`. Model IDs carry slashes and
+// dashes but never `@`, so the split is unambiguous.
+export function parsePrimary(spec) {
+  if (!spec) return null;
+  const at = spec.lastIndexOf("@");
+  if (at < 0) return { model: spec };
+  const model = spec.slice(0, at);
+  const variant = spec.slice(at + 1);
+  if (!model || !variant) throw new Error(`malformed primary "${spec}"; expected model[@variant]`);
+  return { model, variant };
+}
+
 export function createFixture({
   preset = "chatgpt",
+  primary = null,
   auth = true,
   plugin = true,
   inheritGlobal = false,
@@ -118,6 +132,18 @@ export function createFixture({
     readTemplate("templates/opencode.base.jsonc"),
     readTemplate(`templates/presets/${preset}.jsonc`),
   );
+  // A preset ships one default primary, but the router selects the whole worker
+  // mapping from the primary model alone. Overriding it here is how a scenario
+  // exercises another profile in the same preset without editing a template.
+  // The override is authoritative in both directions, for the same reason the
+  // router's worker bindings are: a caller that names no variant must clear the
+  // preset's, not leak one model's effort tier onto a model that has none.
+  if (primary) {
+    const agent = { ...pilotfish.agent.pilotfish, model: primary.model };
+    if (primary.variant === undefined) delete agent.variant;
+    else agent.variant = primary.variant;
+    pilotfish.agent.pilotfish = agent;
+  }
   const config = {
     ...inherited,
     ...pilotfish,
@@ -223,8 +249,10 @@ async function main() {
   if (command === "create") {
     const presetIndex = rest.indexOf("--preset");
     const preset = presetIndex >= 0 ? rest[presetIndex + 1] : "chatgpt";
+    const primaryIndex = rest.indexOf("--primary");
     const fixture = createFixture({
       preset,
+      primary: primaryIndex >= 0 ? parsePrimary(rest[primaryIndex + 1]) : null,
       auth: !rest.includes("--no-auth"),
       inheritGlobal: rest.includes("--inherit-global"),
     });

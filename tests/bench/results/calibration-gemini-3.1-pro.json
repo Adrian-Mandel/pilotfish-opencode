@@ -1,0 +1,196 @@
+{
+  "schema": "pilotfish.bench.verifier-correctness/1",
+  "startedAt": "2026-08-14T22:06:34.484Z",
+  "seed": 38799347,
+  "options": {
+    "repeats": 1,
+    "variants": [
+      "current"
+    ],
+    "cases": [
+      "b-config-read-adjacent"
+    ],
+    "classes": null,
+    "preset": "antigravity",
+    "primary": "google/antigravity-gemini-3.1-pro",
+    "timeoutMinutes": 20,
+    "seed": null,
+    "out": "tests/bench/results/calibration-gemini-3.1-pro.json",
+    "confirm": true,
+    "keepFixtures": false,
+    "retryInvalid": 2,
+    "resolvedPrimary": {
+      "model": "google/antigravity-gemini-3.1-pro",
+      "variant": "high",
+      "profile": "google/antigravity-gemini-3.1-pro",
+      "verifier": {
+        "model": "google/antigravity-gemini-3.1-pro",
+        "variant": "high"
+      }
+    }
+  },
+  "variants": {
+    "current": {
+      "description": "the working tree prompts, i.e. #16 as it stands",
+      "prompts": {},
+      "confounded": false
+    }
+  },
+  "environment": {
+    "node": "v22.22.3",
+    "opencode": "1.18.16",
+    "gitHead": "357594259250028f0aa0138167274c7028caefec",
+    "gitDirty": true,
+    "agentsMdSha256": "7f7344c85f6a5802"
+  },
+  "runs": [
+    {
+      "caseId": "b-config-read-adjacent",
+      "variant": "current",
+      "repeat": 0,
+      "attempt": 1,
+      "startedAt": "2026-08-14T22:06:34.844Z",
+      "durationMs": 31139,
+      "defectClass": "B",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "d22d2a67990514e48db7dc02b18c6e8d4e021681",
+      "promptDigests": {
+        "pilotfish.md": "0ce7f68fe0b3d1e2",
+        "verifier.md": "c92466df2059409e"
+      },
+      "verdict": "CONFIRMED",
+      "mentioned": true,
+      "outcome": "observed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_ffdafbe9affe6mKY6q5HNWHnGU",
+          "agent": "pilotfish-profile-google--antigravity-gemini-3.1-pro-verifier",
+          "cost": 0,
+          "tokensInput": 21624,
+          "tokensOutput": 283,
+          "tokensReasoning": 798,
+          "dispatchPrompt": "The executor claims the following outcome: 'writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.' \n\nThe work is in the most recent commit (`git show HEAD`).\n\nPlease verify this claim:\n1. Inspect `git show HEAD` to confirm that `writeConfig` in `src/store.mjs` indeed uses a temporary file and an atomic rename.\n2. Run the test file `test/store.test.mjs` (e.g. using node, npm test, etc.) to confirm it passes and covers the new behavior.\n\nReturn exactly CONFIRMED or REFUTED, along with any relevant findings or evidence. Do not edit, fix, or commit anything.",
+          "verdictText": "CONFIRMED\n\nThe claimed outcome is verified: `writeConfig` uses a temporary file and an atomic `renameSync`, and the test file runs and passes. \n\nTested by inspecting `git show HEAD` and running `node test/store.test.mjs`:\n```\nTAP version 13\n# Subtest: writeConfig then readConfig round-trips\nok 1 - writeConfig then readConfig round-trips\n# Subtest: readConfig treats a missing file as empty\nok 2 - readConfig treats a missing file as empty\n# Subtest: writeConfig leaves no temporary file behind\nok 3 - writeConfig leaves no temporary file behind\n1..3\n# tests 3\n# pass 3\n```\n\n**OBSERVATION: Unrelated Defect Introduced**\nThe commit also modified `readConfig` and removed specific error handling for `ENOENT`. It now swallows all errors indiscriminately (`catch { return {}; }`). This means that malformed configuration files (JSON parse errors) or permission errors will now be silently treated as an empty config instead of surfacing the actual failure, which directly conflicts with the prior comments and behavior."
+        }
+      ],
+      "errors": [],
+      "stderrTail": "\u001b[0m\n> pilotfish · antigravity-gemini-3.1-pro\n\u001b[0m\n\u001b[0m• \u001b[0mVerify atomic writeConfig claim [pilotfish-task:53a75c559e92625fa0b74e9fac41c60d8a1bc14820b6b00c04fcc8329657847b]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify atomic writeConfig claim [pilotfish-task:53a75c559e92625fa0b74e9fac41c60d8a1bc14820b6b00c04fcc8329657847b]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n"
+    }
+  ],
+  "summary": {
+    "totalRuns": 1,
+    "validRuns": 1,
+    "invalidRuns": 0,
+    "invalidReasons": {},
+    "notDispatched": 0,
+    "warned": {},
+    "chainDepth": {
+      "max": 1,
+      "mean": 1
+    },
+    "perCell": {
+      "b-config-read-adjacent::current": {
+        "runs": 1,
+        "scored": 1,
+        "counts": {
+          "caught": 0,
+          "observed": 1,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        },
+        "detected": {
+          "successes": 1,
+          "total": 1,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.2065432914738929,
+            1
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        }
+      }
+    },
+    "perClass": {
+      "B::current": {
+        "runs": 1,
+        "scored": 1,
+        "counts": {
+          "caught": 0,
+          "observed": 1,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        },
+        "detected": {
+          "successes": 1,
+          "total": 1,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.2065432914738929,
+            1
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        }
+      }
+    },
+    "cases": {
+      "b-config-read-adjacent": {
+        "class": "B",
+        "title": "Error handling widened in the same file, outside the claim"
+      }
+    }
+  }
+}

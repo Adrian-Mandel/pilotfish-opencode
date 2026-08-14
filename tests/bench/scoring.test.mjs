@@ -15,6 +15,8 @@ import { join } from "node:path";
 import { describe, test } from "node:test";
 
 import { briefFor, loadCases, materializeCase } from "./lib/cases.mjs";
+import { loadProfiles, resolvePrimary } from "./lib/routing.mjs";
+import { classifyRunHealth, isStandingFailure } from "./lib/telemetry.mjs";
 import {
   OUTCOMES,
   mentionsDefect,
@@ -232,9 +234,106 @@ describe("the case set", () => {
   });
 });
 
+// A suite run against another provider is only worth having if the result can
+// say which model produced it. That depends entirely on resolution, so the
+// resolution is tested rather than assumed.
+describe("primary model resolution", () => {
+  const data = loadProfiles();
+
+  test("no primary means the preset's own default, untouched", () => {
+    assert.equal(resolvePrimary(null, "chatgpt", data), null);
+  });
+
+  test("a primary resolves to its profile and that profile's verifier", () => {
+    const resolved = resolvePrimary("google/antigravity-gemini-3.1-pro", "antigravity", data);
+    assert.equal(resolved.profile, "google/antigravity-gemini-3.1-pro");
+    assert.equal(resolved.verifier.model, data.profiles[resolved.profile].workers.verifier.model);
+  });
+
+  // The preset default's variant belongs to the preset default's model. Under
+  // `antigravity` that is Opus at `max`, and carrying `max` onto a Gemini
+  // primary is exactly the leak the router refuses for its own worker bindings.
+  test("the variant comes from the profile, not from the preset default", () => {
+    const resolved = resolvePrimary("google/antigravity-gemini-3.1-pro", "antigravity", data);
+    assert.equal(resolved.variant, data.profiles[resolved.profile].primary.variant);
+  });
+
+  test("an explicit @variant overrides the profile's", () => {
+    const resolved = resolvePrimary("google/antigravity-gemini-3.1-pro@low", "antigravity", data);
+    assert.equal(resolved.model, "google/antigravity-gemini-3.1-pro");
+    assert.equal(resolved.variant, "low");
+  });
+
+  // Both of these would otherwise surface as a fail-closed router refusal on
+  // every run of a queue that takes hours.
+  test("a primary outside the preset is rejected, naming what is available", () => {
+    assert.throws(
+      () => resolvePrimary("google/antigravity-gemini-3.1-pro", "chatgpt", data),
+      /selects no profile in preset "chatgpt".*openai\/gpt-5\.6-sol/s,
+    );
+  });
+
+  test("an unknown preset is rejected before any run", () => {
+    assert.throws(() => resolvePrimary(null, "nope", data), /unknown preset "nope"/);
+  });
+
+  // Every profile in every preset must be selectable, or --primary silently
+  // cannot reach part of the shipped matrix.
+  test("every profile in every preset resolves by its own primary model", () => {
+    for (const [preset, members] of Object.entries(data.presets)) {
+      for (const name of members) {
+        const resolved = resolvePrimary(data.profiles[name].primary.model, preset, data);
+        assert.equal(resolved.profile, name, `${preset}/${name}`);
+        assert.ok(resolved.verifier?.model, `${preset}/${name} has no verifier binding`);
+      }
+    }
+  });
+});
+
+// Both patterns are taken from one real suite: the AntiGravity quota guard
+// tripped, and every subsequent call came back as an IAM permission refusal
+// rather than a quota message. Only the first was recognised, so 120 runs were
+// retried into a wall whose reset was 73 hours away.
+describe("standing provider failures", () => {
+  const health = (stderr) =>
+    classifyRunHealth({ telemetry: { present: true, errors: [], cwdResets: 0, foreignPathMentions: 0 }, stderr, exitCode: 1 });
+
+  test("a quota guard message is recognised as a standing failure", () => {
+    const { reasons } = health(
+      "Error: Quota protection: All 1 account(s) are over 90% usage for gemini. Quota resets in 73h 1m.",
+    );
+    assert.ok(reasons.includes("throttled-or-quota"));
+    assert.ok(isStandingFailure(reasons));
+  });
+
+  test("an IAM permission refusal is recognised too, not left as a bare exit code", () => {
+    const { reasons } = health(
+      'Error: Forbidden: {"code":403,"status":"PERMISSION_DENIED","reason":"IAM_PERMISSION_DENIED"}',
+    );
+    assert.ok(reasons.includes("provider-denied"), `got ${reasons.join(",")}`);
+    assert.ok(isStandingFailure(reasons));
+  });
+
+  // The distinction the retry path depends on: a run that merely failed should
+  // still be retried, or a flaky timeout would end a suite.
+  test("an ordinary failure is not standing", () => {
+    const { reasons } = health("Error: something went wrong");
+    assert.deepEqual(reasons, ["exit-1"]);
+    assert.equal(isStandingFailure(reasons), false);
+  });
+
+  test("a timeout is not standing", () => {
+    const { reasons } = classifyRunHealth({
+      telemetry: { present: true, errors: [], cwdResets: 0, foreignPathMentions: 0 },
+      timedOut: true,
+    });
+    assert.equal(isStandingFailure(reasons), false);
+  });
+});
+
 describe("the harness cannot reach the real installation", () => {
   const source = readFileSync(new URL("./verifier-correctness.mjs", import.meta.url), "utf8");
-  const libNames = ["cases", "variants", "telemetry", "scoring"];
+  const libNames = ["cases", "variants", "telemetry", "scoring", "routing"];
   const libs = libNames.map((name) =>
     readFileSync(new URL(`./lib/${name}.mjs`, import.meta.url), "utf8"),
   );

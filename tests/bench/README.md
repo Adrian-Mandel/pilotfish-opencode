@@ -49,6 +49,32 @@ Useful flags: `--repeats N`, `--variants current,pre-scope`, `--cases <id,...>`,
 `--classes A,B`, `--timeout <minutes>`, `--seed N` (replays a run order),
 `--keep-fixtures`, `--out <path>`.
 
+## Choosing which model is measured
+
+`--preset` and `--primary` decide that, and `plan` prints the resolution before
+anything runs:
+
+```bash
+node tests/bench/verifier-correctness.mjs plan \
+  --preset antigravity --primary google/antigravity-gemini-3.1-pro
+```
+
+The router selects a profile from the primary model alone, and the profile binds
+all eight workers — so `--primary` is what puts a given model in the verifier
+seat. Without it the preset's own default primary applies, which under
+`antigravity` is Claude Opus with a Claude Sonnet verifier, not Gemini. An
+unsupported primary is rejected at parse time rather than becoming a fail-closed
+router refusal on every run of an hours-long queue.
+
+**A result is scoped to the model that held the verifier seat.** The prompt
+under test is shared across profiles, but a verdict is the model's: a class B
+result on Gemini says the scope change does not blind *that* verifier, and does
+not transfer to `gpt-5.6`, which is what #16's telemetry and its revert decision
+are about. `report` restates the profile above every table for this reason.
+
+The runtime estimate is a `chatgpt` measurement and is not evidence about any
+other routing; `plan` says so when the two differ.
+
 ## What one run is
 
 One complete `pilotfish` session against the live subscription, inside
@@ -163,9 +189,16 @@ are stated against it, but it does not vote.
 ## Cost, runtime, and what the numbers can support
 
 Read `plan` before starting. The default suite is 5 cases × 2 variants × 5
-repeats = **50 sequential orchestrated runs**. The one measured run so far took
-9.5 minutes, which puts a default suite around **8 hours** and consuming real
-`chatgpt` subscription quota throughout.
+repeats = **50 sequential orchestrated runs**, consuming real subscription quota
+throughout.
+
+How long that takes is a property of the routing, not of the harness, so `plan`
+quotes a per-profile figure and says when a routing has never been measured. The
+two measured so far are 19× apart: `openai/gpt-5.6-sol` at 9.5 min/run puts a
+default suite near **8 hours**, while `google/antigravity-gemini-3.1-pro` at
+0.5 min/run puts the same suite near **25 minutes**. Neither is a distribution —
+each is one run, and a `REFUTED` verdict starts a re-verification round that
+neither measured.
 
 Five repeats is the floor #15 sets, not a comfortable sample. At n=5, a 0/5
 result has a 95% upper bound near 45% — so *"B held"* is not concludable from

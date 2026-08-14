@@ -117,3 +117,62 @@ describe("profile router config generation in OpenCode", () => {
     assert.deepEqual(unexpected, [], "no other Task rule may be introduced");
   });
 });
+
+// A benchmark run on a provider the user still has quota for is only meaningful
+// if the model it names is the model the host actually resolves. That is the
+// whole claim behind `createFixture({ primary })`, so it is checked against the
+// real binary rather than the file the fixture wrote.
+describe("a primary override selects the profile it names", () => {
+  const PRESET = "antigravity";
+  const PROFILE = "google/antigravity-gemini-3.1-pro";
+  let fixture;
+  let config;
+
+  before(async () => {
+    fixture = createFixture({
+      preset: PRESET,
+      primary: { model: PROFILE, variant: PROFILES.profiles[PROFILE].primary.variant },
+      auth: false,
+    });
+    config = await resolvedConfig(fixture);
+  });
+
+  after(() => {
+    if (fixture) destroyFixture(fixture);
+  });
+
+  test("the host resolves the overridden primary, not the preset default", () => {
+    const preset = JSON.parse(
+      readFileSync(join(REPO_ROOT, `templates/presets/${PRESET}.jsonc`), "utf8")
+        .replace(/^\s*\/\/.*$/gm, ""),
+    );
+    assert.notEqual(preset.agent.pilotfish.model, PROFILE, "the fixture must differ from the preset");
+    assert.equal(config.agent.pilotfish.model, PROFILE);
+  });
+
+  // The seat the benchmark measures. If this reads the preset default's
+  // verifier, every result is attributed to the wrong model.
+  test("the verifier seat follows the overridden primary's profile", () => {
+    const binding = PROFILES.profiles[PROFILE].workers.verifier;
+    const clone = config.agent[internalAgentName(PROFILE, "verifier")];
+    assert.ok(clone, "no verifier clone for the overridden profile");
+    assert.equal(clone.model, binding.model);
+    assert.equal(clone.variant, binding.variant);
+  });
+
+  test("an override naming no variant clears the preset's rather than leaking it", () => {
+    const bare = createFixture({ preset: PRESET, primary: { model: PROFILE }, auth: false });
+    try {
+      const written = JSON.parse(
+        readFileSync(join(bare.configDir, "opencode.json"), "utf8"),
+      );
+      assert.equal(written.agent.pilotfish.model, PROFILE);
+      assert.ok(
+        !Object.hasOwn(written.agent.pilotfish, "variant"),
+        "the preset default's variant survived onto another model",
+      );
+    } finally {
+      destroyFixture(bare);
+    }
+  });
+});

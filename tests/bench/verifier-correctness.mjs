@@ -25,8 +25,9 @@ import { fileURLToPath } from "node:url";
 
 import { createFixture, destroyFixture, runOpencode } from "../integration/fixture.mjs";
 import { CLASSES, briefFor, loadCases, materializeCase } from "./lib/cases.mjs";
+import { resolvePrimary } from "./lib/routing.mjs";
 import { DEFAULT_VARIANTS, VARIANTS, applyVariant, resolveVariant } from "./lib/variants.mjs";
-import { classifyRunHealth, readRunTelemetry } from "./lib/telemetry.mjs";
+import { classifyRunHealth, isStandingFailure, readRunTelemetry } from "./lib/telemetry.mjs";
 import { OUTCOMES, scoreVerdict, summarizeCell, verdictSource } from "./lib/scoring.mjs";
 
 const BENCH_DIR = fileURLToPath(new URL("./", import.meta.url));
@@ -34,18 +35,47 @@ const REPO_ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const RESULTS_DIR = join(BENCH_DIR, "results");
 const SCHEMA = "pilotfish.bench.verifier-correctness/1";
 
-// One measured run, not a distribution: a single `chatgpt` class-D run on
-// 2026-08-10 took 9.5 minutes and 18.3k input / 1.2k output tokens in the
-// verifier alone. The range is guesswork around it, widened downward because a
-// clean case is the cheapest one and upward because a REFUTED verdict starts a
-// re-verification round. Stated rather than omitted because the issue requires
-// documented cost and runtime before a user starts a suite; replace both from
-// the first completed suite.
-const ESTIMATE = {
+// Three, not one: a single quota or permission error can be transient, and the
+// retry path exists for exactly that. Three consecutive is a wall.
+const STANDING_FAILURE_LIMIT = 3;
+
+// Single measured runs, not distributions. Stated rather than omitted because
+// the issue requires documented cost and runtime before a user starts a suite;
+// replace each from the first completed suite on that routing.
+//
+// Runtime is a property of the routing, not of the harness: the same class of
+// case took 9.5 minutes on gpt-5.6 and 0.5 minutes on Gemini 3.1 Pro, a 19x
+// spread. Keying the estimate by profile is the only way `plan` can quote a
+// figure that means anything, and an unmeasured routing must say so rather than
+// borrow another one's number.
+const ESTIMATE_FALLBACK = {
   source: "one measured run (2026-08-10, class D, chatgpt); the range around it is an assumption",
   minutesPerRun: 10,
   minutesPerRunRange: [5, 20],
+  measuredOn: "chatgpt / openai/gpt-5.6-sol",
 };
+
+const ESTIMATES = {
+  // 9.5 min, 18.3k input / 1.2k output tokens in the verifier alone.
+  "openai/gpt-5.6-sol": ESTIMATE_FALLBACK,
+  // 31s wall clock, 21.6k input / 283 output / 798 reasoning tokens in the
+  // verifier. Class B, `current`, CONFIRMED-with-observation, chain depth 1.
+  // The upper bound stays well above it because a REFUTED verdict starts a
+  // re-verification round and this run never did.
+  "google/antigravity-gemini-3.1-pro": {
+    source:
+      "one measured run (2026-08-14, class B, antigravity gemini-3.1-pro); the range around it is an assumption",
+    minutesPerRun: 0.5,
+    minutesPerRunRange: [0.4, 3],
+    measuredOn: "antigravity / google/antigravity-gemini-3.1-pro",
+  },
+};
+
+function estimateFor(options) {
+  const key = options.resolvedPrimary?.profile ?? (options.preset === "chatgpt" ? "openai/gpt-5.6-sol" : null);
+  const measured = key ? ESTIMATES[key] : null;
+  return { ...(measured ?? ESTIMATE_FALLBACK), measured: !!measured };
+}
 
 function parseArgs(argv) {
   const options = {
@@ -54,6 +84,7 @@ function parseArgs(argv) {
     cases: null,
     classes: null,
     preset: "chatgpt",
+    primary: null,
     timeoutMinutes: 20,
     seed: null,
     out: null,
@@ -71,6 +102,7 @@ function parseArgs(argv) {
       case "--cases": options.cases = next().split(","); break;
       case "--classes": options.classes = next().split(","); break;
       case "--preset": options.preset = next(); break;
+      case "--primary": options.primary = next(); break;
       case "--timeout": options.timeoutMinutes = Number(next()); break;
       case "--seed": options.seed = Number(next()); break;
       case "--out": options.out = next(); break;
@@ -91,6 +123,7 @@ function parseArgs(argv) {
   if (!Number.isInteger(options.repeats) || options.repeats < 1) {
     throw new Error("--repeats must be a positive integer");
   }
+  options.resolvedPrimary = resolvePrimary(options.primary, options.preset);
   return { command: positional[0] ?? "plan", positional: positional.slice(1), options };
 }
 
@@ -156,7 +189,12 @@ function environmentRecord() {
 
 async function executeRun(entry, caseDef, resolvedVariant, options, attempt) {
   const startedAt = new Date().toISOString();
-  const fixture = createFixture({ preset: options.preset, auth: true, inheritGlobal: true });
+  const fixture = createFixture({
+    preset: options.preset,
+    primary: options.resolvedPrimary,
+    auth: true,
+    inheritGlobal: true,
+  });
   try {
     const digests = applyVariant(fixture, resolvedVariant);
     const { head } = materializeCase(caseDef, fixture.project);
@@ -295,6 +333,25 @@ function renderReport(record) {
       (summary.invalidRuns ? ` (excluded: ${JSON.stringify(summary.invalidReasons)})` : "") +
       `; seed ${record.seed}; preset ${options.preset}.`,
   );
+  if (options.resolvedPrimary) {
+    lines.push("");
+    lines.push(
+      `Profile \`${options.resolvedPrimary.profile}\`: primary ` +
+        `\`${options.resolvedPrimary.model}\`, verifier ` +
+        `\`${options.resolvedPrimary.verifier.model}\`. **Every rate below is scoped to that ` +
+        "verifier model.** The prompt change under test is shared, but a verdict is the model's.",
+    );
+  }
+  if (record.stoppedEarly) {
+    lines.push("");
+    lines.push(
+      `**Suite stopped early after ${record.stoppedEarly.after} runs**, with ` +
+        `${record.stoppedEarly.remaining} still queued: ` +
+        `${record.stoppedEarly.reasons.join(", ")}. The runs that did complete are a truncated ` +
+        "prefix of a randomized queue, so cells are unbalanced and every rate below rests on a " +
+        "smaller n than the plan bought. Replay the same order with `--seed` once the account can run.",
+    );
+  }
   if (summary.notDispatched) {
     lines.push("");
     lines.push(
@@ -360,10 +417,33 @@ function renderReport(record) {
   return lines.join("\n");
 }
 
+function routingText(options) {
+  const primary = options.resolvedPrimary;
+  if (!primary) {
+    return [
+      `  preset    ${options.preset} (default primary)`,
+      "",
+      "  The verifier seat follows the preset's default profile. Pass --primary to",
+      "  measure a different one; a result is only about the model that held that seat.",
+    ];
+  }
+  const verifier = primary.verifier;
+  return [
+    `  preset    ${options.preset}`,
+    `  profile   ${primary.profile}`,
+    `  primary   ${primary.model}${primary.variant ? ` (${primary.variant})` : ""}`,
+    `  verifier  ${verifier.model}${verifier.variant ? ` (${verifier.variant})` : ""}   <- the seat under test`,
+    "",
+    "  A result is about the model in the verifier seat, not about the prompt in",
+    "  the abstract. Report it as scoped to this profile.",
+  ];
+}
+
 function planText(cases, variants, options) {
   const cells = cases.length * variants.length;
   const runs = cells * options.repeats;
-  const [low, high] = ESTIMATE.minutesPerRunRange;
+  const estimate = estimateFor(options);
+  const [low, high] = estimate.minutesPerRunRange;
   const lines = [
     "Suite plan",
     "",
@@ -373,15 +453,26 @@ function planText(cases, variants, options) {
     `  cells     ${cells}`,
     `  runs      ${runs}  full orchestrated pilotfish runs`,
     "",
+    "Routing",
+    "",
+    ...routingText(options),
+    "",
     "Cost and runtime",
     "",
     `  Each run is one complete pilotfish session -- planning, at least one verifier`,
     `  dispatch, and whatever else the primary decides it needs -- against the live`,
     `  ${options.preset} subscription. It consumes the same quota it is measuring.`,
     "",
-    `  Estimate: ~${ESTIMATE.minutesPerRun} min/run, so ~${((runs * ESTIMATE.minutesPerRun) / 60).toFixed(1)}h`,
+    `  Estimate: ~${estimate.minutesPerRun} min/run, so ~${((runs * estimate.minutesPerRun) / 60).toFixed(1)}h`,
     `  (range ${((runs * low) / 60).toFixed(1)}–${((runs * high) / 60).toFixed(1)}h at ${low}–${high} min/run).`,
-    `  Source: ${ESTIMATE.source}. Replace these figures from a completed suite.`,
+    `  Source: ${estimate.source}. Replace these figures from a completed suite.`,
+    ...(estimate.measured
+      ? []
+      : [
+          `  No run has been measured on this routing; the figure above is a`,
+          `  ${estimate.measuredOn} measurement and is not evidence about it. Runtime`,
+          "  varies about 19x across the profiles measured so far.",
+        ]),
     "",
     `  Runs are sequential. Per-run timeout is ${options.timeoutMinutes} min; up to`,
     `  ${options.retryInvalid} retries per invalid run are appended to the queue.`,
@@ -480,6 +571,7 @@ async function main() {
 
   const pending = queue.map((entry) => ({ entry, attempt: 1 }));
   let completed = 0;
+  let standingFailures = 0;
   while (pending.length > 0) {
     const { entry, attempt } = pending.shift();
     completed += 1;
@@ -518,6 +610,26 @@ async function main() {
         ? `${run.outcome} (${(run.durationMs / 60000).toFixed(1)}m, chain ${run.verifierChainDepth})\n`
         : `INVALID: ${run.healthReasons.join(",")} — re-runnable\n`,
     );
+
+    // A quota wall or an entitlement refusal is a property of the account, not
+    // of the run, so the queue behind it cannot succeed either. Retrying into
+    // one produces nothing but a longer transcript of the same error.
+    standingFailures = run.valid || !isStandingFailure(run.healthReasons) ? 0 : standingFailures + 1;
+    if (standingFailures >= STANDING_FAILURE_LIMIT) {
+      record.stoppedEarly = {
+        after: completed,
+        remaining: pending.length,
+        reasons: run.healthReasons,
+        detail: (run.stderrTail ?? "").slice(-600),
+      };
+      process.stdout.write(
+        `\nStopped after ${STANDING_FAILURE_LIMIT} consecutive ${run.healthReasons.join(",")} ` +
+          `failures: the account cannot run right now, so the ${pending.length} queued runs would ` +
+          "fail the same way. Resume with --seed to replay this order once it can.\n",
+      );
+      break;
+    }
+
     if (!run.valid && attempt <= options.retryInvalid) {
       pending.push({ entry, attempt: attempt + 1 });
     }
