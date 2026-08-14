@@ -503,18 +503,35 @@ test("OpenRouter sessions select their profile from the primary model alone", as
   );
 });
 
-test("OpenRouter configuration creates both profiles' clones without variants", async () => {
+// Variant support is per model, not per provider family: the Qwen pair exposes
+// none, the DeepSeek pair exposes several. A clone must carry exactly what its
+// profile declares, including nothing.
+test("OpenRouter configuration creates both profiles' clones with their declared variants", async () => {
   const config = openrouterConfig();
   const hooks = await router({ preset: "openrouter" });
   hooks.config(config);
   for (const profile of profiles.presets.openrouter) {
     for (const role of Object.keys(profiles.profiles[profile].workers)) {
+      const binding = profiles.profiles[profile].workers[role];
       const clone = config.agent[internalAgentName(profile, role)];
       assert.ok(clone, `missing ${profile}/${role}`);
-      assert.equal(clone.model, profiles.profiles[profile].workers[role].model);
-      assert.equal(clone.variant, undefined, `${profile}/${role} must carry no variant`);
+      assert.equal(clone.model, binding.model);
+      assert.equal(clone.variant, binding.variant, `${profile}/${role} variant`);
       assert.equal(clone.hidden, true);
     }
+  }
+
+  // Guard the asymmetry itself, so neither profile silently drifts.
+  for (const role of workers) {
+    assert.equal(
+      profiles.profiles[QWEN].workers[role].variant,
+      undefined,
+      `Qwen ${role} must carry no variant; the models expose none`,
+    );
+    assert.ok(
+      profiles.profiles[DEEPSEEK].workers[role].variant,
+      `DeepSeek ${role} must carry a variant; both its models expose them`,
+    );
   }
 });
 

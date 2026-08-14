@@ -57,10 +57,11 @@ class PolicyContractTests(unittest.TestCase):
             "google/antigravity-claude-opus-4-6-thinking": ("google/antigravity-claude-opus-4-6-thinking", "max"),
             "google/antigravity-gemini-3.1-pro": ("google/antigravity-gemini-3.1-pro", "high"),
             "google/antigravity-gemini-3-flash": ("google/antigravity-gemini-3-flash", "high"),
-            # Reasoning-effort variants are a gpt-5.6 and AntiGravity concept.
-            # The OpenRouter profiles omit them, which the schema allows.
+            # Variant support is per model, not per provider family. The Qwen
+            # pair exposes none, so that profile omits them, which the schema
+            # allows. Both DeepSeek models expose them, so that profile sets them.
             "openrouter/qwen3.6-27b": ("openrouter/qwen/qwen3.6-27b", None),
-            "openrouter/deepseek-v4-pro": ("openrouter/deepseek/deepseek-v4-pro", None),
+            "openrouter/deepseek-v4-pro": ("openrouter/deepseek/deepseek-v4-pro", "high"),
         }
         for profile, primary in expected_primary.items():
             actual = self.profiles["profiles"][profile]
@@ -360,15 +361,32 @@ class PolicyContractTests(unittest.TestCase):
         cheap_roles = {"scout", "Explore", "mech-executor", "executor"}
         self.assertEqual(strong_roles | cheap_roles, set(WORKERS))
 
+        # Qwen exposes no variants; DeepSeek exposes high/xhigh on Pro and
+        # low/high/max on Flash, so only that profile ladders effort.
+        deepseek_variants = {
+            "scout": "low", "Explore": "low", "mech-executor": "low",
+            "executor": "high", "plan-verifier": "high", "verifier": "high",
+            "security-reviewer": "xhigh", "security-executor": "xhigh",
+        }
+        expected_variants = {
+            "openrouter/qwen3.6-27b": (None, {role: None for role in WORKERS}),
+            "openrouter/deepseek-v4-pro": ("high", deepseek_variants),
+        }
+
         for name, (strong, cheap) in strong_cheap.items():
             profile = self.profiles["profiles"][name]
+            primary_variant, worker_variants = expected_variants[name]
             self.assertEqual(profile["primary"]["model"], strong, name)
-            self.assertNotIn("variant", profile["primary"], f"{name}/primary")
+            self.assertEqual(
+                profile["primary"].get("variant"), primary_variant, f"{name}/primary"
+            )
             for role in WORKERS:
                 binding = profile["workers"][role]
                 expected = strong if role in strong_roles else cheap
                 self.assertEqual(binding["model"], expected, f"{name}/{role}")
-                self.assertNotIn("variant", binding, f"{name}/{role}")
+                self.assertEqual(
+                    binding.get("variant"), worker_variants[role], f"{name}/{role}"
+                )
 
     def test_router_source_and_primary_prompt_contracts(self) -> None:
         router = text("templates/pilotfish/profile-router.mjs")
