@@ -108,6 +108,7 @@ function parseArgs(argv) {
     replay: false,
     model: null,
     briefsPath: BRIEFS_PATH,
+    resume: null,
     timeoutMinutes: 20,
     seed: null,
     out: null,
@@ -129,6 +130,7 @@ function parseArgs(argv) {
       case "--replay": options.replay = true; break;
       case "--model": options.model = next(); break;
       case "--briefs": options.briefsPath = next(); break;
+      case "--resume": options.resume = next(); break;
       case "--timeout": options.timeoutMinutes = Number(next()); break;
       case "--seed": options.seed = Number(next()); break;
       case "--out": options.out = next(); break;
@@ -187,6 +189,37 @@ function shuffled(items, seed) {
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
   return copy;
+}
+
+// A cell is identified by what it measures, not by when it ran.
+export function cellKey(entry) {
+  return `${entry.caseId}::${entry.variant}::${entry.repeat}`;
+}
+
+// Resume must not silently pool runs that measure different things. Anything
+// that changes what a run *is* has to match; anything that only changes how
+// many are left does not.
+const RESUME_INVARIANTS = ["replay", "model", "preset", "primary", "repeats"];
+
+export function assertResumable(prior, options) {
+  const before = prior.options ?? {};
+  for (const key of RESUME_INVARIANTS) {
+    const was = before[key] ?? null;
+    const now = options[key] ?? null;
+    if (JSON.stringify(was) !== JSON.stringify(now)) {
+      throw new Error(
+        `cannot resume: --${key} was ${JSON.stringify(was)}, now ${JSON.stringify(now)}. ` +
+          "Resuming would pool runs that measure different things.",
+      );
+    }
+  }
+  for (const key of ["variants", "cases", "classes"]) {
+    const was = JSON.stringify(before[key] ?? null);
+    const now = JSON.stringify(options[key] ?? null);
+    if (was !== now) {
+      throw new Error(`cannot resume: --${key} was ${was}, now ${now}.`);
+    }
+  }
 }
 
 function buildQueue(cases, variants, repeats, seed) {
@@ -637,21 +670,40 @@ async function main() {
     return;
   }
 
-  const seed = options.seed ?? (Date.now() & 0x7fffffff);
+  // A suite is long enough that a laptop lid, a dropped network, or a provider
+  // wall will end one partway. Resuming reads back what already completed and
+  // runs only the remainder, which matters most for the runs that cost money:
+  // re-running a finished cell buys nothing but spend.
+  const prior = options.resume ? JSON.parse(readFileSync(options.resume, "utf8")) : null;
+  if (prior) assertResumable(prior, options);
+
+  const seed = prior?.seed ?? options.seed ?? (Date.now() & 0x7fffffff);
   const resolvedVariants = Object.fromEntries(
     options.variants.map((name) => [name, resolveVariant(name)]),
   );
   const byId = new Map(cases.map((item) => [item.id, item]));
-  const queue = buildQueue(cases, options.variants, options.repeats, seed);
+  const fullQueue = buildQueue(cases, options.variants, options.repeats, seed);
+
+  // Only successful runs are treated as done. An invalid one is re-queued the
+  // same way a fresh suite would re-queue it -- it produced no measurement.
+  const done = new Set(
+    (prior?.runs ?? []).filter((run) => run.valid).map((run) => cellKey(run)),
+  );
+  const queue = fullQueue.filter((entry) => !done.has(cellKey(entry)));
+  // Count against the queue, not against the prior file: a resumed run whose
+  // cell is not in this queue is carried in the record but is not progress
+  // toward it, and reporting it as such would overstate how much is done.
+  const alreadyDone = fullQueue.length - queue.length;
 
   mkdirSync(RESULTS_DIR, { recursive: true });
   const startedAt = new Date().toISOString();
   const outPath =
-    options.out ?? join(RESULTS_DIR, `${startedAt.replace(/[:.]/g, "-")}-verifier-correctness.json`);
+    options.out ?? prior?.options?.out ??
+    join(RESULTS_DIR, `${startedAt.replace(/[:.]/g, "-")}-verifier-correctness.json`);
 
   const record = {
     schema: SCHEMA,
-    startedAt,
+    startedAt: prior?.startedAt ?? startedAt,
     seed,
     options: { ...options, out: outPath },
     variants: Object.fromEntries(
@@ -661,9 +713,21 @@ async function main() {
       ]),
     ),
     environment: environmentRecord(),
-    runs: [],
+    runs: [...(prior?.runs ?? [])],
     summary: null,
   };
+  if (prior) {
+    // Environments can differ between the two halves -- a different machine, a
+    // changed AGENTS.md. Recorded rather than rejected, because the alternative
+    // is discarding runs that already cost real money.
+    record.resumedFrom = {
+      path: options.resume,
+      priorRuns: prior.runs?.length ?? 0,
+      priorValid: alreadyDone,
+      priorEnvironment: prior.environment ?? null,
+      resumedAt: startedAt,
+    };
+  }
   const flush = () => {
     record.summary = summarize(record.runs, cases);
     writeFileSync(outPath, `${JSON.stringify(record, null, 2)}\n`);
@@ -671,7 +735,19 @@ async function main() {
   flush();
 
   process.stdout.write(`${planText(cases, options.variants, options)}\n\n`);
+  if (prior) {
+    process.stdout.write(
+      `Resuming ${options.resume}: ${alreadyDone} of ${fullQueue.length} cells already measured, ` +
+        `${queue.length} to run. Seed ${seed} carried over, so the remaining order is the ` +
+        "one the original suite would have used.\n",
+    );
+  }
   process.stdout.write(`Writing to ${outPath}\n\n`);
+  if (queue.length === 0) {
+    flush();
+    process.stdout.write(`Nothing left to run.\n\n${renderReport(record)}\n`);
+    return;
+  }
 
   const pending = queue.map((entry) => ({ entry, attempt: 1 }));
   let completed = 0;

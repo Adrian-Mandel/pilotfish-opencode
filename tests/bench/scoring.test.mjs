@@ -18,6 +18,7 @@ import { briefFor, loadCases, materializeCase } from "./lib/cases.mjs";
 import { loadProfiles, resolvePrimary } from "./lib/routing.mjs";
 import { classifyRunHealth, isStandingFailure } from "./lib/telemetry.mjs";
 import { BRIEFS_SCHEMA, briefFor as storeBriefFor, captureBriefs } from "./lib/briefs.mjs";
+import { assertResumable, cellKey } from "./verifier-correctness.mjs";
 import {
   OUTCOMES,
   mentionsDefect,
@@ -288,6 +289,50 @@ describe("primary model resolution", () => {
         assert.ok(resolved.verifier?.model, `${preset}/${name} has no verifier binding`);
       }
     }
+  });
+});
+
+// A suite outlives a sitting. Resume exists so a laptop lid does not cost the
+// runs already paid for -- and must not silently pool runs measuring different
+// things, which would be worse than losing them.
+describe("resuming a partial suite", () => {
+  const base = { replay: true, model: "openrouter/qwen/qwen3.6-27b", preset: "chatgpt",
+    primary: null, repeats: 20, variants: ["current", "pre-scope"], cases: null, classes: ["A", "B"] };
+
+  test("a cell is identified by what it measures, not when it ran", () => {
+    assert.equal(cellKey({ caseId: "a", variant: "current", repeat: 3 }), "a::current::3");
+    assert.equal(
+      cellKey({ caseId: "a", variant: "current", repeat: 3, attempt: 2, startedAt: "later" }),
+      cellKey({ caseId: "a", variant: "current", repeat: 3 }),
+    );
+  });
+
+  test("identical options resume", () => {
+    assert.doesNotThrow(() => assertResumable({ options: { ...base } }, { ...base }));
+  });
+
+  // Each of these would produce a result file whose rows are not comparable.
+  test("a changed model, variant set, or repeat count refuses to resume", () => {
+    for (const [key, value] of [
+      ["model", "openrouter/deepseek/deepseek-v4-pro"],
+      ["repeats", 10],
+      ["preset", "antigravity"],
+      ["variants", ["current"]],
+      ["classes", ["B"]],
+    ]) {
+      assert.throws(
+        () => assertResumable({ options: { ...base } }, { ...base, [key]: value }),
+        /cannot resume/,
+        `${key} must block resume`,
+      );
+    }
+  });
+
+  test("switching between replay and in-situ refuses to resume", () => {
+    assert.throws(
+      () => assertResumable({ options: { ...base } }, { ...base, replay: false, model: null }),
+      /cannot resume/,
+    );
   });
 });
 
