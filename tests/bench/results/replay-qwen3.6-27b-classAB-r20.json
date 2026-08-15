@@ -1148,8 +1148,8 @@
         "variant": "current"
       },
       "verdict": "CONFIRMED",
-      "mentioned": true,
-      "outcome": "observed",
+      "mentioned": false,
+      "outcome": "missed",
       "verdictSource": "leading-line",
       "verifierChainDepth": 1,
       "verifierRuns": [
@@ -3513,8 +3513,8 @@
         "variant": "pre-scope"
       },
       "verdict": "CONFIRMED",
-      "mentioned": true,
-      "outcome": "observed",
+      "mentioned": false,
+      "outcome": "missed",
       "verdictSource": "leading-line",
       "verifierChainDepth": 1,
       "verifierRuns": [
@@ -3685,8 +3685,8 @@
         "variant": "current"
       },
       "verdict": "CONFIRMED",
-      "mentioned": true,
-      "outcome": "observed",
+      "mentioned": false,
+      "outcome": "missed",
       "verdictSource": "leading-line",
       "verifierChainDepth": 1,
       "verifierRuns": [
@@ -4029,8 +4029,8 @@
         "variant": "pre-scope"
       },
       "verdict": "CONFIRMED",
-      "mentioned": true,
-      "outcome": "observed",
+      "mentioned": false,
+      "outcome": "missed",
       "verdictSource": "leading-line",
       "verifierChainDepth": 1,
       "verifierRuns": [
@@ -4244,8 +4244,8 @@
         "variant": "current"
       },
       "verdict": "CONFIRMED",
-      "mentioned": true,
-      "outcome": "observed",
+      "mentioned": false,
+      "outcome": "missed",
       "verdictSource": "leading-line",
       "verifierChainDepth": 1,
       "verifierRuns": [
@@ -5574,8 +5574,8 @@
         "scored": 20,
         "counts": {
           "caught": 0,
-          "observed": 7,
-          "missed": 13,
+          "observed": 6,
+          "missed": 14,
           "refuted-other": 0,
           "clean-confirmed": 0,
           "false-refuted": 0,
@@ -5583,23 +5583,23 @@
           "not-dispatched": 0
         },
         "falseConfirmed": {
-          "successes": 13,
+          "successes": 14,
           "total": 20,
-          "rate": 0.65,
-          "sd": 0.1066536450385077,
+          "rate": 0.7,
+          "sd": 0.10246950765959599,
           "ci95": [
-            0.43285051021946463,
-            0.8188104521320554
+            0.4810232237710206,
+            0.854524726031006
           ]
         },
         "detected": {
-          "successes": 7,
+          "successes": 6,
           "total": 20,
-          "rate": 0.35,
-          "sd": 0.1066536450385077,
+          "rate": 0.3,
+          "sd": 0.10246950765959598,
           "ci95": [
-            0.18118954786794464,
-            0.5671494897805354
+            0.14547527396899385,
+            0.5189767762289793
           ]
         },
         "refutedOnDefect": {
@@ -5662,8 +5662,8 @@
         "scored": 20,
         "counts": {
           "caught": 0,
-          "observed": 7,
-          "missed": 12,
+          "observed": 3,
+          "missed": 16,
           "refuted-other": 1,
           "clean-confirmed": 0,
           "false-refuted": 0,
@@ -5671,23 +5671,23 @@
           "not-dispatched": 0
         },
         "falseConfirmed": {
-          "successes": 12,
+          "successes": 16,
           "total": 20,
-          "rate": 0.6,
-          "sd": 0.10954451150103323,
+          "rate": 0.8,
+          "sd": 0.08944271909999157,
           "ci95": [
-            0.3865779423152061,
-            0.7811960325858074
+            0.5839782779742401,
+            0.9193436467288
           ]
         },
         "detected": {
-          "successes": 7,
+          "successes": 3,
           "total": 20,
-          "rate": 0.35,
-          "sd": 0.1066536450385077,
+          "rate": 0.15,
+          "sd": 0.07984359711335656,
           "ci95": [
-            0.18118954786794464,
-            0.5671494897805354
+            0.05236779195949584,
+            0.36042329588695743
           ]
         },
         "refutedOnDefect": {
@@ -5708,8 +5708,8 @@
         "scored": 40,
         "counts": {
           "caught": 0,
-          "observed": 25,
-          "missed": 15,
+          "observed": 24,
+          "missed": 16,
           "refuted-other": 0,
           "clean-confirmed": 0,
           "false-refuted": 0,
@@ -5717,23 +5717,23 @@
           "not-dispatched": 0
         },
         "falseConfirmed": {
-          "successes": 15,
+          "successes": 16,
           "total": 40,
-          "rate": 0.375,
-          "sd": 0.07654655446197431,
+          "rate": 0.4,
+          "sd": 0.07745966692414834,
           "ci95": [
-            0.2422277353579172,
-            0.529678399454681
+            0.2634811061240136,
+            0.5540438017260649
           ]
         },
         "detected": {
-          "successes": 25,
+          "successes": 24,
           "total": 40,
-          "rate": 0.625,
-          "sd": 0.07654655446197431,
+          "rate": 0.6,
+          "sd": 0.07745966692414834,
           "ci95": [
-            0.47032160054531913,
-            0.7577722646420829
+            0.445956198273935,
+            0.7365188938759863
           ]
         },
         "refutedOnDefect": {
@@ -5840,8 +5840,8 @@
         "scored": 40,
         "counts": {
           "caught": 5,
-          "observed": 21,
-          "missed": 13,
+          "observed": 17,
+          "missed": 17,
           "refuted-other": 1,
           "clean-confirmed": 0,
           "false-refuted": 0,
@@ -5849,23 +5849,23 @@
           "not-dispatched": 0
         },
         "falseConfirmed": {
-          "successes": 13,
+          "successes": 17,
           "total": 40,
-          "rate": 0.325,
-          "sd": 0.07405656621799313,
+          "rate": 0.425,
+          "sd": 0.07816249100431741,
           "ci95": [
-            0.20084316962661725,
-            0.4798254191110201
+            0.28509168524815875,
+            0.5780519956394001
           ]
         },
         "detected": {
-          "successes": 26,
+          "successes": 22,
           "total": 40,
-          "rate": 0.65,
-          "sd": 0.07541551564499178,
+          "rate": 0.55,
+          "sd": 0.07866066361276136,
           "ci95": [
-            0.4950559699353738,
-            0.7786566682895086
+            0.39828829888440775,
+            0.6929492471905531
           ]
         },
         "refutedOnDefect": {
@@ -5892,7 +5892,16 @@
       "b-timeout-guard-adjacent": {
         "class": "B",
         "title": "Broken guard in a function the change touched but the claim does not name"
+      },
+      "c-doc-drift-removed-helper": {
+        "class": "C",
+        "title": "Documentation still describes a helper the trivial edit removed"
+      },
+      "d-clean-cache-cap": {
+        "class": "D",
+        "title": "Correct change, no defect seeded"
       }
     }
-  }
+  },
+  "rescoredAt": "2026-08-15T02:33:00.837Z"
 }

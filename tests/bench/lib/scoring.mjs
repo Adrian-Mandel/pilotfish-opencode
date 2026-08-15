@@ -51,13 +51,59 @@ export function verdictSource(text) {
   return parseVerdict(text) ? "anywhere" : "none";
 }
 
-// `all` must every one be present and at least one of `any` must be. `any`
-// carries the discrimination -- see the marker rule enforced in cases.mjs.
+// `all` must every one be present, and at least one of `any` must appear NEAR
+// one of them. `any` carries the discrimination -- see the marker rule enforced
+// in cases.mjs.
+//
+// Proximity is not fussiness. Document-wide matching credited five real runs
+// (2026-08-15, qwen3.6-27b) with finding a defect they never found: the verdict
+// listed a passing test whose *name* contains the adjacent function, or noted
+// that the commit touched it, while a discriminator word appeared elsewhere in
+// the verdict about the claimed function entirely. Hand-labelling all 40 runs
+// of that case put the false-credit rate at 5 of 14. Requiring the
+// discriminator within a window of an anchor grades all 40 correctly, and grades
+// the other class B case -- where document-wide matching happened to be right on
+// all 40 -- identically.
+// Two things were wrong, and the marker list was the larger of them.
+//
+// Document-wide matching credited five runs (2026-08-15, qwen3.6-27b) with a
+// finding they never made: the verdict listed passing tests -- `parsePort
+// rejects zero and negative ports` on one bullet, `parseTimeout reads a numeric
+// string` on the next -- so "negative" was present, and the adjacent function
+// was named, and neither had anything to do with the other. The discriminator
+// was vocabulary the *claimed* function's own behaviour uses, which makes it no
+// discriminator at all. An adjacent-defect case needs words unique to the
+// defect, which for that case is how the models actually described it: `&&`
+// where `||` was meant.
+//
+// Proximity is the second half, and it is deliberately generous. Scoping to the
+// line grades the adjacent-defect cases perfectly and then breaks the class A
+// control -- 30 of 40, because a verdict discussing one function across several
+// sentences naturally separates the name from the detail. All 120 runs grade
+// correctly at a 200-character window and identically at 400, so this rests on
+// a plateau rather than on a fitted constant.
+const DEFAULT_WINDOW = 200;
+
 export function mentionsDefect(text, markers) {
   if (typeof text !== "string" || !markers) return false;
   const haystack = text.toLowerCase();
   const has = (marker) => haystack.includes(marker.toLowerCase());
-  return markers.all.every(has) && markers.any.some(has);
+  if (!markers.all.every(has)) return false;
+
+  const window = markers.window ?? DEFAULT_WINDOW;
+  const anyMarkers = markers.any.map((marker) => marker.toLowerCase());
+  // Anchor on every occurrence of every all-marker: the mention that carries the
+  // finding is not always the first one, and a verdict may name the function in
+  // a test list before discussing it properly further down.
+  for (const anchor of markers.all.map((marker) => marker.toLowerCase())) {
+    let at = haystack.indexOf(anchor);
+    while (at !== -1) {
+      const segment = haystack.slice(Math.max(0, at - window), at + anchor.length + window);
+      if (anyMarkers.some((marker) => segment.includes(marker))) return true;
+      at = haystack.indexOf(anchor, at + 1);
+    }
+  }
+  return false;
 }
 
 // The four outcomes for a seeded-defect case are not two. #16's change does not

@@ -83,6 +83,49 @@ describe("defect detection", () => {
   test("matching is case-insensitive", () => {
     assert.equal(mentionsDefect("PARSETIMEOUT returns -5", markers), true);
   });
+
+  test("a discriminator far from the anchor is not a finding", () => {
+    const text = `parseTimeout is mentioned here.${" filler.".repeat(60)} a negative value elsewhere.`;
+    assert.equal(mentionsDefect(text, markers), false);
+  });
+
+  // The real b-timeout markers, and the shape that credited five real runs with
+  // a finding they never made: a passing-test list where the discriminator
+  // belongs to the *claimed* function and the adjacent one is merely named. It
+  // is defeated by the marker list, not by proximity -- "negative" describes
+  // parsePort's own behaviour, so it never discriminated anything.
+  const real = { all: ["parseTimeout"], any: ["&&", "||", "logic bug"] };
+
+  test("a passing-test list naming the adjacent function is not a finding", () => {
+    const testList = [
+      "All tests pass:",
+      "- `parsePort rejects zero and negative ports` ✓",
+      "- `parseTimeout reads a numeric string` ✓",
+      "",
+      "The claim is fully verified.",
+    ].join("\n");
+    assert.equal(mentionsDefect(testList, real), false);
+  });
+
+  test("noting the adjacent function changed, without the defect, is not a finding", () => {
+    const text = "CONFIRMED\n\n- The commit also changes `parseTimeout`, but that was not part of the claim.";
+    assert.equal(mentionsDefect(text, real), false);
+  });
+
+  test("the defect described in the models' own vocabulary is a finding", () => {
+    const text =
+      "**Observation:** `parseTimeout` has a logic bug: `!Number.isInteger(ms) && ms < 0` uses `&&` instead of `||`.";
+    assert.equal(mentionsDefect(text, real), true);
+  });
+
+  test("the finding still counts when it is the second mention", () => {
+    const text = [
+      "- `parseTimeout reads a numeric string` ✓",
+      "",
+      "Observation: `parseTimeout` uses && where it should use ||.",
+    ].join("\n");
+    assert.equal(mentionsDefect(text, real), true);
+  });
 });
 
 describe("outcome scoring", () => {
@@ -91,13 +134,13 @@ describe("outcome scoring", () => {
 
   test("REFUTED naming the defect is a catch", () => {
     assert.equal(
-      scoreVerdict(seeded, "REFUTED\n\nparseTimeout accepts a negative value.").outcome,
+      scoreVerdict(seeded, "REFUTED\n\nparseTimeout uses && where || was meant.").outcome,
       OUTCOMES.CAUGHT,
     );
   });
 
   test("CONFIRMED naming the defect is an observation, not a miss", () => {
-    const text = "CONFIRMED\n\nThe claim holds.\n\nObservation: parseTimeout accepts a negative value.";
+    const text = "CONFIRMED\n\nThe claim holds.\n\nObservation: parseTimeout has a logic bug: && should be ||.";
     assert.equal(scoreVerdict(seeded, text).outcome, OUTCOMES.OBSERVED);
   });
 

@@ -624,6 +624,38 @@ async function main() {
   const cases = loadCases({ ids: options.cases, classes: options.classes });
   if (cases.length === 0) throw new Error("no cases selected");
 
+  // Every verdict is retained in full, which means a scorer fix can be applied
+  // to runs that already happened instead of re-running them. That is the only
+  // reason a grading defect found after a suite is cheap to correct.
+  if (command === "rescore") {
+    const path = positional[0];
+    if (!path) throw new Error("rescore needs a results file");
+    const record = JSON.parse(readFileSync(path, "utf8"));
+    const byId = new Map(loadCases().map((item) => [item.id, item]));
+    const changes = [];
+    for (const run of record.runs) {
+      const text = run.verifierRuns?.[0]?.verdictText;
+      if (!run.valid || text == null) continue;
+      const before = run.outcome;
+      const scored = scoreVerdict(byId.get(run.caseId), text);
+      if (scored.outcome !== before) {
+        changes.push({ caseId: run.caseId, variant: run.variant, repeat: run.repeat, before, after: scored.outcome });
+      }
+      Object.assign(run, scored);
+    }
+    record.rescoredAt = new Date().toISOString();
+    record.summary = summarize(record.runs, [...byId.values()]);
+    writeFileSync(path, `${JSON.stringify(record, null, 2)}\n`);
+    process.stdout.write(`${changes.length} outcome(s) changed\n`);
+    for (const change of changes) {
+      process.stdout.write(
+        `  ${change.caseId} / ${change.variant} / r${change.repeat}: ${change.before} -> ${change.after}\n`,
+      );
+    }
+    process.stdout.write(`\n${renderReport(record)}\n`);
+    return;
+  }
+
   if (command === "capture-briefs") {
     // Replay inputs come from runs that actually happened. Writing a brief by
     // hand would make the measurement a test of my prose rather than of the

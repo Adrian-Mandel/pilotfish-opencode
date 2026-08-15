@@ -266,16 +266,26 @@ primary wrote; it does not measure the primary's choice of brief.
 |---|---|---|---|---|---|
 | A | current | 20 | 0% | 100% | 100% |
 | A | pre-scope | 20 | 0% | 100% | 100% |
-| B | current | 40 | 38% (24–53%) | 63% | 0% |
-| B | pre-scope | 40 | 33% (20–48%) | 65% | 13% (5–26%) |
+| B | current | 40 | 40% (26–55%) | 60% | 0% |
+| B | pre-scope | 40 | 43% (29–58%) | 55% | 13% (5–26%) |
+
+These are the figures after the scorer correction described at the end of this
+section. The first reading of the same runs put class B at 38% and 33%; five
+runs had been credited with a finding they never made.
 
 ### The scope change has no detectable effect on this model
 
 Every class B cell is paired: the same repeat index replays the same brief to
 both variants, so a difference cannot be a difference in what was asked. Of 40
-paired cells, 9 missed under both, 21 missed under neither, 6 missed only under
-`current` and 4 only under `pre-scope`. Ten discordant pairs split 6–4 is an
-exact two-sided **p = 0.75**. There is no effect here to act on.
+paired cells, 13 missed under both, 20 missed under neither, 3 missed only under
+`current` and 4 only under `pre-scope`. Seven discordant pairs split 3–4 is an
+exact two-sided **p = 1.00**. There is no effect here to act on.
+
+The uncorrected scoring gave a 6–4 split and p = 0.75 — the same conclusion, but
+its direction pointed the other way. Neither direction means anything at this
+separation, which is the point: an interim read of a partial suite pointed at
+`current` being worse, and the completed, corrected suite has `pre-scope`
+nominally worse. Both are noise.
 
 The one difference that is real is the one the change was designed to produce.
 `pre-scope` refuted on the adjacent defect 5 times in 40; `current` never did,
@@ -290,7 +300,7 @@ Pooling class B hides a bimodal split, and the split is by case, not by variant:
 | case | current missed | pre-scope missed |
 |---|---|---|
 | `b-config-read-adjacent` | 2/20 | 1/20 |
-| `b-timeout-guard-adjacent` | 13/20 | 12/20 |
+| `b-timeout-guard-adjacent` | 14/20 | 16/20 |
 
 Both defects sit in the same file as the claim and inside the same diff. One is
 found almost always and the other missed about two thirds of the time, under
@@ -316,21 +326,41 @@ has a captured brief, so the documentation-drift case and the false-REFUTED
 noise floor are unmeasured here. Chain depth was 1 throughout, by construction
 in replay, so this says nothing about the chain budget.
 
-### A scoring defect found while reading the raw verdicts
+### A scoring defect, found by reading the raw verdicts, now fixed
 
-Detection is substring matching over the whole verdict, so a run that mentions
-the adjacent function in passing *and* separately uses a discriminator word
-about the claimed function scores as `observed` without ever having found the
-defect. Two of 46 `observed` runs are false credits on that account; correcting
-them moves class B `current` to 40% and `pre-scope` to 35%, which changes no
-conclusion.
+Detection was substring matching over the whole verdict, so a run that mentioned
+the adjacent function in passing *and* separately used a discriminator word
+about the claimed function scored as `observed` without ever having found the
+defect. Every one of the 40 `b-timeout-guard-adjacent` runs was then hand-read
+and labelled: **9 genuine detections, 5 false credits, 26 that never mention the
+function at all**. The other class B case was hand-read too and had none — all
+37 of its detections are real.
 
-The error is one-directional and was checked in both: **zero of the 25 `missed`
-runs mention the adjacent function at all**, so nothing is being scored as a
-miss that was really a detection. The reverse direction is worth fixing — the
-markers should require the discriminator near the anchor rather than anywhere in
-the document — and worth knowing about before trusting an `observed` cell from
-any future run.
+The larger of the two causes was the marker list, not the matching. The
+discriminators were `negative` and `-5`, which is vocabulary the *claimed*
+function's own behaviour uses: a verdict listing `parsePort rejects zero and
+negative ports` next to `parseTimeout reads a numeric string` contains both
+markers and reports nothing. An adjacent-defect case needs words unique to the
+defect, which here is how the models actually described it — `&&` where `||` was
+meant.
+
+Proximity is the second half, and it is deliberately generous. Scoping to the
+line grades both class B cases perfectly and then breaks the class A control,
+30 of 40, because a verdict discussing one function across several sentences
+naturally separates the name from the detail. All 120 runs grade correctly at a
+200-character window and identically at 400, so the rule sits on a plateau
+rather than on a constant fitted to one dataset.
+
+The error was one-directional, checked in both: **zero of the 25 runs scored
+`missed` mention the adjacent function at all**, so nothing real was being
+scored as a miss. Correcting it moved 5 runs and changed no conclusion.
+
+Because every verdict is retained in full, the fix was applied to the runs that
+already happened rather than by re-running them:
+
+```bash
+node tests/bench/verifier-correctness.mjs rescore <result.json>
+```
 
 ### Reproducing
 

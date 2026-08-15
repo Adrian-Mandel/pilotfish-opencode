@@ -7,8 +7,14 @@
     "file": "src/config.mjs",
     "summary": "parseTimeout, changed by the same commit but absent from the claim, joins its guard with `&&` instead of `||`, so -5, 1.5 and NaN all pass through.",
     "markers": {
-      "all": ["parseTimeout"],
-      "any": ["negative", "-5"]
+      "all": [
+        "parseTimeout"
+      ],
+      "any": [
+        "&&",
+        "||",
+        "logic bug"
+      ]
     }
   }
 }
