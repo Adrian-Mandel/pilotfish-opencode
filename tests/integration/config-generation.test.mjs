@@ -118,6 +118,60 @@ describe("profile router config generation in OpenCode", () => {
   });
 });
 
+// Replay measures one role alone, which the CLI otherwise refuses: `--agent`
+// rejects a subagent. The promotion has to be real in the resolved config, and
+// it has to keep the role's own permissions — a verifier that could edit, or
+// that lost the shell it needs to reproduce a test, is not the role under test.
+describe("a solo agent is promoted without becoming a different role", () => {
+  let fixture;
+  let config;
+
+  before(async () => {
+    fixture = createFixture({
+      preset: "chatgpt",
+      soloAgent: "verifier",
+      soloModel: { model: "openrouter/qwen/qwen3.6-27b" },
+      auth: false,
+    });
+    config = await resolvedConfig(fixture);
+  });
+
+  after(() => {
+    if (fixture) destroyFixture(fixture);
+  });
+
+  test("the role is the only agent, and is a primary the CLI will accept", () => {
+    assert.equal(config.agent.verifier.mode, "primary");
+    assert.equal(config.agent.verifier.model, "openrouter/qwen/qwen3.6-27b");
+    assert.equal(config.agent.pilotfish, undefined, "the orchestrator must be gone");
+    const clones = Object.keys(config.agent).filter((name) => name.startsWith("pilotfish-profile-"));
+    assert.deepEqual(clones, [], "no router clones may survive into a solo config");
+  });
+
+  // The router is removed rather than taught an exception. A bench mode inside
+  // the component whose value is failing closed would be a bypass; deleting the
+  // plugin from a throwaway config is not.
+  test("the router is absent, not bypassed", () => {
+    const written = JSON.parse(readFileSync(join(fixture.configDir, "opencode.json"), "utf8"));
+    const plugins = (written.plugin ?? []).map((entry) => (Array.isArray(entry) ? entry[0] : entry));
+    assert.ok(!plugins.some((name) => `${name}`.includes("profile-router")), plugins.join(","));
+  });
+
+  test("the role keeps the permissions it is shipped with", () => {
+    const base = JSON.parse(
+      readFileSync(join(REPO_ROOT, "templates/opencode.base.jsonc"), "utf8").replace(/^\s*\/\/.*$/gm, ""),
+    );
+    assert.deepEqual(
+      config.agent.verifier.permission,
+      base.agent.verifier.permission,
+      "promotion must not rewrite the role's permissions",
+    );
+    assert.equal(config.agent.verifier.permission.edit, "deny", "a solo verifier must still not edit");
+    assert.equal(config.agent.verifier.permission.task, "deny", "a solo verifier must still not delegate");
+    assert.ok(config.agent.verifier.permission.bash, "a verifier that cannot run tests cannot verify");
+  });
+});
+
 // A benchmark run on a provider the user still has quota for is only meaningful
 // if the model it names is the model the host actually resolves. That is the
 // whole claim behind `createFixture({ primary })`, so it is checked against the

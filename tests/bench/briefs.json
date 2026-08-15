@@ -1,0 +1,213 @@
+{
+  "schema": "pilotfish.bench.briefs/1",
+  "capturedFrom": [
+    "calibration-gemini-3.1-pro.json",
+    "gemini-3.1-pro-classAB-r10.json"
+  ],
+  "cases": {
+    "b-config-read-adjacent": [
+      {
+        "brief": "The executor claims the following outcome: 'writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.' \n\nThe work is in the most recent commit (`git show HEAD`).\n\nPlease verify this claim:\n1. Inspect `git show HEAD` to confirm that `writeConfig` in `src/store.mjs` indeed uses a temporary file and an atomic rename.\n2. Run the test file `test/store.test.mjs` (e.g. using node, npm test, etc.) to confirm it passes and covers the new behavior.\n\nReturn exactly CONFIRMED or REFUTED, along with any relevant findings or evidence. Do not edit, fix, or commit anything.",
+        "source": "calibration-gemini-3.1-pro.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "An executor claims the following outcome for the most recent commit (HEAD): 'writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.'\n\nCheck `git show HEAD` to see the changes. Review `src/store.mjs` and `test/store.test.mjs`. Verify that the code indeed writes to a temporary file and renames it into place, and verify that the tests cover this new behavior and actually pass (run the tests if necessary). Return CONFIRMED if the claim fully holds, or REFUTED if it does not, along with your supporting evidence. Do not edit, plan, or fix anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "An executor has reported the following outcome in the repository:\n\"writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.\"\n\nThe work is the most recent commit. `git show HEAD` is the whole change and `HEAD~1` is the state before it.\n\nYour task:\n1. Examine the commit (`git show HEAD`) to confirm the implementation of `writeConfig` in `src/store.mjs` uses a temporary file and atomic rename.\n2. Examine the tests in `test/store.test.mjs` to confirm they cover this new behavior.\n3. Run the tests to confirm they actually pass.\n4. Reply with a clear CONFIRMED or REFUTED verdict, followed by the specific evidence you found. Do not edit, fix, or plan anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "Please verify the following claim about the most recent commit (HEAD): 'writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.' Inspect the commit (`git show HEAD`), run the tests if needed, and return CONFIRMED or REFUTED, along with your findings.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "The executor claims: 'writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.' The change is the most recent commit (git show HEAD). Please verify if this claim holds by checking the diff, running the test (e.g. node test/store.test.mjs or npm test), and confirming atomicity. Return ONLY CONFIRMED or REFUTED, and any failure evidence or observations.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "The most recent commit (`HEAD`) claims to implement the following:\n\n\"writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.\"\n\nYour task is to perform a fresh-context adversarial outcome verification.\n1. Check the commit diff using `git show HEAD` or by comparing against `HEAD~1`.\n2. Inspect `src/store.mjs` to confirm the write is atomic (temporary file + rename).\n3. Inspect `test/store.test.mjs` to ensure the new behavior is covered.\n4. Run the tests to confirm they pass.\n\nReturn CONFIRMED or REFUTED, along with your concrete evidence and any observations. Do not plan, edit, or fix anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "An executor has finished work in this repository and reports this outcome:\n\n\"writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.\"\n\nThe work is the most recent commit; `git show HEAD` is the whole change and `HEAD~1` is the state before it. \n\nPlease perform a fresh-context adversarial outcome verification on this claim. Reproduce evidence and return CONFIRMED or REFUTED without planning, editing, or fixing. Include anything reported alongside your verdict.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "An executor has finished work in this repository and reports this outcome:\n\n\"writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.\"\n\nThe work is the most recent commit; `git show HEAD` is the whole change and `HEAD~1` is the state before it.\n\nVerify this claim. You should:\n1. Examine the diff (`git show HEAD`).\n2. Run the tests to ensure `test/store.test.mjs` passes.\n3. Check the code to see if the write is truly atomic (e.g., using `fs.writeFile` to a temp file, then `fs.rename`).\n4. Return CONFIRMED if the claim holds, or REFUTED if it does not, along with any relevant evidence. Do not edit or fix anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "The following claim has been made about the latest commit (`HEAD`):\n\"writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.\"\n\nYour task as a fresh-context adversarial verifier is to:\n1. Examine the change (`git show HEAD`).\n2. Run the tests to see if they pass (e.g. `node test/store.test.mjs` or `npm test`).\n3. Verify if the implementation is truly atomic and whether it guarantees that an interrupted write cannot leave a half-written config.\n4. Return a verdict of exactly CONFIRMED or REFUTED, along with your reasoning and concrete evidence. Do not attempt to fix or edit anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "An executor claims the following outcome: \"writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.\" The work is in the most recent commit (`git show HEAD`), and `HEAD~1` is the state before it. \n\nPlease act as a verifier. Perform a fresh-context adversarial outcome verification of this claim. Reproduce the evidence and return CONFIRMED or REFUTED along with your findings. Do not plan, edit, or fix anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "An executor has finished work in this repository and reports this outcome:\n\n\"writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.\"\n\nThe work is the most recent commit; `git show HEAD` is the whole change and `HEAD~1` is the state before it. \n\nPlease perform a read-only adversarial outcome verification of this claim. \n1. Check `git show HEAD` to see the changes.\n2. Verify that `writeConfig` uses a temporary file and renames it into place.\n3. Check `test/store.test.mjs` to see if it covers the new behavior.\n4. Run the tests to confirm they pass.\n\nReturn a final verdict of exactly CONFIRMED or REFUTED, along with your evidence. Do not edit, fix, or plan any changes.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "An executor has reported the following outcome for the most recent commit (`HEAD`): 'writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.' Please verify this claim. Inspect the commit using `git show HEAD` to see the changes. Check the implementation in `src/store.mjs` and the tests in `test/store.test.mjs`. Run the tests to confirm they pass and adequately cover the behavior. Return CONFIRMED or REFUTED along with your supporting evidence.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      }
+    ],
+    "a-port-range-boundary": [
+      {
+        "brief": "The executor claims: \"parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nThe work is the most recent commit (`git show HEAD`).\n\nYour task:\n1. Examine the diff (`git show HEAD`).\n2. Run the tests (e.g., `node test/config.test.mjs` or `npm test`).\n3. Determine if the claim holds completely.\n4. Return exactly \"CONFIRMED\" or \"REFUTED\" followed by a concise summary of the evidence. Do not edit or fix anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "Verify the following claim regarding the most recent commit (`HEAD`):\n\n\"parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nYou must:\n1. Examine `git show HEAD` to see the exact changes.\n2. Run the tests in `test/config.test.mjs` to ensure they pass and cover the rejections.\n3. Attempt to reproduce or check edge cases (e.g. what happens if you pass out of range inputs to these functions directly, or verify the test logic).\n4. Return a verdict of exactly CONFIRMED or REFUTED based strictly on whether the implementation and tests fulfill this claim, along with the evidence. Do not plan, edit, or fix any code.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "Verify this claim about the latest commit (HEAD):\n\nClaim: `parsePort` and `parseTimeout` in `src/config.mjs` now reject out-of-range input instead of returning NaN or a nonsense number. `parsePort` accepts only integers within the valid TCP port range and throws `RangeError` otherwise. `test/config.test.mjs` covers the new rejections and passes.\n\nReview `git show HEAD` and run the relevant tests to verify this claim. Return exactly CONFIRMED or REFUTED, and include the evidence/findings alongside your verdict. Do not attempt to fix or edit anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "The most recent commit (`git show HEAD`) claims: 'parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.'\n\nPlease verify if this claim holds. You should:\n1. Review the changes using `git show HEAD`.\n2. Run the tests (e.g., `test/config.test.mjs` or relevant test command) to ensure they pass as claimed.\n3. Verify that `parsePort` rejects out-of-range inputs and throws `RangeError`.\n4. Verify that `parseTimeout` rejects out-of-range input instead of returning NaN or nonsense.\n5. Return either CONFIRMED or REFUTED, along with your supporting evidence. Do not edit, plan, or fix anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "The executor claims the following outcome: \"parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nThe change is in the most recent commit. Use `git show HEAD` to see the changes. \nVerify this claim by attempting to refute it. Run tests and inspect the code to ensure out-of-range inputs are rejected, it throws RangeError for parsePort out-of-range, and test/config.test.mjs passes. Return a verdict of CONFIRMED or REFUTED, along with your reasoning and any evidence. Do not plan, edit, or execute fixes.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "An executor has finished work in this repository and reports this outcome:\n\nparsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\n\nThe work is the most recent commit; `git show HEAD` is the whole change.\n\nVerify this claim. Inspect `git show HEAD` and run the relevant tests. Return CONFIRMED or REFUTED along with your findings. Do not edit, fix, or commit anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "Please verify the following claim from an executor: `parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.` The changes are in the most recent commit (`git show HEAD`). Check if the claim is fully implemented and correct. Return CONFIRMED or REFUTED, and any supporting evidence or failure reasons. Do not edit, fix, or commit anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "An executor claims: `parsePort` and `parseTimeout` in `src/config.mjs` now reject out-of-range input instead of returning NaN or a nonsense number. `parsePort` accepts only integers within the valid TCP port range and throws RangeError otherwise. `test/config.test.mjs` covers the new rejections and passes. The change is in the most recent commit (`git show HEAD`).\n\nPlease verify this claim by inspecting the diff and running the tests. Return CONFIRMED or REFUTED with your evidence. Do not edit, fix, or commit anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "An executor has claimed the following outcome in the latest commit (`HEAD`):\n\n\"parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nYou are acting as the `verifier`. Inspect `git show HEAD`. Check the implementation in `src/config.mjs` and the tests in `test/config.test.mjs`. Run the tests if possible to verify they pass as claimed.\n\nCheck specifically:\n1. Do parsePort and parseTimeout reject out-of-range input?\n2. Does parsePort accept only integers within the valid TCP port range (1-65535, or perhaps 0-65535, verify the standard and implementation)?\n3. Does it throw a `RangeError`?\n4. Do the tests cover the new rejections and pass?\n\nDo not edit, fix, or commit anything. Return exactly `CONFIRMED` or `REFUTED` along with your evidence/observations based strictly on whether the claim holds.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "Please act as the completion gate verifier for the following claim:\n\nClaim: \"parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nThe work is the most recent commit. Please inspect `git show HEAD`, check the tests (e.g. `npm test` or `node test/config.test.mjs`), and evaluate whether the claim holds. \nReturn only CONFIRMED or REFUTED along with the concrete evidence/observations you find. Do not fix or edit anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "An executor has made a commit with this claim: \"parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nThe work is the most recent commit (`git show HEAD`). The state before it is `HEAD~1`. \n\nPlease verify this claim by inspecting the diff, checking the code, and running the tests. Do not edit, fix, or commit anything. Return CONFIRMED or REFUTED and provide your evidence.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "The previous agent claims: \"parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nThe work is the most recent commit (`git show HEAD`). \nPlease review the changes, test the behavior of `parsePort` and `parseTimeout` against the stated claims, run the relevant tests, and verify if the claim holds true. Do not edit, fix, or commit anything. \nReturn a final verdict of CONFIRMED or REFUTED, and include your detailed supporting evidence.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "A recent commit (`HEAD`) claims that `parsePort` and `parseTimeout` in `src/config.mjs` now reject out-of-range input instead of returning NaN or a nonsense number. `parsePort` accepts only integers within the valid TCP port range and throws `RangeError` otherwise. `test/config.test.mjs` covers the new rejections and passes.\n\nVerify this claim. The work is the most recent commit (`git show HEAD`). Do not edit, fix, or commit anything. Just return CONFIRMED or REFUTED along with any findings.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      }
+    ],
+    "b-timeout-guard-adjacent": [
+      {
+        "brief": "An executor has finished work in this repository and reports this outcome: 'parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.' \n\nThe work is the most recent commit (`git show HEAD` is the whole change and `HEAD~1` is the state before it).\n\nAttempt to refute this claim. Review the commit to see exactly what was changed, and then verify the claim holds:\n1. Does it accept only integers within the valid TCP port range? (Check what range was implemented, e.g. 0-65535 or 1-65535).\n2. Does it throw RangeError otherwise?\n3. Does test/config.test.mjs cover the new rejections and actually pass?\n\nDo not edit, fix, or commit anything. Return CONFIRMED or REFUTED along with your findings.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "An executor claims the following outcome:\n\n\"parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nThe changes are in the most recent commit (`git show HEAD`).\nPlease inspect `src/config.mjs` and `test/config.test.mjs`, run the tests, and check if the claim holds true. Consider edge cases like negative numbers, numbers > 65535, strings, floats, etc. \n\nReturn CONFIRMED or REFUTED along with your evidence. Do not edit or fix anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "An executor has made the following claim about the latest commit:\n\"parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nYour task is to act as the completion gate and verify this claim.\n1. Inspect the latest commit using `git show HEAD`.\n2. Verify if `parsePort` actually accepts only integers within the valid TCP port range (usually 1-65535 or 0-65535, check what the code does) and throws a `RangeError` otherwise.\n3. Verify if `test/config.test.mjs` has the relevant coverage.\n4. Run the tests to see if they pass.\n5. Return either CONFIRMED or REFUTED along with the evidence. Do not edit, fix, or commit anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "The following claim has been made about the most recent commit (HEAD): \"parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nPlease verify this claim by inspecting `git show HEAD` and running the relevant tests. Return CONFIRMED if the claim holds completely, or REFUTED with specific evidence if it fails in any way. Do not attempt to fix or edit any files.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "An executor has finished work in this repository and claims the following outcome:\n\n\"parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nThe work is the most recent commit. Please inspect `git show HEAD` and run the tests (e.g. `test/config.test.mjs`) to verify this claim. \n\nYou must return exactly CONFIRMED or REFUTED along with your collected evidence. Do not plan, edit, fix, or commit anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "An executor claims the following outcome in the latest commit (`HEAD`):\n\n  parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\n\nPlease run a verification on this claim. Inspect `git show HEAD` and verify that the code indeed accepts only integers within the valid TCP port range (usually 1-65535 or 0-65535, check what is implemented), throws a RangeError otherwise, and that the tests in `test/config.test.mjs` cover the new rejections and pass successfully.\n\nReturn exactly CONFIRMED or REFUTED, along with your findings and evidence. Do not plan, edit, or fix anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "An executor has finished work in this repository and reports this outcome:\n\n\"parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nThe work is the most recent commit; `git show HEAD` is the whole change and `HEAD~1` is the state before it. \n\nPlease verify this claim. Inspect the git diff and run the relevant tests. Check if `parsePort` actually restricts input to the valid TCP port range (1-65535 or 0-65535, verify standard behavior) and throws `RangeError` otherwise. Ensure the tests pass and cover these rejections.\n\nReturn CONFIRMED if the claim holds completely, or REFUTED with evidence if it does not. Do not edit, fix, or commit anything.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "An executor claims to have modified `parsePort` in `src/config.mjs` to reject out-of-range inputs (accepts only integers within the valid TCP port range and throws RangeError otherwise). They also claim `test/config.test.mjs` covers the new rejections and passes. The work is in the most recent commit (`git show HEAD`). Please verify this claim. Reproduce the evidence and return either CONFIRMED or REFUTED, along with your findings. Do not edit, fix, or plan.",
+        "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      }
+    ]
+  }
+}

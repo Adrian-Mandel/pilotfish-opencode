@@ -23,8 +23,16 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { createFixture, destroyFixture, runOpencode } from "../integration/fixture.mjs";
+import { createFixture, destroyFixture, parsePrimary, runOpencode } from "../integration/fixture.mjs";
 import { CLASSES, briefFor, loadCases, materializeCase } from "./lib/cases.mjs";
+import {
+  BRIEFS_PATH,
+  briefCounts,
+  briefFor as briefFromStore,
+  captureBriefs,
+  loadBriefs,
+  writeBriefs,
+} from "./lib/briefs.mjs";
 import { resolvePrimary } from "./lib/routing.mjs";
 import { DEFAULT_VARIANTS, VARIANTS, applyVariant, resolveVariant } from "./lib/variants.mjs";
 import { classifyRunHealth, isStandingFailure, readRunTelemetry } from "./lib/telemetry.mjs";
@@ -69,10 +77,22 @@ const ESTIMATES = {
     minutesPerRunRange: [0.4, 3],
     measuredOn: "antigravity / google/antigravity-gemini-3.1-pro",
   },
+  // 15.6s, $0.017013, 24.0k input / 443 output. One verifier session with no
+  // primary around it -- which is the whole reason replay exists: the same
+  // measurement at a price that makes n=20 per cell unremarkable.
+  "replay:openrouter/qwen/qwen3.6-27b": {
+    source: "one measured run (2026-08-15, class B, replay on qwen3.6-27b); the range around it is an assumption",
+    minutesPerRun: 0.3,
+    minutesPerRunRange: [0.2, 1],
+    usdPerRun: 0.017,
+    measuredOn: "replay / openrouter/qwen/qwen3.6-27b",
+  },
 };
 
 function estimateFor(options) {
-  const key = options.resolvedPrimary?.profile ?? (options.preset === "chatgpt" ? "openai/gpt-5.6-sol" : null);
+  const key = options.replay
+    ? `replay:${options.replayModel.model}`
+    : (options.resolvedPrimary?.profile ?? (options.preset === "chatgpt" ? "openai/gpt-5.6-sol" : null));
   const measured = key ? ESTIMATES[key] : null;
   return { ...(measured ?? ESTIMATE_FALLBACK), measured: !!measured };
 }
@@ -85,6 +105,9 @@ function parseArgs(argv) {
     classes: null,
     preset: "chatgpt",
     primary: null,
+    replay: false,
+    model: null,
+    briefsPath: BRIEFS_PATH,
     timeoutMinutes: 20,
     seed: null,
     out: null,
@@ -103,6 +126,9 @@ function parseArgs(argv) {
       case "--classes": options.classes = next().split(","); break;
       case "--preset": options.preset = next(); break;
       case "--primary": options.primary = next(); break;
+      case "--replay": options.replay = true; break;
+      case "--model": options.model = next(); break;
+      case "--briefs": options.briefsPath = next(); break;
       case "--timeout": options.timeoutMinutes = Number(next()); break;
       case "--seed": options.seed = Number(next()); break;
       case "--out": options.out = next(); break;
@@ -124,6 +150,18 @@ function parseArgs(argv) {
     throw new Error("--repeats must be a positive integer");
   }
   options.resolvedPrimary = resolvePrimary(options.primary, options.preset);
+  if (options.replay) {
+    if (!options.model) {
+      throw new Error("--replay needs --model <provider/model[@variant]>: replay binds the verifier directly");
+    }
+    if (options.primary) {
+      throw new Error("--replay and --primary are exclusive: replay runs no primary at all");
+    }
+    options.replayModel = parsePrimary(options.model);
+    options.replayBriefs = loadBriefs(options.briefsPath);
+  } else if (options.model) {
+    throw new Error("--model applies to --replay only; use --primary to pick an in-situ profile");
+  }
   return { command: positional[0] ?? "plan", positional: positional.slice(1), options };
 }
 
@@ -189,22 +227,33 @@ function environmentRecord() {
 
 async function executeRun(entry, caseDef, resolvedVariant, options, attempt) {
   const startedAt = new Date().toISOString();
+  const replay = options.replayBriefs
+    ? briefFromStore(options.replayBriefs, caseDef.id, entry.repeat)
+    : null;
   const fixture = createFixture({
     preset: options.preset,
-    primary: options.resolvedPrimary,
+    primary: replay ? null : options.resolvedPrimary,
+    // Replay runs the verifier alone against a recorded brief: one session
+    // instead of an orchestration, which is the whole cost saving.
+    soloAgent: replay ? "verifier" : null,
+    soloModel: replay ? options.replayModel : null,
     auth: true,
     inheritGlobal: true,
   });
   try {
     const digests = applyVariant(fixture, resolvedVariant);
     const { head } = materializeCase(caseDef, fixture.project);
-    const brief = briefFor(caseDef);
+    const brief = replay ? replay.brief : briefFor(caseDef);
 
     const started = Date.now();
-    const result = await runOpencode(fixture, ["run", brief, "--agent", "pilotfish"], {
-      timeoutMs: options.timeoutMinutes * 60_000,
-      stdoutFile: join(fixture.root, "run-stdout.txt"),
-    });
+    const result = await runOpencode(
+      fixture,
+      ["run", brief, "--agent", replay ? "verifier" : "pilotfish"],
+      {
+        timeoutMs: options.timeoutMinutes * 60_000,
+        stdoutFile: join(fixture.root, "run-stdout.txt"),
+      },
+    );
     const durationMs = Date.now() - started;
 
     const telemetry = readRunTelemetry(fixture, { outside: REPO_ROOT.replace(/\/$/, "") });
@@ -237,6 +286,8 @@ async function executeRun(entry, caseDef, resolvedVariant, options, attempt) {
       timedOut: result.timedOut,
       commit: head,
       promptDigests: digests,
+      mode: replay ? "replay" : "in-situ",
+      replayedBrief: replay ? { source: replay.source, variant: replay.variant } : null,
       ...scored,
       verdictSource: verdictSource(first?.verdictText ?? ""),
       verifierChainDepth: telemetry.verifierRuns.length,
@@ -333,6 +384,16 @@ function renderReport(record) {
       (summary.invalidRuns ? ` (excluded: ${JSON.stringify(summary.invalidReasons)})` : "") +
       `; seed ${record.seed}; preset ${options.preset}.`,
   );
+  if (options.replay) {
+    lines.push("");
+    lines.push(
+      `**Replay mode**, verifier \`${options.replayModel.model}\`` +
+        `${options.replayModel.variant ? ` (${options.replayModel.variant})` : ""}. Each run is that ` +
+        "model answering a brief a real primary wrote, with no primary in the loop. It measures the " +
+        "prompt and the model in the verifier seat; it does not measure dispatch, and a difference " +
+        "here is not automatically a difference in situ.",
+    );
+  }
   if (options.resolvedPrimary) {
     lines.push("");
     lines.push(
@@ -419,6 +480,19 @@ function renderReport(record) {
 
 function routingText(options) {
   const primary = options.resolvedPrimary;
+  if (options.replay) {
+    const model = options.replayModel;
+    return [
+      "  mode      replay (no primary; one verifier session per run)",
+      `  verifier  ${model.model}${model.variant ? ` (${model.variant})` : ""}   <- the seat under test`,
+      `  briefs    ${JSON.stringify(briefCounts(options.replayBriefs))}`,
+      "",
+      "  Each run replays a brief a real primary wrote, so this measures the",
+      "  verifier's response to a fixed instruction -- not the primary's choice of",
+      "  brief, and not the dispatch. Two variants at the same repeat index get the",
+      "  identical brief, which is what makes the comparison paired.",
+    ];
+  }
   if (!primary) {
     return [
       `  preset    ${options.preset} (default primary)`,
@@ -451,7 +525,7 @@ function planText(cases, variants, options) {
     `  variants  ${variants.length}  (${variants.join(", ")})`,
     `  repeats   ${options.repeats} per cell`,
     `  cells     ${cells}`,
-    `  runs      ${runs}  full orchestrated pilotfish runs`,
+    `  runs      ${runs}  ${options.replay ? "single verifier sessions" : "full orchestrated pilotfish runs"}`,
     "",
     "Routing",
     "",
@@ -459,12 +533,23 @@ function planText(cases, variants, options) {
     "",
     "Cost and runtime",
     "",
-    `  Each run is one complete pilotfish session -- planning, at least one verifier`,
-    `  dispatch, and whatever else the primary decides it needs -- against the live`,
-    `  ${options.preset} subscription. It consumes the same quota it is measuring.`,
+    ...(options.replay
+      ? [
+          "  Each run is one verifier session against a recorded brief. No primary, no",
+          "  planning, no dispatch -- roughly half the sessions and a small fraction of",
+          `  the tokens of an in-situ run, billed to ${options.replayModel.model.split("/")[0]}.`,
+        ]
+      : [
+          `  Each run is one complete pilotfish session -- planning, at least one verifier`,
+          `  dispatch, and whatever else the primary decides it needs -- against the live`,
+          `  ${options.preset} subscription. It consumes the same quota it is measuring.`,
+        ]),
     "",
     `  Estimate: ~${estimate.minutesPerRun} min/run, so ~${((runs * estimate.minutesPerRun) / 60).toFixed(1)}h`,
     `  (range ${((runs * low) / 60).toFixed(1)}–${((runs * high) / 60).toFixed(1)}h at ${low}–${high} min/run).`,
+    ...(estimate.usdPerRun
+      ? [`  Metered API cost: ~$${(runs * estimate.usdPerRun).toFixed(2)} for the suite, at $${estimate.usdPerRun}/run.`]
+      : []),
     `  Source: ${estimate.source}. Replace these figures from a completed suite.`,
     ...(estimate.measured
       ? []
@@ -505,6 +590,25 @@ async function main() {
 
   const cases = loadCases({ ids: options.cases, classes: options.classes });
   if (cases.length === 0) throw new Error("no cases selected");
+
+  if (command === "capture-briefs") {
+    // Replay inputs come from runs that actually happened. Writing a brief by
+    // hand would make the measurement a test of my prose rather than of the
+    // primary's.
+    if (positional.length === 0) throw new Error("capture-briefs needs one or more result files");
+    const store = captureBriefs(positional);
+    const path = writeBriefs(store, options.briefsPath);
+    const counts = briefCounts(store);
+    for (const [id, count] of Object.entries(counts)) {
+      process.stdout.write(`ok  ${id}: ${count} distinct brief(s)\n`);
+    }
+    const missing = cases.filter((item) => !counts[item.id]);
+    for (const item of missing) {
+      process.stdout.write(`--  ${item.id}: none captured; replay cannot cover this case yet\n`);
+    }
+    process.stdout.write(`\nWrote ${path}\n`);
+    return;
+  }
 
   if (command === "validate") {
     // Offline: proves every case builds into a two-commit repository and that

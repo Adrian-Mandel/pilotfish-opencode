@@ -9,7 +9,7 @@
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, test } from "node:test";
@@ -17,6 +17,7 @@ import { describe, test } from "node:test";
 import { briefFor, loadCases, materializeCase } from "./lib/cases.mjs";
 import { loadProfiles, resolvePrimary } from "./lib/routing.mjs";
 import { classifyRunHealth, isStandingFailure } from "./lib/telemetry.mjs";
+import { BRIEFS_SCHEMA, briefFor as storeBriefFor, captureBriefs } from "./lib/briefs.mjs";
 import {
   OUTCOMES,
   mentionsDefect,
@@ -286,6 +287,63 @@ describe("primary model resolution", () => {
         assert.equal(resolved.profile, name, `${preset}/${name}`);
         assert.ok(resolved.verifier?.model, `${preset}/${name} has no verifier binding`);
       }
+    }
+  });
+});
+
+// Replay is only defensible if its inputs are real. A brief invented here would
+// turn the measurement into a test of my prose rather than of the primary's.
+describe("replayed briefs", () => {
+  const store = {
+    schema: BRIEFS_SCHEMA,
+    cases: {
+      "a-case": [
+        { brief: "first", source: "r.json", variant: "current" },
+        { brief: "second", source: "r.json", variant: "pre-scope" },
+      ],
+    },
+  };
+
+  // The pairing that makes the A/B comparison meaningful: both variants at
+  // repeat 3 answer the identical brief, so a difference between them cannot be
+  // a difference in what they were asked.
+  test("a repeat index selects the same brief for every variant", () => {
+    for (const repeat of [0, 1, 2, 3, 7]) {
+      assert.equal(
+        storeBriefFor(store, "a-case", repeat).brief,
+        storeBriefFor(store, "a-case", repeat).brief,
+      );
+    }
+    assert.equal(storeBriefFor(store, "a-case", 0).brief, "first");
+    assert.equal(storeBriefFor(store, "a-case", 1).brief, "second");
+    assert.equal(storeBriefFor(store, "a-case", 2).brief, "first", "must cycle, not run out");
+  });
+
+  test("a case with no captured brief fails loudly rather than replaying nothing", () => {
+    assert.throws(() => storeBriefFor(store, "absent", 0), /no captured brief/);
+  });
+
+  test("capture keeps provenance and drops duplicates", () => {
+    const dir = mkdtempSync(join(tmpdir(), "briefs-"));
+    try {
+      const path = join(dir, "result.json");
+      const brief = "An executor claims ...";
+      writeFileSync(
+        path,
+        JSON.stringify({
+          runs: [
+            { caseId: "a-case", variant: "current", promptDigests: { "pilotfish.md": "abc" },
+              verifierRuns: [{ dispatchPrompt: brief }, { dispatchPrompt: brief }] },
+          ],
+        }),
+      );
+      const captured = captureBriefs([path]);
+      assert.equal(captured.schema, BRIEFS_SCHEMA);
+      assert.equal(captured.cases["a-case"].length, 1, "identical briefs must collapse");
+      assert.equal(captured.cases["a-case"][0].pilotfishPrompt, "abc");
+      assert.equal(captured.cases["a-case"][0].source, "result.json");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });

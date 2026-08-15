@@ -49,6 +49,53 @@ Useful flags: `--repeats N`, `--variants current,pre-scope`, `--cases <id,...>`,
 `--classes A,B`, `--timeout <minutes>`, `--seed N` (replays a run order),
 `--keep-fixtures`, `--out <path>`.
 
+## Replay mode: the same measurement for about a fiftieth of the cost
+
+An in-situ run pays for a whole orchestrated session — planning, tool calls,
+integration — and scores exactly one thing: the verifier's first verdict.
+Everything else is overhead paid to produce one input string. Replay records
+that string and reuses it:
+
+```bash
+node tests/bench/verifier-correctness.mjs capture-briefs tests/bench/results/*.json
+node tests/bench/verifier-correctness.mjs plan --replay --model openrouter/qwen/qwen3.6-27b --classes A,B --repeats 20
+node tests/bench/verifier-correctness.mjs run --confirm --replay --model openrouter/qwen/qwen3.6-27b --classes A,B --repeats 20
+```
+
+One run becomes a single verifier session against a brief a real primary wrote.
+Measured on `qwen3.6-27b`: **15.6 s and $0.017**, against 9.5 minutes of
+subscription quota for the in-situ equivalent on `gpt-5.6`. That is what makes
+n=20 per cell unremarkable, and n is the whole problem — at the n=5 the default
+suite buys, a null result on class B is not concludable.
+
+`--replay` needs `--model` and refuses `--primary`, because there is no primary.
+The verifier is promoted to a primary agent in a throwaway config, which is how
+a role gets run directly at all: the CLI refuses a subagent for `--agent`. The
+router is **removed** from that config rather than taught an exception — a bench
+mode inside the component whose value is failing closed would be a bypass; a
+config without it is not.
+
+**Briefs are captured, never written.** A hand-written brief would make the
+result a test of the harness author's prose. Every distinct brief a real run
+produced is kept rather than one canonical example, because the primary phrases
+the same claim differently every time and collapsing that would make replay look
+more consistent than the system it stands in for. A repeat index selects the
+same brief for every variant, so the two arms of the A/B answer identical input
+and a difference between them cannot be a difference in what they were asked.
+
+### What replay gives up, and when not to use it
+
+It measures the verifier's response to a fixed instruction. It does not measure
+the primary's choice of brief, and the Completion Gate wording is part of what
+#16 changed — so a replay result is evidence about the verifier prompt and the
+model, not about the gate end to end. Keep a handful of in-situ runs alongside
+any replay conclusion to confirm the replay is not distorting.
+
+It also only covers cases that have a captured brief. Classes C and D have none
+yet, so the documentation-drift case and the false-REFUTED noise floor cannot be
+replayed until one in-situ run of each is recorded — two runs, then unlimited
+cheap repeats.
+
 ## Choosing which model is measured
 
 `--preset` and `--primary` decide that, and `plan` prints the resolution before
