@@ -244,3 +244,97 @@ GROUP BY tool ORDER BY 2 DESC;"
 ```
 
 `task` rows report nonsense totals here because nested runs leave end timestamps unset; every other tool is sound.
+
+## The scope change, measured against ground truth (2026-08-15)
+
+The last open risk in this issue is a false `CONFIRMED`: telling the verifier not
+to refute work outside its claim could suppress a real finding, and real
+telemetry cannot see that because it records the verdict and never whether the
+verdict was right. Seeded defects answer it. Two suites now exist.
+
+**Gemini 3.1 Pro, in situ, 14 valid runs.** Ended early: AntiGravity's soft quota
+guard tripped 14 runs into a 60-run suite, after which the backend refused with
+`403 IAM_PERMISSION_DENIED` rather than a quota message. The runs that completed
+are a truncated prefix of a randomized queue, so the cells are unbalanced and no
+rate from it is worth quoting on its own.
+
+**qwen3.6-27b, replay, 120 valid runs of 120.** Complete, paired, and the basis
+for everything below. Replay measures the verifier's response to a brief a real
+primary wrote; it does not measure the primary's choice of brief.
+
+| class | variant | n | false CONFIRMED | detected at all | refuted on the defect |
+|---|---|---|---|---|---|
+| A | current | 20 | 0% | 100% | 100% |
+| A | pre-scope | 20 | 0% | 100% | 100% |
+| B | current | 40 | 38% (24–53%) | 63% | 0% |
+| B | pre-scope | 40 | 33% (20–48%) | 65% | 13% (5–26%) |
+
+### The scope change has no detectable effect on this model
+
+Every class B cell is paired: the same repeat index replays the same brief to
+both variants, so a difference cannot be a difference in what was asked. Of 40
+paired cells, 9 missed under both, 21 missed under neither, 6 missed only under
+`current` and 4 only under `pre-scope`. Ten discordant pairs split 6–4 is an
+exact two-sided **p = 0.75**. There is no effect here to act on.
+
+The one difference that is real is the one the change was designed to produce.
+`pre-scope` refuted on the adjacent defect 5 times in 40; `current` never did,
+reporting it as an observation instead. The finding still reaches the primary —
+that is the intended channel — but the gate stops the change under the old
+prompt and does not under the new one.
+
+### The defect decides detection, not the prompt
+
+Pooling class B hides a bimodal split, and the split is by case, not by variant:
+
+| case | current missed | pre-scope missed |
+|---|---|---|
+| `b-config-read-adjacent` | 2/20 | 1/20 |
+| `b-timeout-guard-adjacent` | 13/20 | 12/20 |
+
+Both defects sit in the same file as the claim and inside the same diff. One is
+found almost always and the other missed about two thirds of the time, under
+either prompt. Whatever governs detection at this tier, it is a property of the
+defect, not of the instruction — which is also why a two-case class B is too
+narrow a base for a general claim about adjacent defects.
+
+### The finding that matters is the level, not the delta
+
+A cheap verifier misses roughly a third of adjacent defects **under the old
+prompt too**. Pilotfish is a frontier orchestrator with cheap workers and the
+verifier is a worker, so this is not a proxy for #16's `gpt-5.6` criterion — it
+is the architecture's own viability question. At this tier the gate is reliable
+for defects inside the claim it was given (class A, 40/40) and unreliable for
+anything beside them, and no prompt wording in this experiment moved that.
+
+### What this does not settle
+
+`gpt-5.6` is untested. Every number this issue's revert decision rests on — the
+72% REFUTED baseline, the 19-run chain — is a `gpt-5.6` number, and a
+`qwen3.6-27b` result cannot move it. Classes C and D were not replayed: neither
+has a captured brief, so the documentation-drift case and the false-REFUTED
+noise floor are unmeasured here. Chain depth was 1 throughout, by construction
+in replay, so this says nothing about the chain budget.
+
+### A scoring defect found while reading the raw verdicts
+
+Detection is substring matching over the whole verdict, so a run that mentions
+the adjacent function in passing *and* separately uses a discriminator word
+about the claimed function scores as `observed` without ever having found the
+defect. Two of 46 `observed` runs are false credits on that account; correcting
+them moves class B `current` to 40% and `pre-scope` to 35%, which changes no
+conclusion.
+
+The error is one-directional and was checked in both: **zero of the 25 `missed`
+runs mention the adjacent function at all**, so nothing is being scored as a
+miss that was really a detection. The reverse direction is worth fixing — the
+markers should require the discriminator near the anchor rather than anywhere in
+the document — and worth knowing about before trusting an `observed` cell from
+any future run.
+
+### Reproducing
+
+```bash
+node tests/bench/verifier-correctness.mjs report \
+  tests/bench/results/replay-qwen3.6-27b-classAB-r20.json
+```
