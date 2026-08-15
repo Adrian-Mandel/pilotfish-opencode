@@ -4,13 +4,13 @@ All notable changes to Pilotfish for OpenCode. Installed versions are recorded i
 
 ## v0.2.0 - Unreleased
 
-Tested with OpenCode `1.18.10`.
+Tested with OpenCode `1.18.18`.
 
 ### Added
 
 - Canonical ChatGPT, AntiGravity, and OpenRouter profiles, with a dependency-free runtime profile router. Each profile is named for its primary model identifier — `openai/gpt-5.6-sol`, `openrouter/qwen3.6-27b`, and so on — so a name states which orchestrator it selects rather than a vendor family that ships many models. Provider slashes are flattened to `--` when a profile name becomes a hidden agent name, and two profiles that would flatten together are refused.
 - Session-pinned Task routing to hidden capability-preserving worker clones, plus focused executable router contracts.
-- A profile router contract fixing the router's guarantees, its OpenCode `1.18.10` couplings, its accepted risks, and its threat model.
+- A profile router contract fixing the router's guarantees, its OpenCode `1.18.18` couplings, its accepted risks, and its threat model.
 - An isolated OpenCode integration fixture and a host-level config-generation test that needs no provider request.
 - Per-role `steps` backstops and a `doom_loop` deny on all eight subagents, where an `ask` has nobody attached to answer it and stalls instead of breaking the loop.
 - `question` permission for the `pilotfish` primary, which OpenCode denies globally and re-allows only for its own built-in primaries.
@@ -33,6 +33,7 @@ Tested with OpenCode `1.18.10`.
 - Extended install, update, rollback, and uninstall ownership to the required router plugin tuple and hash-tracked runtime files.
 - Raised the verified OpenCode baseline to `1.18.10` for the runtime hook contract.
 - All eight workers now carry a closed tool scope rather than only the four read-only ones. The four executors previously took the default toolset, so every MCP server a user happened to have installed rode along on every one of their requests — measured at 13,748 tokens per request against a real 44-tool GitHub MCP server, paid again on each step of a role that runs up to 250 of them. A closed scope removes a tool from the request schema outright rather than refusing it at call time. The `pilotfish` primary stays open deliberately: it is the agent the user drives, and silently removing their MCP servers from their own session is not a trade worth making. Because a worker can no longer see any MCP server unless granted, installation now enumerates configured servers, measures each one's cost, reports which roles have actually used it, and asks per server per role; a grant must be appended after the deny, since OpenCode resolves a tool against the last matching rule.
+- The host contract is re-pinned from OpenCode `1.18.10` to the shipped `1.18.18`, with all thirteen host-fact rows verified there rather than four of thirteen. Issue #24 had left a split pin — four rows current at `1.18.16`, eight never re-run — under a contract whose own rule says a host upgrade invalidates every claim until the fixture is re-run. The four rows whose consequence is an ordering or timing guarantee, H3, H4, H6, and H7, are now exercised against the real host by `tests/integration/host-facts.test.mjs` instead of read, and H11 by `tests/integration/host-fact-config-identity.test.mjs`, which drives one server process across three project directories, because a shared object reference is invisible to source reading. H11's boundary turned out to sit one level deeper than the row claimed: the `agent` map is rebuilt per instance but points back at the previous instance's agent record, so a plugin writing anywhere under `config.agent.<name>`, not only into `permission.task`, writes into every directory that process serves. H8 still holds and is still load-bearing: Task exposes no per-invocation model override at `1.18.18`, so hidden clones remain necessary and issue #13 stays answered in the negative. H2 loses the word "silently", because a skipped plugin factory does log. H12 gains the detail that the TUI filters a toast on its workspace rather than its directory. H9 changed materially: the host's wildcard matcher is case-insensitive on every platform while the router's mirror is case-insensitive only on Windows, so on a posix host a Task rule such as `"PILOTFISH-PROFILE-*"` passes the G9 guard while still admitting internal clones on the host. That is a G9 defect, split out as issue #38 under change control rather than patched here.
 
 ### Fixed
 
