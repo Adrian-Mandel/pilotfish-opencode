@@ -13,7 +13,9 @@
       "any": [
         "&&",
         "||",
-        "logic bug"
+        "logic bug",
+        "defective",
+        "faulty"
       ]
     }
   }

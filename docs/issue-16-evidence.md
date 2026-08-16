@@ -368,3 +368,65 @@ node tests/bench/verifier-correctness.mjs rescore <result.json>
 node tests/bench/verifier-correctness.mjs report \
   tests/bench/results/replay-qwen3.6-27b-classAB-r20.json
 ```
+
+## gpt-5.6: the scope change improves the gate (2026-08-16)
+
+The model #16's criterion is actually written against, measured the same way: 120
+replay runs on `gpt-5.6-sol` at `high`, the binding the original telemetry was
+collected on, answering the identical recorded briefs the qwen suite used. 119
+valid, one throttled.
+
+| class | variant | n | false CONFIRMED | detected at all | refuted on the defect |
+|---|---|---|---|---|---|
+| A | current | 20 | 0% | 100% | 100% |
+| A | pre-scope | 20 | 0% | 100% | 100% |
+| B | current | 40 | **13%** (5–26%) | **73%** (57–84%) | 40% |
+| B | pre-scope | 40 | **33%** (20–48%) | **38%** (24–53%) | 38% |
+
+Paired on identical briefs, 40 cells: false CONFIRMED discordant 1–9 in favour of
+`current`, exact **p = 0.022**; detection discordant 17–3, **p = 0.003**. The
+same analysis on `qwen3.6-27b` gives p = 1.00 and p = 0.69 — no effect at all.
+
+**The feared regression is the opposite of what happens.** The change was
+expected to risk suppressing findings outside the claim. On `gpt-5.6` it more
+than doubles them and cuts false CONFIRMEDs from a third to an eighth.
+
+### The mechanism is a missing channel, and the outcome counts show it exactly
+
+| variant | caught | observed | missed | refuted-other | REFUTED verdicts |
+|---|---|---|---|---|---|
+| `current` | 16 | **13** | 5 | 6 | 22/40 |
+| `pre-scope` | 15 | **0** | 13 | 12 | 27/40 |
+
+`caught` is unchanged — 16 against 15. The old prompt did not refute on the
+adjacent defect more often; it had **nowhere to put a finding that did not
+justify refusal**, so `observed` is zero across all forty runs. Adding that
+channel converts thirteen silent misses into reported findings without costing a
+single refusal.
+
+### This invalidates the `REFUTED rate` criterion rather than passing it
+
+Total REFUTED verdicts fall, 27 to 22. Read against the issue's surviving
+criterion — *"REFUTED rate: no material fall"* — that is a regression. Read
+against what the criterion was for, it is the opposite: the gate detects
+**73% against 38%** and ships fewer defects.
+
+The criterion counts refusals as a proxy for findings. The scope change is
+precisely the intervention that breaks the proxy, because it separates the two.
+**Report detection and false CONFIRMED; retire the REFUTED-rate row**, which now
+joins the four already withdrawn for measuring the wrong thing.
+
+### Robustness
+
+The markers under-counted `gpt-5.6`, which describes this defect in vocabulary
+the qwen-tuned list did not carry — "regresses", "suppresses every read/parse
+error", "malformed JSON now returns `{}`" rather than "swallow" or "ENOENT".
+Nine runs were re-graded after hand-reading every verdict that named the
+adjacent function. **Six of the nine corrections favoured `pre-scope`**, and the
+result survived them: the correction pushed against the conclusion and the
+conclusion held. The same broadened markers change **zero** of the 120 qwen runs,
+so the previously reported qwen null is unaffected.
+
+Remaining limits are unchanged: two class B cases, replay measures the verifier
+prompt rather than the gate end to end, and classes C and D are still unmeasured
+though their briefs now exist.
