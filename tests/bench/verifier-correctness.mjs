@@ -80,6 +80,16 @@ const ESTIMATES = {
   // 15.6s, $0.017013, 24.0k input / 443 output. One verifier session with no
   // primary around it -- which is the whole reason replay exists: the same
   // measurement at a price that makes n=20 per cell unremarkable.
+  // Five measured runs (2026-08-15): 1.1-1.5 min, ~13k input / ~700 output per
+  // verifier session. Subscription-billed, so no per-run dollar figure. Roughly
+  // four times a qwen replay run and roughly an eighth of an in-situ gpt-5.6
+  // run, which is the saving replay exists for.
+  "replay:openai/gpt-5.6-sol": {
+    source: "five measured runs (2026-08-15, classes B, replay on gpt-5.6-sol/high)",
+    minutesPerRun: 1.25,
+    minutesPerRunRange: [1, 3],
+    measuredOn: "replay / openai/gpt-5.6-sol@high",
+  },
   "replay:openrouter/qwen/qwen3.6-27b": {
     source: "one measured run (2026-08-15, class B, replay on qwen3.6-27b); the range around it is an assumption",
     minutesPerRun: 0.3,
