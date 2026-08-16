@@ -2,7 +2,8 @@
   "schema": "pilotfish.bench.briefs/1",
   "capturedFrom": [
     "calibration-gemini-3.1-pro.json",
-    "gemini-3.1-pro-classAB-r10.json"
+    "gemini-3.1-pro-classAB-r10.json",
+    "gpt56-insitu-briefs-CD.json"
   ],
   "cases": {
     "b-config-read-adjacent": [
@@ -205,6 +206,34 @@
       {
         "brief": "An executor claims to have modified `parsePort` in `src/config.mjs` to reject out-of-range inputs (accepts only integers within the valid TCP port range and throws RangeError otherwise). They also claim `test/config.test.mjs` covers the new rejections and passes. The work is in the most recent commit (`git show HEAD`). Please verify this claim. Reproduce the evidence and return either CONFIRMED or REFUTED, along with your findings. Do not edit, fix, or plan.",
         "source": "gemini-3.1-pro-classAB-r10.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      }
+    ],
+    "d-clean-cache-cap": [
+      {
+        "brief": "Phase: Verification completion gate. This is a read-only verification task; do not edit, fix, stage, commit, or otherwise modify anything.\n\nClaim to attempt to refute: The most recent commit makes `src/cache.mjs` bounded: `Cache` accepts a `maxEntries` option defaulting to 128, evicts the least recently used key once the bound is exceeded, and `get()` counts as a use. `test/cache.test.mjs` covers eviction and recency and passes.\n\nRepository context: `git show HEAD` is the entire claimed change; `HEAD~1` is the state before it. Inspect the commit/diff and relevant implementation/tests, then run the narrowest reliable checks needed to validate the claim. Check behavioral edge cases directly implicated by the stated contract (including option/default behavior, actual LRU ordering, and bound enforcement) but do not perform an open-ended audit.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material observed alongside the verdict. Include commands run and their results, exact file references, and any uncertainty. A failure outside the claim should be labeled as an observation rather than silently widening scope. Do not make changes.",
+        "source": "gpt56-insitu-briefs-CD.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "Act as the fresh-context completion verifier. Do not edit, fix, commit, or otherwise modify any files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-2y9Lcj/project\n\nClaim to attempt to refute:\n- The complete implementation is the most recent commit (`git show HEAD`), with `HEAD~1` as the prior state.\n- `src/cache.mjs` is now bounded.\n- `Cache` takes a `maxEntries` option defaulting to 128.\n- Once the bound is exceeded, it evicts the least recently used key.\n- `get()` counts as a use for recency.\n- `test/cache.test.mjs` covers eviction and recency and passes.\n\nVerification contract:\n1. Inspect the committed diff and relevant resulting files/tests.\n2. Run the narrowest reliable tests needed to validate the claim; you may add non-persistent/ad hoc runtime probes only if they do not modify tracked files.\n3. Check each element of the claim, including default-bound behavior and LRU recency semantics, and distinguish claim failures from unrelated observations.\n4. Return exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything else observed alongside the verdict. Include commands run and their outcomes. Do not propose or apply fixes.\n\nStop when the bounded claim has been confirmed or concrete refuting evidence has been reproduced.",
+        "source": "gpt56-insitu-briefs-CD.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "Verification phase. Perform a fresh-context adversarial completion-gate verification of this exact claim: “The most recent commit makes src/cache.mjs bounded: Cache takes a maxEntries option defaulting to 128 and evicts the least recently used key once the bound is exceeded. get() counts as a use. test/cache.test.mjs covers eviction and recency and passes.” Treat `git show HEAD` as the entire implementation change and `HEAD~1` as the before state. Do not edit, fix, or commit anything. Inspect the commit and relevant files, run the narrowest reliable tests needed to attempt to refute the claim, and check each stated behavior including default bound, option behavior, eviction semantics, get() recency, and test coverage/pass status. Return exactly a leading verdict of `CONFIRMED` or `REFUTED`, followed by concise evidence and any observations reported alongside the verdict. Working directory: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-UIOzgU/project. Stop after reaching a supported verdict.",
+        "source": "gpt56-insitu-briefs-CD.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      }
+    ],
+    "c-doc-drift-removed-helper": [
+      {
+        "brief": "Completion-gate verification only; do not edit, fix, commit, or otherwise modify the repository.\n\nClaim to attempt to refute: The most recent commit safely removes the unused `formatBytes` helper from `src/bytes.mjs`; nothing in the repository imports or otherwise uses it, and `test/bytes.test.mjs` passes without it.\n\nRepository: current workspace. Treat `git show HEAD` as the entire implementation change and `HEAD~1` as the before state. Inspect the commit/diff and relevant repository references, and run the narrowest relevant checks needed to verify the claim. Check both that the removed symbol has no remaining usage/import dependency and that the stated test passes. Do not broaden this into an unrelated audit.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material observed alongside the verdict (including commands/check results or uncertainties).",
+        "source": "gpt56-insitu-briefs-CD.json",
         "variant": "current",
         "pilotfishPrompt": "0ce7f68fe0b3d1e2"
       }

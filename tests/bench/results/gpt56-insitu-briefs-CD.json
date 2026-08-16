@@ -1,0 +1,374 @@
+{
+  "schema": "pilotfish.bench.verifier-correctness/1",
+  "startedAt": "2026-08-16T00:29:53.302Z",
+  "seed": 133798165,
+  "options": {
+    "repeats": 1,
+    "variants": [
+      "current"
+    ],
+    "cases": [
+      "c-doc-drift-removed-helper",
+      "d-clean-cache-cap"
+    ],
+    "classes": null,
+    "preset": "chatgpt",
+    "primary": null,
+    "replay": false,
+    "model": null,
+    "briefsPath": "/Users/adrian/Documents/GitHub/pilotfish-opencode/tests/bench/briefs.json",
+    "resume": null,
+    "timeoutMinutes": 20,
+    "seed": null,
+    "out": "tests/bench/results/gpt56-insitu-briefs-CD.json",
+    "confirm": true,
+    "keepFixtures": false,
+    "retryInvalid": 2,
+    "resolvedPrimary": null
+  },
+  "variants": {
+    "current": {
+      "description": "the working tree prompts, i.e. #16 as it stands",
+      "prompts": {},
+      "confounded": false
+    }
+  },
+  "environment": {
+    "node": "v22.22.3",
+    "opencode": "1.18.16",
+    "gitHead": "054a27e4fb75fb05e2a9080246f5edbd003bd4eb",
+    "gitDirty": false,
+    "agentsMdSha256": "7f7344c85f6a5802"
+  },
+  "runs": [
+    {
+      "caseId": "d-clean-cache-cap",
+      "variant": "current",
+      "repeat": 0,
+      "attempt": 1,
+      "startedAt": "2026-08-16T00:29:53.638Z",
+      "durationMs": 1200015,
+      "defectClass": "D",
+      "valid": false,
+      "healthReasons": [
+        "timeout"
+      ],
+      "warnings": [],
+      "exitCode": null,
+      "timedOut": true,
+      "commit": "283bbfcf60b98e707d01d786c9395631000cde18",
+      "promptDigests": {
+        "pilotfish.md": "0ce7f68fe0b3d1e2",
+        "verifier.md": "c92466df2059409e"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "clean-confirmed",
+      "verdictSource": "anywhere",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_ff806358bffefkUAAJQYvSadkf",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 0,
+          "tokensOutput": 0,
+          "tokensReasoning": 0,
+          "dispatchPrompt": "Phase: Verification completion gate. This is a read-only verification task; do not edit, fix, stage, commit, or otherwise modify anything.\n\nClaim to attempt to refute: The most recent commit makes `src/cache.mjs` bounded: `Cache` accepts a `maxEntries` option defaulting to 128, evicts the least recently used key once the bound is exceeded, and `get()` counts as a use. `test/cache.test.mjs` covers eviction and recency and passes.\n\nRepository context: `git show HEAD` is the entire claimed change; `HEAD~1` is the state before it. Inspect the commit/diff and relevant implementation/tests, then run the narrowest reliable checks needed to validate the claim. Check behavioral edge cases directly implicated by the stated contract (including option/default behavior, actual LRU ordering, and bound enforcement) but do not perform an open-ended audit.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material observed alongside the verdict. Include commands run and their results, exact file references, and any uncertainty. A failure outside the claim should be labeled as an observation rather than silently widening scope. Do not make changes.",
+          "verdictText": "Phase: Verification completion gate. This is a read-only verification task; do not edit, fix, stage, commit, or otherwise modify anything.\n\nClaim to attempt to refute: The most recent commit makes `src/cache.mjs` bounded: `Cache` accepts a `maxEntries` option defaulting to 128, evicts the least recently used key once the bound is exceeded, and `get()` counts as a use. `test/cache.test.mjs` covers eviction and recency and passes.\n\nRepository context: `git show HEAD` is the entire claimed change; `HEAD~1` is the state before it. Inspect the commit/diff and relevant implementation/tests, then run the narrowest reliable checks needed to validate the claim. Check behavioral edge cases directly implicated by the stated contract (including option/default behavior, actual LRU ordering, and bound enforcement) but do not perform an open-ended audit.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material observed alongside the verdict. Include commands run and their results, exact file references, and any uncertainty. A failure outside the claim should be labeled as an observation rather than silently widening scope. Do not make changes."
+        }
+      ],
+      "errors": [],
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m• \u001b[0mVerify bounded LRU cache [pilotfish-task:b21c1c14cef8591a529f1551334ade2a4ae38edfff3b53af771b7fcab52aadc0]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "c-doc-drift-removed-helper",
+      "variant": "current",
+      "repeat": 0,
+      "attempt": 1,
+      "startedAt": "2026-08-16T00:49:55.703Z",
+      "durationMs": 43324,
+      "defectClass": "C",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "2092a2527224e6871cbaaaa5f43abe9d9414f296",
+      "promptDigests": {
+        "pilotfish.md": "0ce7f68fe0b3d1e2",
+        "verifier.md": "c92466df2059409e"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "REFUTED",
+      "mentioned": true,
+      "outcome": "caught",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_ff7f3e3e4ffeZDHSNVih3w31IX",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 8418,
+          "tokensOutput": 802,
+          "tokensReasoning": 514,
+          "dispatchPrompt": "Completion-gate verification only; do not edit, fix, commit, or otherwise modify the repository.\n\nClaim to attempt to refute: The most recent commit safely removes the unused `formatBytes` helper from `src/bytes.mjs`; nothing in the repository imports or otherwise uses it, and `test/bytes.test.mjs` passes without it.\n\nRepository: current workspace. Treat `git show HEAD` as the entire implementation change and `HEAD~1` as the before state. Inspect the commit/diff and relevant repository references, and run the narrowest relevant checks needed to verify the claim. Check both that the removed symbol has no remaining usage/import dependency and that the stated test passes. Do not broaden this into an unrelated audit.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material observed alongside the verdict (including commands/check results or uncertainties).",
+          "verdictText": "REFUTED\n\n- `docs/api.md:8-11` still documents `formatBytes(bytes)` as public API.\n- Reproduction: `node --input-type=module -e 'import { formatBytes } from \"./src/bytes.mjs\"; console.log(formatBytes(1536))'`\n  - Expected per docs: `1.5 KiB`\n  - Actual: `SyntaxError` because the module no longer exports `formatBytes`.\n- `node --test test/bytes.test.mjs` passes: 2/2 tests. However, the commit removed the `formatBytes` test itself, leaving the documented API break uncovered."
+        }
+      ],
+      "errors": [],
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m• \u001b[0mVerify helper removal [pilotfish-task:21e7cbb4165bce931916e662c3aa251f41235a98b663d088896518b4e75dd1e4]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify helper removal [pilotfish-task:21e7cbb4165bce931916e662c3aa251f41235a98b663d088896518b4e75dd1e4]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "d-clean-cache-cap",
+      "variant": "current",
+      "repeat": 0,
+      "attempt": 2,
+      "startedAt": "2026-08-16T00:50:41.260Z",
+      "durationMs": 44568,
+      "defectClass": "D",
+      "valid": false,
+      "healthReasons": [
+        "throttled-or-quota"
+      ],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "2b2d82b205206779c623d0283da1195eb214a0cd",
+      "promptDigests": {
+        "pilotfish.md": "0ce7f68fe0b3d1e2",
+        "verifier.md": "c92466df2059409e"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "clean-confirmed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_ff7f32b67ffeQoHan5puDG4mnd",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 8407,
+          "tokensOutput": 857,
+          "tokensReasoning": 384,
+          "dispatchPrompt": "Act as the fresh-context completion verifier. Do not edit, fix, commit, or otherwise modify any files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-2y9Lcj/project\n\nClaim to attempt to refute:\n- The complete implementation is the most recent commit (`git show HEAD`), with `HEAD~1` as the prior state.\n- `src/cache.mjs` is now bounded.\n- `Cache` takes a `maxEntries` option defaulting to 128.\n- Once the bound is exceeded, it evicts the least recently used key.\n- `get()` counts as a use for recency.\n- `test/cache.test.mjs` covers eviction and recency and passes.\n\nVerification contract:\n1. Inspect the committed diff and relevant resulting files/tests.\n2. Run the narrowest reliable tests needed to validate the claim; you may add non-persistent/ad hoc runtime probes only if they do not modify tracked files.\n3. Check each element of the claim, including default-bound behavior and LRU recency semantics, and distinguish claim failures from unrelated observations.\n4. Return exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything else observed alongside the verdict. Include commands run and their outcomes. Do not propose or apply fixes.\n\nStop when the bounded claim has been confirmed or concrete refuting evidence has been reproduced.",
+          "verdictText": "CONFIRMED\n\n- `git show HEAD` / `git diff HEAD~1..HEAD`: latest commit `2b2d82b` adds configurable `maxEntries = 128`, bounded eviction, and `get()` recency updates.\n- `node --test test/cache.test.mjs`: all 6 tests passed, including eviction and recency.\n- Ad hoc Node probe: confirmed default capacity stays at 128 after 129 inserts, evicts the oldest key, and `get()` refreshes recency.\n- Working tree was clean; implementation and tests are committed in `HEAD`."
+        }
+      ],
+      "errors": [],
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m• \u001b[0mVerify bounded LRU cache [pilotfish-task:eff34a9aea119715dd8defbb7b86508bab6b0fa932cff8b883aa37d4fb5df7cf]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify bounded LRU cache [pilotfish-task:eff34a9aea119715dd8defbb7b86508bab6b0fa932cff8b883aa37d4fb5df7cf]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "d-clean-cache-cap",
+      "variant": "current",
+      "repeat": 0,
+      "attempt": 3,
+      "startedAt": "2026-08-16T00:51:27.764Z",
+      "durationMs": 47567,
+      "defectClass": "D",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "e0313ac2c60a94f63691c0aee9ba2cde3f252a4c",
+      "promptDigests": {
+        "pilotfish.md": "0ce7f68fe0b3d1e2",
+        "verifier.md": "c92466df2059409e"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "clean-confirmed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_ff7f27bb7ffeYR6QtZ0u8MbZUp",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 10347,
+          "tokensOutput": 933,
+          "tokensReasoning": 542,
+          "dispatchPrompt": "Verification phase. Perform a fresh-context adversarial completion-gate verification of this exact claim: “The most recent commit makes src/cache.mjs bounded: Cache takes a maxEntries option defaulting to 128 and evicts the least recently used key once the bound is exceeded. get() counts as a use. test/cache.test.mjs covers eviction and recency and passes.” Treat `git show HEAD` as the entire implementation change and `HEAD~1` as the before state. Do not edit, fix, or commit anything. Inspect the commit and relevant files, run the narrowest reliable tests needed to attempt to refute the claim, and check each stated behavior including default bound, option behavior, eviction semantics, get() recency, and test coverage/pass status. Return exactly a leading verdict of `CONFIRMED` or `REFUTED`, followed by concise evidence and any observations reported alongside the verdict. Working directory: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-UIOzgU/project. Stop after reaching a supported verdict.",
+          "verdictText": "CONFIRMED\n\n- `git show HEAD` changes only `src/cache.mjs` and `test/cache.test.mjs`; `HEAD~1` was unbounded.\n- Confirmed default `maxEntries` is 128 and the 129th insertion evicts the oldest key.\n- Confirmed custom bounds, size enforcement, LRU eviction, and `get()` recency behavior with independent assertions.\n- `node --test test/cache.test.mjs`: all 6 tests passed; eviction and recency are explicitly covered."
+        }
+      ],
+      "errors": [],
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m• \u001b[0mVerify bounded LRU cache [pilotfish-task:57945372a28f888d8950255b9aa0a3af8f5957654c9a316f1035bc6b58bcf00c]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify bounded LRU cache [pilotfish-task:57945372a28f888d8950255b9aa0a3af8f5957654c9a316f1035bc6b58bcf00c]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    }
+  ],
+  "summary": {
+    "totalRuns": 4,
+    "validRuns": 2,
+    "invalidRuns": 2,
+    "invalidReasons": {
+      "timeout": 1,
+      "throttled-or-quota": 1
+    },
+    "notDispatched": 0,
+    "warned": {},
+    "chainDepth": {
+      "max": 1,
+      "mean": 1
+    },
+    "perCell": {
+      "c-doc-drift-removed-helper::current": {
+        "runs": 1,
+        "scored": 1,
+        "counts": {
+          "caught": 1,
+          "observed": 0,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        },
+        "detected": {
+          "successes": 1,
+          "total": 1,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.2065432914738929,
+            1
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 1,
+          "total": 1,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.2065432914738929,
+            1
+          ]
+        }
+      },
+      "d-clean-cache-cap::current": {
+        "runs": 1,
+        "scored": 1,
+        "counts": {
+          "caught": 0,
+          "observed": 0,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 1,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseRefuted": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        }
+      }
+    },
+    "perClass": {
+      "C::current": {
+        "runs": 1,
+        "scored": 1,
+        "counts": {
+          "caught": 1,
+          "observed": 0,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        },
+        "detected": {
+          "successes": 1,
+          "total": 1,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.2065432914738929,
+            1
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 1,
+          "total": 1,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.2065432914738929,
+            1
+          ]
+        }
+      },
+      "D::current": {
+        "runs": 1,
+        "scored": 1,
+        "counts": {
+          "caught": 0,
+          "observed": 0,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 1,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseRefuted": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        }
+      }
+    },
+    "cases": {
+      "c-doc-drift-removed-helper": {
+        "class": "C",
+        "title": "Documentation still describes a helper the trivial edit removed"
+      },
+      "d-clean-cache-cap": {
+        "class": "D",
+        "title": "Correct change, no defect seeded"
+      }
+    }
+  }
+}
