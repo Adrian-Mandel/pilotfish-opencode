@@ -16,6 +16,7 @@
         "strict",
         "strictly",
         "exactly",
+        "exact-fill",
         "boundary",
         "fits exactly",
         "one too few",

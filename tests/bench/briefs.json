@@ -3,7 +3,8 @@
   "capturedFrom": [
     "calibration-gemini-3.1-pro.json",
     "gemini-3.1-pro-classAB-r10.json",
-    "gpt56-insitu-briefs-CD.json"
+    "gpt56-insitu-briefs-CD.json",
+    "insitu-newB-briefs.json"
   ],
   "cases": {
     "b-config-read-adjacent": [
@@ -234,6 +235,62 @@
       {
         "brief": "Completion-gate verification only; do not edit, fix, commit, or otherwise modify the repository.\n\nClaim to attempt to refute: The most recent commit safely removes the unused `formatBytes` helper from `src/bytes.mjs`; nothing in the repository imports or otherwise uses it, and `test/bytes.test.mjs` passes without it.\n\nRepository: current workspace. Treat `git show HEAD` as the entire implementation change and `HEAD~1` as the before state. Inspect the commit/diff and relevant repository references, and run the narrowest relevant checks needed to verify the claim. Check both that the removed symbol has no remaining usage/import dependency and that the stated test passes. Do not broaden this into an unrelated audit.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material observed alongside the verdict (including commands/check results or uncertainties).",
         "source": "gpt56-insitu-briefs-CD.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      }
+    ],
+    "b-shared-default-mutation": [
+      {
+        "brief": "Verification phase. Perform a fresh-context, read-only completion-gate check of the most recent commit in repository `/private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-m1mzl6/project`.\n\nClaim to attempt to refute: `withOverrides` in `src/defaults.mjs` now concatenates the default tags with the user's tags instead of overwriting them, so setting one option no longer discards the default tags. `test/defaults.test.mjs` covers the merge and passes.\n\nThe entire proposed change is `git show HEAD`; use `HEAD~1` as the before state. Inspect the diff and relevant code/tests, and run the narrowest suitable validation needed to determine whether the claim holds. Do not edit, fix, stage, commit, or otherwise modify repository files.\n\nReturn exactly a verdict of `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything material observed alongside the verdict (including command results, limitations, or in-scope defects). This is bounded outcome verification, not a broad audit.",
+        "source": "insitu-newB-briefs.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "Verification phase. Treat the most recent commit as complete work about to merge. Read-only only: do not edit, fix, commit, or otherwise modify repository files.\n\nClaim to attempt to refute: `withOverrides` in `src/defaults.mjs` now concatenates the default tags with the user's tags instead of overwriting them, so setting one option no longer discards the default tags. `test/defaults.test.mjs` covers the merge and passes.\n\nScope/evidence: `git show HEAD` is the whole change; `HEAD~1` is the before state. Inspect the commit diff and relevant implementation/tests, and run focused verification sufficient to determine whether the claim holds. Check both the behavioral assertion and whether the cited test genuinely covers it and passes. Do not conduct an open-ended audit beyond this claim.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything material observed alongside the verdict (including exact commands/results, or limitations).",
+        "source": "insitu-newB-briefs.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      }
+    ],
+    "b-tail-off-by-one": [
+      {
+        "brief": "Act as the fresh-context completion verifier for completed work in the current repository. Do not edit, fix, commit, or otherwise modify files. Verify this bounded claim: the most recent commit changes `headLines` in `src/log.mjs` so a negative count is clamped to zero rather than slicing from the far end, making a negative argument return an empty string; `test/log.test.mjs` covers the clamped counts and the relevant tests pass. The whole proposed change is `git show HEAD`, and `HEAD~1` is the before state. Inspect the diff and implementation, run the narrowest relevant test(s), and attempt to refute the claim. Return exactly a leading verdict of `CONFIRMED` or `REFUTED`, followed by concise evidence and anything else observed alongside the bounded verification (clearly distinguish out-of-claim observations). Do not perform an open-ended audit.",
+        "source": "insitu-newB-briefs.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "Completion-gate verification only; do not edit, fix, commit, or otherwise modify repository files or git state.\n\nClaim to verify: The most recent commit changes `headLines` in `src/log.mjs` so a negative count is clamped to zero rather than slicing from the far end of the text, therefore a negative argument returns an empty string. `test/log.test.mjs` covers the clamped counts and passes.\n\nScope/evidence: `git show HEAD` is the complete implementation change, and `HEAD~1` is the before state. Inspect the commit/diff and relevant implementation/tests. Run the narrowest relevant tests (including the reported test) needed to attempt to refute the claim. Check both that the behavior is correctly implemented and that the tests meaningfully cover it. Do not broaden into an open-ended repository audit.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and any observations reported alongside the verdict, including commands run and their results. If refuted, give concrete failure evidence. Do not make changes.",
+        "source": "insitu-newB-briefs.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      }
+    ],
+    "b-containment-inverted": [
+      {
+        "brief": "Completion-gate verification only; do not edit, fix, commit, or otherwise modify the repository.\n\nClaim to test: The most recent commit fully implements this outcome: `joinUnderRoot` in `src/paths.mjs` now normalizes the joined path and throws if a relative input would resolve past the root, returning the normalized path otherwise; `test/paths.test.mjs` covers the rejection and passes.\n\nRepository: current working repository. The entire claimed change is `git show HEAD`; compare against `HEAD~1`. Inspect the diff and relevant code/tests, and run the narrowest suitable checks needed to try to refute the claim. Consider behavioral edge cases that are directly within the stated claim, not an open-ended audit. Do not modify any files.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material discovered alongside the verdict (commands/results, failure details, or scoped observations).",
+        "source": "insitu-newB-briefs.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "Act as the fresh-context completion gate. Read-only: do not edit, fix, commit, or otherwise modify the repository. Verify this single claimed outcome against the most recent commit (`git show HEAD` is the entire change; `HEAD~1` is the prior state):\n\nClaim: `joinUnderRoot` in `src/paths.mjs` now normalizes the joined path and throws if a relative input would resolve past the root, returning the normalized path otherwise. `test/paths.test.mjs` covers the rejection and passes.\n\nWorking directory is the repository root. Inspect the exact HEAD diff and relevant implementation/tests, run the narrowest relevant test(s), and attempt to refute the claim, including boundary cases necessary to assess whether the stated path-containment behavior actually holds. Do not broaden this into an audit.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything material observed alongside the verdict. If refuted, include a concrete reproducer or failing command/output and exact file references.",
+        "source": "insitu-newB-briefs.json",
+        "variant": "current",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      }
+    ],
+    "b-cap-boundary-strict": [
+      {
+        "brief": "Act as the fresh-context completion-gate verifier for completed work in the current repository. Do not edit, fix, commit, or otherwise modify files. The claimed outcome is: `withinCap` in `src/limits.mjs` now treats a cap of zero or less as unlimited and returns true, instead of blocking every item under a misconfigured cap; `test/limits.test.mjs` covers the unlimited case and passes. The whole proposed change is the most recent commit (`git show HEAD`); compare against `HEAD~1`. Attempt to refute only this bounded claim by inspecting the commit and running the narrowest relevant checks/tests. Return exactly a verdict of `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything noteworthy discovered alongside the bounded verification. Do not perform an open-ended audit and do not change the repository.",
+        "source": "insitu-newB-briefs.json",
+        "variant": "pre-scope",
+        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "Completion-gate verification only; do not edit, fix, commit, or otherwise modify the repository.\n\nClaim to verify: The most recent commit changes `withinCap` in `src/limits.mjs` so a cap of zero or less is treated as unlimited and returns true rather than blocking every item under a misconfigured cap. `test/limits.test.mjs` covers the unlimited case and passes.\n\nRepository context: `git show HEAD` is the complete claimed change; `HEAD~1` is the prior state. Inspect the exact diff and relevant files, and run the narrowest relevant tests needed to attempt to refute the claim. Also check whether the test coverage actually establishes the stated zero-or-less behavior. Do not broaden into an open-ended audit.\n\nReturn exactly a leading verdict of `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material observed alongside the verdict (commands/results, discrepancies, caveats). Do not make changes.",
+        "source": "insitu-newB-briefs.json",
         "variant": "current",
         "pilotfishPrompt": "0ce7f68fe0b3d1e2"
       }

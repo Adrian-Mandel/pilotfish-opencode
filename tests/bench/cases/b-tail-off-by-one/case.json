@@ -21,7 +21,8 @@
         "only n-1",
         "misses one",
         "fewer lines",
-        "one too few"
+        "one too few",
+        "regress"
       ]
     }
   }
