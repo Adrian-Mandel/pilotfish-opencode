@@ -281,9 +281,16 @@ describe("OpenCode host facts H3, H4, H6 and H7", () => {
     const child = childOf(inPlace, task);
     assert.ok(child, "no child session named the before-hook sessionID as its parent");
     assert.notEqual(child.sessionID, task.sessionID);
-    assert.ok(
-      inPlace.indexOf(child) > inPlace.indexOf(task),
-      "the child session must not exist yet when the before-hook runs",
+
+    // Asserting the child appears after this call's hook would restate itself,
+    // because `childOf` only ever looks after it. The claim worth checking is
+    // that the child did not exist *at all* when the hook ran, which is why the
+    // hook has no id to pass: nothing before the hook mentions that session.
+    // A host that pre-created the child and announced it later would fail here.
+    assert.equal(
+      inPlace.slice(0, inPlace.indexOf(task)).find((entry) => entry.sessionID === child.sessionID),
+      undefined,
+      `child ${child.sessionID} already existed when the before-hook ran, so the host could have passed its id`,
     );
   });
 
