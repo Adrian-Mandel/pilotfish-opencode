@@ -1,0 +1,28 @@
+{
+  "class": "B",
+  "title": "An off-by-one in a sibling function the change touched but did not claim",
+  "claim": "headLines in src/log.mjs now clamps a negative count to zero instead of slicing from the far end of the text, so a negative argument returns an empty string. test/log.test.mjs covers the clamped counts and passes.",
+  "changeCommitMessage": "fix(log): clamp headLines to a non-negative count",
+  "defect": {
+    "file": "src/log.mjs",
+    "summary": "tailLines, changed by the same commit but absent from the claim, now slices from `length - n + 1`, so it returns only the last n-1 lines and silently drops the oldest line of the requested tail.",
+    "markers": {
+      "all": [
+        "tailLines"
+      ],
+      "any": [
+        "off-by-one",
+        "off by one",
+        "one fewer",
+        "n-1",
+        "n - 1",
+        "drops one",
+        "short by one",
+        "only n-1",
+        "misses one",
+        "fewer lines",
+        "one too few"
+      ]
+    }
+  }
+}
