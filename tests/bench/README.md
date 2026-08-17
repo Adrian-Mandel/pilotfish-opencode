@@ -96,6 +96,41 @@ yet, so the documentation-drift case and the false-REFUTED noise floor cannot be
 replayed until one in-situ run of each is recorded — two runs, then unlimited
 cheap repeats.
 
+## Before you trust a number from a new model
+
+Two mistakes were made repeatedly while producing the results in
+`docs/issue-16-evidence.md`. Both are cheap to avoid and both changed the answer
+when they were not.
+
+**Marker vocabulary is model-sensitive. Validate it per model.** Detection is
+deterministic substring matching against markers declared in the case — there is
+no LLM judge here, by design — so a model that describes the same defect in
+different words is scored as having missed it. This went wrong three times.
+`qwen3.6-27b` describes one seeded defect as `&&` where `||` was meant;
+`gpt-5.6` describes the same one as "defective" and describes another as
+"regresses" and "suppresses every read/parse error" where the markers expected
+"swallow" and "ENOENT". Nine `gpt-5.6` runs were graded as misses that were not.
+
+The check takes minutes. Pull every verdict whose text names the adjacent
+function, read the sentence around each mention, and confirm the marker list
+covers that model's phrasing:
+
+```bash
+node tests/bench/verifier-correctness.mjs rescore tests/bench/results/<file>.json
+```
+
+`rescore` re-grades stored transcripts, so a marker fix costs a re-read rather
+than a re-run — which is the reason every verdict is retained in full. Check the
+correction in both directions: a broadened marker that flips runs *toward* your
+preferred conclusion deserves more suspicion than one that flips them away.
+
+**Do not report a direction from a partial suite.** This was done twice and was
+wrong both times. At 40 of 120 runs one comparison looked like 8 misses in 12
+against 4 in 13; the finished suite was 40% against 43% with p = 1.00, and the
+nominal direction had flipped. Cells fill unevenly because the queue is
+randomized, so a half-finished suite is a biased sample, not a small one. Wait
+for the suite, then run the paired test.
+
 ## Choosing which model is measured
 
 `--preset` and `--primary` decide that, and `plan` prints the resolution before

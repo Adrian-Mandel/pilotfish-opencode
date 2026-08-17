@@ -258,6 +258,13 @@ guard tripped 14 runs into a 60-run suite, after which the backend refused with
 are a truncated prefix of a randomized queue, so the cells are unbalanced and no
 rate from it is worth quoting on its own.
 
+Its raw result file is deliberately **not** committed — 6,310 lines of transcript
+for fourteen runs whose rates are unusable. Both things it produced are kept:
+the 32 dispatch briefs it generated are in `tests/bench/briefs.json` with their
+provenance recorded, and the quota-wall behaviour it exposed is the reason
+`provider-denied` and the standing-failure guard exist. One in-situ Gemini
+transcript is retained in full as `calibration-gemini-3.1-pro.json`.
+
 **qwen3.6-27b, replay, 120 valid runs of 120.** Complete, paired, and the basis
 for everything below. Replay measures the verifier's response to a brief a real
 primary wrote; it does not measure the primary's choice of brief.
