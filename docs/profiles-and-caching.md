@@ -213,6 +213,71 @@ If `cache.read` stays at zero across turns, the pin is not doing what you think.
 against the providers list, confirm `allow_fallbacks` is `false`, and confirm the endpoint you pinned
 still publishes a cached price.
 
+## Local providers: what changes
+
+A locally served model inverts most of this document. Nothing is billed, so there is no cached-input
+price to check and no endpoint to pin, and the caching verification above will mislead you: llama.cpp
+and LM Studio reuse the KV cache internally but do not report `cached_tokens` back over the
+OpenAI-compatible API, so `cache.read` stays at zero even when prompt reuse is working perfectly. A
+measured local profile showed 79 requests at 0% reported cache hits while follow-up turns were plainly
+reusing the prefix. Judge a local profile on wall time, not on `cache.read`.
+
+What does need care is the provider block, because a local model is user-defined rather than supplied by
+OpenCode:
+
+```jsonc
+"myserver": {
+  "npm": "@ai-sdk/openai-compatible",
+  "name": "My Server",
+  "options": { "baseURL": "http://192.168.1.10:1234/v1", "timeout": 3000000, "chunkTimeout": 3000000 },
+  "models": {
+    "the-exact-model-id-the-server-reports": {
+      "name": "Display name",
+      "limit": { "context": 204850, "output": 32768 },
+      "modalities": { "input": ["text"], "output": ["text"] },
+      "reasoning": true,
+      "temperature": false,
+      "tool_call": true
+    }
+  }
+}
+```
+
+**`limit.context` must match what the server actually allocated, not the model's native maximum.** These
+are different numbers. A 256K-native model loaded with a 200K context window will truncate or error near
+the top if OpenCode believes it has 256K. Read the figure off the server's load settings and copy it
+exactly. Confirm the model id against `curl http://<host>/v1/models` rather than the Hugging Face repo
+name; they often differ.
+
+**`temperature: false` hands sampling to the server**, which is usually what you want with a local model
+whose recommended samplers are model-specific and set once at load time. Qwen3.8 in thinking mode wants
+`temp 1.0 / top_p 0.95 / top_k 20 / min_p 0`, and greedy decoding is explicitly warned against; set that
+on the server and let OpenCode stay out of it.
+
+**A quantized GGUF may not honor graded `reasoning_effort` even when the upstream model does.** The chat
+template ships inside the quant, and quantizers sometimes package an older binary `enable_thinking`
+template instead. The symptom is a server log line like `Reasoning setting 'medium' is not supported by
+model ...  Supported settings: 'on', 'off'. Falling back to reasoning setting 'on'.` Verify before you
+declare variants: send `reasoning_effort` at two levels and compare `usage.completion_tokens_details.
+reasoning_tokens`. Use several samples — run-to-run variance on the same setting can exceed 2x, which is
+enough to fake a gradient that is not there. If the template is binary, declare only the variants that
+exist (a `none` variant for thinking off) and let the absence of a variant mean thinking on; OpenCode
+sends no `reasoning_effort` field at all when no variant is selected.
+
+**Name the profile by the rule in the router contract** — `<providerID>/<final segment of the primary
+modelID>`. For a local model the whole id is usually the final segment, so a quant suffix is part of the
+name: `myserver/qwen3.8-27b-mtp-pure`, not `myserver/qwen3.8-27b`. The truncated form is especially
+dangerous locally because servers commonly host several quants of the same base model, so the short name
+may silently look like a different model that also exists. Nothing enforces this on an installed config
+(see #30).
+
+**Save the load settings as the model's default, not just for the running instance.** A JIT reload uses
+the saved defaults, so a mismatch surfaces only when the model is evicted and cannot come back — for
+example a KV-cache quantization that requires flash attention while the saved default has it off.
+
+Local worker viability has now been measured rather than assumed; see
+[Issue #16 evidence](./issue-16-evidence.md) and the results under `tests/bench/results/`.
+
 ## What is not yet proven
 
 That pinning to a caching endpoint actually produces cache hits on a 50K prefix across turns. The
