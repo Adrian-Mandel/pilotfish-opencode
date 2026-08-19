@@ -11,6 +11,7 @@
 // attempt. Scenarios live in scenarios.mjs and reuse this file.
 //
 //   node tests/integration/fixture.mjs create [--preset chatgpt|antigravity]
+//                                             [--primary model[@variant]]
 //   node tests/integration/fixture.mjs exec <root> -- run "hello" --agent pilotfish
 //   node tests/integration/fixture.mjs destroy <root>
 
@@ -98,12 +99,55 @@ function inheritGlobalConfig(configDir) {
   return {};
 }
 
+// `provider/model` optionally suffixed `@variant`. Model IDs carry slashes and
+// dashes but never `@`, so the split is unambiguous.
+export function parsePrimary(spec) {
+  if (!spec) return null;
+  const at = spec.lastIndexOf("@");
+  if (at < 0) return { model: spec };
+  const model = spec.slice(0, at);
+  const variant = spec.slice(at + 1);
+  if (!model || !variant) throw new Error(`malformed primary "${spec}"; expected model[@variant]`);
+  return { model, variant };
+}
+
+// Promote one role to the only agent in the config, as a primary.
+//
+// The OpenCode CLI refuses a subagent for `--agent`, so a role cannot be run
+// directly while it is defined as a subagent. Rewriting it to a primary in a
+// throwaway config is how a harness measures one role's response to a fixed
+// input without paying for an orchestration around it.
+//
+// This is not a router bench mode and deliberately not one: the router is
+// removed entirely rather than taught to make an exception, so nothing here can
+// weaken a component whose value is failing closed. What it costs is fidelity —
+// a solo role is not being dispatched by a real primary — so it measures the
+// prompt and the model, not the dispatch.
+function soloAgentConfig(agents, role, model) {
+  const agent = structuredClone(agents[role]);
+  if (!agent) throw new Error(`no agent "${role}" to promote`);
+  agent.mode = "primary";
+  delete agent.hidden;
+  if (model) {
+    agent.model = model.model;
+    if (model.variant === undefined) delete agent.variant;
+    else agent.variant = model.variant;
+  }
+  // The role's own permissions stay exactly as shipped. A verifier that could
+  // suddenly edit, or one that lost `bash` and so could not run the tests it is
+  // asked to reproduce, would not be the role under test.
+  return { [role]: agent };
+}
+
 // `extraPlugins` appends plugin entries after the router's, `agentModel` binds
 // every agent to one model, and `env` reaches the spawned host through
 // fixtureEnv. Host-fact probes need all three: an observer plugin, a model that
 // costs no credentials, and a path to write observations to.
 export function createFixture({
   preset = "chatgpt",
+  primary = null,
+  soloAgent = null,
+  soloModel = null,
   auth = true,
   plugin = true,
   inheritGlobal = false,
@@ -125,16 +169,33 @@ export function createFixture({
     readTemplate("templates/opencode.base.jsonc"),
     readTemplate(`templates/presets/${preset}.jsonc`),
   );
+  // A preset ships one default primary, but the router selects the whole worker
+  // mapping from the primary model alone. Overriding it here is how a scenario
+  // exercises another profile in the same preset without editing a template.
+  // The override is authoritative in both directions, for the same reason the
+  // router's worker bindings are: a caller that names no variant must clear the
+  // preset's, not leak one model's effort tier onto a model that has none.
+  if (primary) {
+    const agent = { ...pilotfish.agent.pilotfish, model: primary.model };
+    if (primary.variant === undefined) delete agent.variant;
+    else agent.variant = primary.variant;
+    pilotfish.agent.pilotfish = agent;
+  }
+  const agents = soloAgent
+    ? soloAgentConfig(pilotfish.agent, soloAgent, soloModel)
+    : { ...(inherited.agent ?? {}), ...pilotfish.agent };
   const config = {
     ...inherited,
     ...pilotfish,
-    agent: { ...(inherited.agent ?? {}), ...pilotfish.agent },
+    agent: agents,
   };
   // Provider auth plugins must load before the router so its models exist.
+  // A solo role has no Task calls to route, so the router is left out entirely
+  // rather than loaded and bypassed.
   const providerPlugins = auth ? realProviderPlugins() : [];
   config.plugin = [
     ...providerPlugins,
-    ...(plugin ? [["./pilotfish/profile-router.mjs", { preset }]] : []),
+    ...(plugin && !soloAgent ? [["./pilotfish/profile-router.mjs", { preset }]] : []),
     ...extraPlugins,
   ];
   if (agentModel) {
@@ -238,8 +299,10 @@ async function main() {
   if (command === "create") {
     const presetIndex = rest.indexOf("--preset");
     const preset = presetIndex >= 0 ? rest[presetIndex + 1] : "chatgpt";
+    const primaryIndex = rest.indexOf("--primary");
     const fixture = createFixture({
       preset,
+      primary: primaryIndex >= 0 ? parsePrimary(rest[primaryIndex + 1]) : null,
       auth: !rest.includes("--no-auth"),
       inheritGlobal: rest.includes("--inherit-global"),
     });

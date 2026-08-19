@@ -244,3 +244,196 @@ GROUP BY tool ORDER BY 2 DESC;"
 ```
 
 `task` rows report nonsense totals here because nested runs leave end timestamps unset; every other tool is sound.
+
+## The scope change, measured against ground truth (2026-08-15)
+
+The last open risk in this issue is a false `CONFIRMED`: telling the verifier not
+to refute work outside its claim could suppress a real finding, and real
+telemetry cannot see that because it records the verdict and never whether the
+verdict was right. Seeded defects answer it. Two suites now exist.
+
+**Gemini 3.1 Pro, in situ, 14 valid runs.** Ended early: AntiGravity's soft quota
+guard tripped 14 runs into a 60-run suite, after which the backend refused with
+`403 IAM_PERMISSION_DENIED` rather than a quota message. The runs that completed
+are a truncated prefix of a randomized queue, so the cells are unbalanced and no
+rate from it is worth quoting on its own.
+
+Its raw result file is deliberately **not** committed — 6,310 lines of transcript
+for fourteen runs whose rates are unusable. Both things it produced are kept:
+the 32 dispatch briefs it generated are in `tests/bench/briefs.json` with their
+provenance recorded, and the quota-wall behaviour it exposed is the reason
+`provider-denied` and the standing-failure guard exist. One in-situ Gemini
+transcript is retained in full as `calibration-gemini-3.1-pro.json`.
+
+**qwen3.6-27b, replay, 120 valid runs of 120.** Complete, paired, and the basis
+for everything below. Replay measures the verifier's response to a brief a real
+primary wrote; it does not measure the primary's choice of brief.
+
+| class | variant | n | false CONFIRMED | detected at all | refuted on the defect |
+|---|---|---|---|---|---|
+| A | current | 20 | 0% | 100% | 100% |
+| A | pre-scope | 20 | 0% | 100% | 100% |
+| B | current | 40 | 40% (26–55%) | 60% | 0% |
+| B | pre-scope | 40 | 43% (29–58%) | 55% | 13% (5–26%) |
+
+These are the figures after the scorer correction described at the end of this
+section. The first reading of the same runs put class B at 38% and 33%; five
+runs had been credited with a finding they never made.
+
+### The scope change has no detectable effect on this model
+
+Every class B cell is paired: the same repeat index replays the same brief to
+both variants, so a difference cannot be a difference in what was asked. Of 40
+paired cells, 13 missed under both, 20 missed under neither, 3 missed only under
+`current` and 4 only under `pre-scope`. Seven discordant pairs split 3–4 is an
+exact two-sided **p = 1.00**. There is no effect here to act on.
+
+The uncorrected scoring gave a 6–4 split and p = 0.75 — the same conclusion, but
+its direction pointed the other way. Neither direction means anything at this
+separation, which is the point: an interim read of a partial suite pointed at
+`current` being worse, and the completed, corrected suite has `pre-scope`
+nominally worse. Both are noise.
+
+The one difference that is real is the one the change was designed to produce.
+`pre-scope` refuted on the adjacent defect 5 times in 40; `current` never did,
+reporting it as an observation instead. The finding still reaches the primary —
+that is the intended channel — but the gate stops the change under the old
+prompt and does not under the new one.
+
+### The defect decides detection, not the prompt
+
+Pooling class B hides a bimodal split, and the split is by case, not by variant:
+
+| case | current missed | pre-scope missed |
+|---|---|---|
+| `b-config-read-adjacent` | 2/20 | 1/20 |
+| `b-timeout-guard-adjacent` | 14/20 | 16/20 |
+
+Both defects sit in the same file as the claim and inside the same diff. One is
+found almost always and the other missed about two thirds of the time, under
+either prompt. Whatever governs detection at this tier, it is a property of the
+defect, not of the instruction — which is also why a two-case class B is too
+narrow a base for a general claim about adjacent defects.
+
+### The finding that matters is the level, not the delta
+
+A cheap verifier misses roughly a third of adjacent defects **under the old
+prompt too**. Pilotfish is a frontier orchestrator with cheap workers and the
+verifier is a worker, so this is not a proxy for #16's `gpt-5.6` criterion — it
+is the architecture's own viability question. At this tier the gate is reliable
+for defects inside the claim it was given (class A, 40/40) and unreliable for
+anything beside them, and no prompt wording in this experiment moved that.
+
+### What this does not settle
+
+`gpt-5.6` is untested. Every number this issue's revert decision rests on — the
+72% REFUTED baseline, the 19-run chain — is a `gpt-5.6` number, and a
+`qwen3.6-27b` result cannot move it. Classes C and D were not replayed: neither
+has a captured brief, so the documentation-drift case and the false-REFUTED
+noise floor are unmeasured here. Chain depth was 1 throughout, by construction
+in replay, so this says nothing about the chain budget.
+
+### A scoring defect, found by reading the raw verdicts, now fixed
+
+Detection was substring matching over the whole verdict, so a run that mentioned
+the adjacent function in passing *and* separately used a discriminator word
+about the claimed function scored as `observed` without ever having found the
+defect. Every one of the 40 `b-timeout-guard-adjacent` runs was then hand-read
+and labelled: **9 genuine detections, 5 false credits, 26 that never mention the
+function at all**. The other class B case was hand-read too and had none — all
+37 of its detections are real.
+
+The larger of the two causes was the marker list, not the matching. The
+discriminators were `negative` and `-5`, which is vocabulary the *claimed*
+function's own behaviour uses: a verdict listing `parsePort rejects zero and
+negative ports` next to `parseTimeout reads a numeric string` contains both
+markers and reports nothing. An adjacent-defect case needs words unique to the
+defect, which here is how the models actually described it — `&&` where `||` was
+meant.
+
+Proximity is the second half, and it is deliberately generous. Scoping to the
+line grades both class B cases perfectly and then breaks the class A control,
+30 of 40, because a verdict discussing one function across several sentences
+naturally separates the name from the detail. All 120 runs grade correctly at a
+200-character window and identically at 400, so the rule sits on a plateau
+rather than on a constant fitted to one dataset.
+
+The error was one-directional, checked in both: **zero of the 25 runs scored
+`missed` mention the adjacent function at all**, so nothing real was being
+scored as a miss. Correcting it moved 5 runs and changed no conclusion.
+
+Because every verdict is retained in full, the fix was applied to the runs that
+already happened rather than by re-running them:
+
+```bash
+node tests/bench/verifier-correctness.mjs rescore <result.json>
+```
+
+### Reproducing
+
+```bash
+node tests/bench/verifier-correctness.mjs report \
+  tests/bench/results/replay-qwen3.6-27b-classAB-r20.json
+```
+
+## gpt-5.6: the scope change improves the gate (2026-08-16)
+
+The model #16's criterion is actually written against, measured the same way: 120
+replay runs on `gpt-5.6-sol` at `high`, the binding the original telemetry was
+collected on, answering the identical recorded briefs the qwen suite used. 119
+valid, one throttled.
+
+| class | variant | n | false CONFIRMED | detected at all | refuted on the defect |
+|---|---|---|---|---|---|
+| A | current | 20 | 0% | 100% | 100% |
+| A | pre-scope | 20 | 0% | 100% | 100% |
+| B | current | 40 | **13%** (5–26%) | **73%** (57–84%) | 40% |
+| B | pre-scope | 40 | **33%** (20–48%) | **38%** (24–53%) | 38% |
+
+Paired on identical briefs, 40 cells: false CONFIRMED discordant 1–9 in favour of
+`current`, exact **p = 0.022**; detection discordant 17–3, **p = 0.003**. The
+same analysis on `qwen3.6-27b` gives p = 1.00 and p = 0.69 — no effect at all.
+
+**The feared regression is the opposite of what happens.** The change was
+expected to risk suppressing findings outside the claim. On `gpt-5.6` it more
+than doubles them and cuts false CONFIRMEDs from a third to an eighth.
+
+### The mechanism is a missing channel, and the outcome counts show it exactly
+
+| variant | caught | observed | missed | refuted-other | REFUTED verdicts |
+|---|---|---|---|---|---|
+| `current` | 16 | **13** | 5 | 6 | 22/40 |
+| `pre-scope` | 15 | **0** | 13 | 12 | 27/40 |
+
+`caught` is unchanged — 16 against 15. The old prompt did not refute on the
+adjacent defect more often; it had **nowhere to put a finding that did not
+justify refusal**, so `observed` is zero across all forty runs. Adding that
+channel converts thirteen silent misses into reported findings without costing a
+single refusal.
+
+### This invalidates the `REFUTED rate` criterion rather than passing it
+
+Total REFUTED verdicts fall, 27 to 22. Read against the issue's surviving
+criterion — *"REFUTED rate: no material fall"* — that is a regression. Read
+against what the criterion was for, it is the opposite: the gate detects
+**73% against 38%** and ships fewer defects.
+
+The criterion counts refusals as a proxy for findings. The scope change is
+precisely the intervention that breaks the proxy, because it separates the two.
+**Report detection and false CONFIRMED; retire the REFUTED-rate row**, which now
+joins the four already withdrawn for measuring the wrong thing.
+
+### Robustness
+
+The markers under-counted `gpt-5.6`, which describes this defect in vocabulary
+the qwen-tuned list did not carry — "regresses", "suppresses every read/parse
+error", "malformed JSON now returns `{}`" rather than "swallow" or "ENOENT".
+Nine runs were re-graded after hand-reading every verdict that named the
+adjacent function. **Six of the nine corrections favoured `pre-scope`**, and the
+result survived them: the correction pushed against the conclusion and the
+conclusion held. The same broadened markers change **zero** of the 120 qwen runs,
+so the previously reported qwen null is unaffected.
+
+Remaining limits are unchanged: two class B cases, replay measures the verifier
+prompt rather than the gate end to end, and classes C and D are still unmeasured
+though their briefs now exist.

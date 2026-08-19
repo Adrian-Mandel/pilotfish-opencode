@@ -49,6 +49,114 @@ Useful flags: `--repeats N`, `--variants current,pre-scope`, `--cases <id,...>`,
 `--classes A,B`, `--timeout <minutes>`, `--seed N` (replays a run order),
 `--keep-fixtures`, `--out <path>`.
 
+## Replay mode: the same measurement for about a fiftieth of the cost
+
+An in-situ run pays for a whole orchestrated session — planning, tool calls,
+integration — and scores exactly one thing: the verifier's first verdict.
+Everything else is overhead paid to produce one input string. Replay records
+that string and reuses it:
+
+```bash
+node tests/bench/verifier-correctness.mjs capture-briefs tests/bench/results/*.json
+node tests/bench/verifier-correctness.mjs plan --replay --model openrouter/qwen/qwen3.6-27b --classes A,B --repeats 20
+node tests/bench/verifier-correctness.mjs run --confirm --replay --model openrouter/qwen/qwen3.6-27b --classes A,B --repeats 20
+```
+
+One run becomes a single verifier session against a brief a real primary wrote.
+Measured on `qwen3.6-27b`: **15.6 s and $0.017**, against 9.5 minutes of
+subscription quota for the in-situ equivalent on `gpt-5.6`. That is what makes
+n=20 per cell unremarkable, and n is the whole problem — at the n=5 the default
+suite buys, a null result on class B is not concludable.
+
+`--replay` needs `--model` and refuses `--primary`, because there is no primary.
+The verifier is promoted to a primary agent in a throwaway config, which is how
+a role gets run directly at all: the CLI refuses a subagent for `--agent`. The
+router is **removed** from that config rather than taught an exception — a bench
+mode inside the component whose value is failing closed would be a bypass; a
+config without it is not.
+
+**Briefs are captured, never written.** A hand-written brief would make the
+result a test of the harness author's prose. Every distinct brief a real run
+produced is kept rather than one canonical example, because the primary phrases
+the same claim differently every time and collapsing that would make replay look
+more consistent than the system it stands in for. A repeat index selects the
+same brief for every variant, so the two arms of the A/B answer identical input
+and a difference between them cannot be a difference in what they were asked.
+
+### What replay gives up, and when not to use it
+
+It measures the verifier's response to a fixed instruction. It does not measure
+the primary's choice of brief, and the Completion Gate wording is part of what
+#16 changed — so a replay result is evidence about the verifier prompt and the
+model, not about the gate end to end. Keep a handful of in-situ runs alongside
+any replay conclusion to confirm the replay is not distorting.
+
+It also only covers cases that have a captured brief. Classes C and D have none
+yet, so the documentation-drift case and the false-REFUTED noise floor cannot be
+replayed until one in-situ run of each is recorded — two runs, then unlimited
+cheap repeats.
+
+## Before you trust a number from a new model
+
+Two mistakes were made repeatedly while producing the results in
+`docs/issue-16-evidence.md`. Both are cheap to avoid and both changed the answer
+when they were not.
+
+**Marker vocabulary is model-sensitive. Validate it per model.** Detection is
+deterministic substring matching against markers declared in the case — there is
+no LLM judge here, by design — so a model that describes the same defect in
+different words is scored as having missed it. This went wrong three times.
+`qwen3.6-27b` describes one seeded defect as `&&` where `||` was meant;
+`gpt-5.6` describes the same one as "defective" and describes another as
+"regresses" and "suppresses every read/parse error" where the markers expected
+"swallow" and "ENOENT". Nine `gpt-5.6` runs were graded as misses that were not.
+
+The check takes minutes. Pull every verdict whose text names the adjacent
+function, read the sentence around each mention, and confirm the marker list
+covers that model's phrasing:
+
+```bash
+node tests/bench/verifier-correctness.mjs rescore tests/bench/results/<file>.json
+```
+
+`rescore` re-grades stored transcripts, so a marker fix costs a re-read rather
+than a re-run — which is the reason every verdict is retained in full. Check the
+correction in both directions: a broadened marker that flips runs *toward* your
+preferred conclusion deserves more suspicion than one that flips them away.
+
+**Do not report a direction from a partial suite.** This was done twice and was
+wrong both times. At 40 of 120 runs one comparison looked like 8 misses in 12
+against 4 in 13; the finished suite was 40% against 43% with p = 1.00, and the
+nominal direction had flipped. Cells fill unevenly because the queue is
+randomized, so a half-finished suite is a biased sample, not a small one. Wait
+for the suite, then run the paired test.
+
+## Choosing which model is measured
+
+`--preset` and `--primary` decide that, and `plan` prints the resolution before
+anything runs:
+
+```bash
+node tests/bench/verifier-correctness.mjs plan \
+  --preset antigravity --primary google/antigravity-gemini-3.1-pro
+```
+
+The router selects a profile from the primary model alone, and the profile binds
+all eight workers — so `--primary` is what puts a given model in the verifier
+seat. Without it the preset's own default primary applies, which under
+`antigravity` is Claude Opus with a Claude Sonnet verifier, not Gemini. An
+unsupported primary is rejected at parse time rather than becoming a fail-closed
+router refusal on every run of an hours-long queue.
+
+**A result is scoped to the model that held the verifier seat.** The prompt
+under test is shared across profiles, but a verdict is the model's: a class B
+result on Gemini says the scope change does not blind *that* verifier, and does
+not transfer to `gpt-5.6`, which is what #16's telemetry and its revert decision
+are about. `report` restates the profile above every table for this reason.
+
+The runtime estimate is a `chatgpt` measurement and is not evidence about any
+other routing; `plan` says so when the two differ.
+
 ## What one run is
 
 One complete `pilotfish` session against the live subscription, inside
@@ -163,9 +271,16 @@ are stated against it, but it does not vote.
 ## Cost, runtime, and what the numbers can support
 
 Read `plan` before starting. The default suite is 5 cases × 2 variants × 5
-repeats = **50 sequential orchestrated runs**. The one measured run so far took
-9.5 minutes, which puts a default suite around **8 hours** and consuming real
-`chatgpt` subscription quota throughout.
+repeats = **50 sequential orchestrated runs**, consuming real subscription quota
+throughout.
+
+How long that takes is a property of the routing, not of the harness, so `plan`
+quotes a per-profile figure and says when a routing has never been measured. The
+two measured so far are 19× apart: `openai/gpt-5.6-sol` at 9.5 min/run puts a
+default suite near **8 hours**, while `google/antigravity-gemini-3.1-pro` at
+0.5 min/run puts the same suite near **25 minutes**. Neither is a distribution —
+each is one run, and a `REFUTED` verdict starts a re-verification round that
+neither measured.
 
 Five repeats is the floor #15 sets, not a comfortable sample. At n=5, a 0/5
 result has a 95% upper bound near 45% — so *"B held"* is not concludable from

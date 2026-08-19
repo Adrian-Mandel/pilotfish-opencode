@@ -23,10 +23,19 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { createFixture, destroyFixture, runOpencode } from "../integration/fixture.mjs";
+import { createFixture, destroyFixture, parsePrimary, runOpencode } from "../integration/fixture.mjs";
 import { CLASSES, briefFor, loadCases, materializeCase } from "./lib/cases.mjs";
+import {
+  BRIEFS_PATH,
+  briefCounts,
+  briefFor as briefFromStore,
+  captureBriefs,
+  loadBriefs,
+  writeBriefs,
+} from "./lib/briefs.mjs";
+import { resolvePrimary } from "./lib/routing.mjs";
 import { DEFAULT_VARIANTS, VARIANTS, applyVariant, resolveVariant } from "./lib/variants.mjs";
-import { classifyRunHealth, readRunTelemetry } from "./lib/telemetry.mjs";
+import { classifyRunHealth, isStandingFailure, readRunTelemetry } from "./lib/telemetry.mjs";
 import { OUTCOMES, scoreVerdict, summarizeCell, verdictSource } from "./lib/scoring.mjs";
 
 const BENCH_DIR = fileURLToPath(new URL("./", import.meta.url));
@@ -34,18 +43,69 @@ const REPO_ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const RESULTS_DIR = join(BENCH_DIR, "results");
 const SCHEMA = "pilotfish.bench.verifier-correctness/1";
 
-// One measured run, not a distribution: a single `chatgpt` class-D run on
-// 2026-08-10 took 9.5 minutes and 18.3k input / 1.2k output tokens in the
-// verifier alone. The range is guesswork around it, widened downward because a
-// clean case is the cheapest one and upward because a REFUTED verdict starts a
-// re-verification round. Stated rather than omitted because the issue requires
-// documented cost and runtime before a user starts a suite; replace both from
-// the first completed suite.
-const ESTIMATE = {
+// Three, not one: a single quota or permission error can be transient, and the
+// retry path exists for exactly that. Three consecutive is a wall.
+const STANDING_FAILURE_LIMIT = 3;
+
+// Single measured runs, not distributions. Stated rather than omitted because
+// the issue requires documented cost and runtime before a user starts a suite;
+// replace each from the first completed suite on that routing.
+//
+// Runtime is a property of the routing, not of the harness: the same class of
+// case took 9.5 minutes on gpt-5.6 and 0.5 minutes on Gemini 3.1 Pro, a 19x
+// spread. Keying the estimate by profile is the only way `plan` can quote a
+// figure that means anything, and an unmeasured routing must say so rather than
+// borrow another one's number.
+const ESTIMATE_FALLBACK = {
   source: "one measured run (2026-08-10, class D, chatgpt); the range around it is an assumption",
   minutesPerRun: 10,
   minutesPerRunRange: [5, 20],
+  measuredOn: "chatgpt / openai/gpt-5.6-sol",
 };
+
+const ESTIMATES = {
+  // 9.5 min, 18.3k input / 1.2k output tokens in the verifier alone.
+  "openai/gpt-5.6-sol": ESTIMATE_FALLBACK,
+  // 31s wall clock, 21.6k input / 283 output / 798 reasoning tokens in the
+  // verifier. Class B, `current`, CONFIRMED-with-observation, chain depth 1.
+  // The upper bound stays well above it because a REFUTED verdict starts a
+  // re-verification round and this run never did.
+  "google/antigravity-gemini-3.1-pro": {
+    source:
+      "one measured run (2026-08-14, class B, antigravity gemini-3.1-pro); the range around it is an assumption",
+    minutesPerRun: 0.5,
+    minutesPerRunRange: [0.4, 3],
+    measuredOn: "antigravity / google/antigravity-gemini-3.1-pro",
+  },
+  // 15.6s, $0.017013, 24.0k input / 443 output. One verifier session with no
+  // primary around it -- which is the whole reason replay exists: the same
+  // measurement at a price that makes n=20 per cell unremarkable.
+  // Five measured runs (2026-08-15): 1.1-1.5 min, ~13k input / ~700 output per
+  // verifier session. Subscription-billed, so no per-run dollar figure. Roughly
+  // four times a qwen replay run and roughly an eighth of an in-situ gpt-5.6
+  // run, which is the saving replay exists for.
+  "replay:openai/gpt-5.6-sol": {
+    source: "five measured runs (2026-08-15, classes B, replay on gpt-5.6-sol/high)",
+    minutesPerRun: 1.25,
+    minutesPerRunRange: [1, 3],
+    measuredOn: "replay / openai/gpt-5.6-sol@high",
+  },
+  "replay:openrouter/qwen/qwen3.6-27b": {
+    source: "one measured run (2026-08-15, class B, replay on qwen3.6-27b); the range around it is an assumption",
+    minutesPerRun: 0.3,
+    minutesPerRunRange: [0.2, 1],
+    usdPerRun: 0.017,
+    measuredOn: "replay / openrouter/qwen/qwen3.6-27b",
+  },
+};
+
+function estimateFor(options) {
+  const key = options.replay
+    ? `replay:${options.replayModel.model}`
+    : (options.resolvedPrimary?.profile ?? (options.preset === "chatgpt" ? "openai/gpt-5.6-sol" : null));
+  const measured = key ? ESTIMATES[key] : null;
+  return { ...(measured ?? ESTIMATE_FALLBACK), measured: !!measured };
+}
 
 function parseArgs(argv) {
   const options = {
@@ -54,6 +114,11 @@ function parseArgs(argv) {
     cases: null,
     classes: null,
     preset: "chatgpt",
+    primary: null,
+    replay: false,
+    model: null,
+    briefsPath: BRIEFS_PATH,
+    resume: null,
     timeoutMinutes: 20,
     seed: null,
     out: null,
@@ -71,6 +136,11 @@ function parseArgs(argv) {
       case "--cases": options.cases = next().split(","); break;
       case "--classes": options.classes = next().split(","); break;
       case "--preset": options.preset = next(); break;
+      case "--primary": options.primary = next(); break;
+      case "--replay": options.replay = true; break;
+      case "--model": options.model = next(); break;
+      case "--briefs": options.briefsPath = next(); break;
+      case "--resume": options.resume = next(); break;
       case "--timeout": options.timeoutMinutes = Number(next()); break;
       case "--seed": options.seed = Number(next()); break;
       case "--out": options.out = next(); break;
@@ -90,6 +160,19 @@ function parseArgs(argv) {
   }
   if (!Number.isInteger(options.repeats) || options.repeats < 1) {
     throw new Error("--repeats must be a positive integer");
+  }
+  options.resolvedPrimary = resolvePrimary(options.primary, options.preset);
+  if (options.replay) {
+    if (!options.model) {
+      throw new Error("--replay needs --model <provider/model[@variant]>: replay binds the verifier directly");
+    }
+    if (options.primary) {
+      throw new Error("--replay and --primary are exclusive: replay runs no primary at all");
+    }
+    options.replayModel = parsePrimary(options.model);
+    options.replayBriefs = loadBriefs(options.briefsPath);
+  } else if (options.model) {
+    throw new Error("--model applies to --replay only; use --primary to pick an in-situ profile");
   }
   return { command: positional[0] ?? "plan", positional: positional.slice(1), options };
 }
@@ -116,6 +199,37 @@ function shuffled(items, seed) {
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
   return copy;
+}
+
+// A cell is identified by what it measures, not by when it ran.
+export function cellKey(entry) {
+  return `${entry.caseId}::${entry.variant}::${entry.repeat}`;
+}
+
+// Resume must not silently pool runs that measure different things. Anything
+// that changes what a run *is* has to match; anything that only changes how
+// many are left does not.
+const RESUME_INVARIANTS = ["replay", "model", "preset", "primary", "repeats"];
+
+export function assertResumable(prior, options) {
+  const before = prior.options ?? {};
+  for (const key of RESUME_INVARIANTS) {
+    const was = before[key] ?? null;
+    const now = options[key] ?? null;
+    if (JSON.stringify(was) !== JSON.stringify(now)) {
+      throw new Error(
+        `cannot resume: --${key} was ${JSON.stringify(was)}, now ${JSON.stringify(now)}. ` +
+          "Resuming would pool runs that measure different things.",
+      );
+    }
+  }
+  for (const key of ["variants", "cases", "classes"]) {
+    const was = JSON.stringify(before[key] ?? null);
+    const now = JSON.stringify(options[key] ?? null);
+    if (was !== now) {
+      throw new Error(`cannot resume: --${key} was ${was}, now ${now}.`);
+    }
+  }
 }
 
 function buildQueue(cases, variants, repeats, seed) {
@@ -156,17 +270,33 @@ function environmentRecord() {
 
 async function executeRun(entry, caseDef, resolvedVariant, options, attempt) {
   const startedAt = new Date().toISOString();
-  const fixture = createFixture({ preset: options.preset, auth: true, inheritGlobal: true });
+  const replay = options.replayBriefs
+    ? briefFromStore(options.replayBriefs, caseDef.id, entry.repeat)
+    : null;
+  const fixture = createFixture({
+    preset: options.preset,
+    primary: replay ? null : options.resolvedPrimary,
+    // Replay runs the verifier alone against a recorded brief: one session
+    // instead of an orchestration, which is the whole cost saving.
+    soloAgent: replay ? "verifier" : null,
+    soloModel: replay ? options.replayModel : null,
+    auth: true,
+    inheritGlobal: true,
+  });
   try {
     const digests = applyVariant(fixture, resolvedVariant);
     const { head } = materializeCase(caseDef, fixture.project);
-    const brief = briefFor(caseDef);
+    const brief = replay ? replay.brief : briefFor(caseDef);
 
     const started = Date.now();
-    const result = await runOpencode(fixture, ["run", brief, "--agent", "pilotfish"], {
-      timeoutMs: options.timeoutMinutes * 60_000,
-      stdoutFile: join(fixture.root, "run-stdout.txt"),
-    });
+    const result = await runOpencode(
+      fixture,
+      ["run", brief, "--agent", replay ? "verifier" : "pilotfish"],
+      {
+        timeoutMs: options.timeoutMinutes * 60_000,
+        stdoutFile: join(fixture.root, "run-stdout.txt"),
+      },
+    );
     const durationMs = Date.now() - started;
 
     const telemetry = readRunTelemetry(fixture, { outside: REPO_ROOT.replace(/\/$/, "") });
@@ -199,6 +329,8 @@ async function executeRun(entry, caseDef, resolvedVariant, options, attempt) {
       timedOut: result.timedOut,
       commit: head,
       promptDigests: digests,
+      mode: replay ? "replay" : "in-situ",
+      replayedBrief: replay ? { source: replay.source, variant: replay.variant } : null,
       ...scored,
       verdictSource: verdictSource(first?.verdictText ?? ""),
       verifierChainDepth: telemetry.verifierRuns.length,
@@ -295,6 +427,35 @@ function renderReport(record) {
       (summary.invalidRuns ? ` (excluded: ${JSON.stringify(summary.invalidReasons)})` : "") +
       `; seed ${record.seed}; preset ${options.preset}.`,
   );
+  if (options.replay) {
+    lines.push("");
+    lines.push(
+      `**Replay mode**, verifier \`${options.replayModel.model}\`` +
+        `${options.replayModel.variant ? ` (${options.replayModel.variant})` : ""}. Each run is that ` +
+        "model answering a brief a real primary wrote, with no primary in the loop. It measures the " +
+        "prompt and the model in the verifier seat; it does not measure dispatch, and a difference " +
+        "here is not automatically a difference in situ.",
+    );
+  }
+  if (options.resolvedPrimary) {
+    lines.push("");
+    lines.push(
+      `Profile \`${options.resolvedPrimary.profile}\`: primary ` +
+        `\`${options.resolvedPrimary.model}\`, verifier ` +
+        `\`${options.resolvedPrimary.verifier.model}\`. **Every rate below is scoped to that ` +
+        "verifier model.** The prompt change under test is shared, but a verdict is the model's.",
+    );
+  }
+  if (record.stoppedEarly) {
+    lines.push("");
+    lines.push(
+      `**Suite stopped early after ${record.stoppedEarly.after} runs**, with ` +
+        `${record.stoppedEarly.remaining} still queued: ` +
+        `${record.stoppedEarly.reasons.join(", ")}. The runs that did complete are a truncated ` +
+        "prefix of a randomized queue, so cells are unbalanced and every rate below rests on a " +
+        "smaller n than the plan bought. Replay the same order with `--seed` once the account can run.",
+    );
+  }
   if (summary.notDispatched) {
     lines.push("");
     lines.push(
@@ -360,10 +521,46 @@ function renderReport(record) {
   return lines.join("\n");
 }
 
+function routingText(options) {
+  const primary = options.resolvedPrimary;
+  if (options.replay) {
+    const model = options.replayModel;
+    return [
+      "  mode      replay (no primary; one verifier session per run)",
+      `  verifier  ${model.model}${model.variant ? ` (${model.variant})` : ""}   <- the seat under test`,
+      `  briefs    ${JSON.stringify(briefCounts(options.replayBriefs))}`,
+      "",
+      "  Each run replays a brief a real primary wrote, so this measures the",
+      "  verifier's response to a fixed instruction -- not the primary's choice of",
+      "  brief, and not the dispatch. Two variants at the same repeat index get the",
+      "  identical brief, which is what makes the comparison paired.",
+    ];
+  }
+  if (!primary) {
+    return [
+      `  preset    ${options.preset} (default primary)`,
+      "",
+      "  The verifier seat follows the preset's default profile. Pass --primary to",
+      "  measure a different one; a result is only about the model that held that seat.",
+    ];
+  }
+  const verifier = primary.verifier;
+  return [
+    `  preset    ${options.preset}`,
+    `  profile   ${primary.profile}`,
+    `  primary   ${primary.model}${primary.variant ? ` (${primary.variant})` : ""}`,
+    `  verifier  ${verifier.model}${verifier.variant ? ` (${verifier.variant})` : ""}   <- the seat under test`,
+    "",
+    "  A result is about the model in the verifier seat, not about the prompt in",
+    "  the abstract. Report it as scoped to this profile.",
+  ];
+}
+
 function planText(cases, variants, options) {
   const cells = cases.length * variants.length;
   const runs = cells * options.repeats;
-  const [low, high] = ESTIMATE.minutesPerRunRange;
+  const estimate = estimateFor(options);
+  const [low, high] = estimate.minutesPerRunRange;
   const lines = [
     "Suite plan",
     "",
@@ -371,17 +568,39 @@ function planText(cases, variants, options) {
     `  variants  ${variants.length}  (${variants.join(", ")})`,
     `  repeats   ${options.repeats} per cell`,
     `  cells     ${cells}`,
-    `  runs      ${runs}  full orchestrated pilotfish runs`,
+    `  runs      ${runs}  ${options.replay ? "single verifier sessions" : "full orchestrated pilotfish runs"}`,
+    "",
+    "Routing",
+    "",
+    ...routingText(options),
     "",
     "Cost and runtime",
     "",
-    `  Each run is one complete pilotfish session -- planning, at least one verifier`,
-    `  dispatch, and whatever else the primary decides it needs -- against the live`,
-    `  ${options.preset} subscription. It consumes the same quota it is measuring.`,
+    ...(options.replay
+      ? [
+          "  Each run is one verifier session against a recorded brief. No primary, no",
+          "  planning, no dispatch -- roughly half the sessions and a small fraction of",
+          `  the tokens of an in-situ run, billed to ${options.replayModel.model.split("/")[0]}.`,
+        ]
+      : [
+          `  Each run is one complete pilotfish session -- planning, at least one verifier`,
+          `  dispatch, and whatever else the primary decides it needs -- against the live`,
+          `  ${options.preset} subscription. It consumes the same quota it is measuring.`,
+        ]),
     "",
-    `  Estimate: ~${ESTIMATE.minutesPerRun} min/run, so ~${((runs * ESTIMATE.minutesPerRun) / 60).toFixed(1)}h`,
+    `  Estimate: ~${estimate.minutesPerRun} min/run, so ~${((runs * estimate.minutesPerRun) / 60).toFixed(1)}h`,
     `  (range ${((runs * low) / 60).toFixed(1)}–${((runs * high) / 60).toFixed(1)}h at ${low}–${high} min/run).`,
-    `  Source: ${ESTIMATE.source}. Replace these figures from a completed suite.`,
+    ...(estimate.usdPerRun
+      ? [`  Metered API cost: ~$${(runs * estimate.usdPerRun).toFixed(2)} for the suite, at $${estimate.usdPerRun}/run.`]
+      : []),
+    `  Source: ${estimate.source}. Replace these figures from a completed suite.`,
+    ...(estimate.measured
+      ? []
+      : [
+          `  No run has been measured on this routing; the figure above is a`,
+          `  ${estimate.measuredOn} measurement and is not evidence about it. Runtime`,
+          "  varies about 19x across the profiles measured so far.",
+        ]),
     "",
     `  Runs are sequential. Per-run timeout is ${options.timeoutMinutes} min; up to`,
     `  ${options.retryInvalid} retries per invalid run are appended to the queue.`,
@@ -415,6 +634,57 @@ async function main() {
   const cases = loadCases({ ids: options.cases, classes: options.classes });
   if (cases.length === 0) throw new Error("no cases selected");
 
+  // Every verdict is retained in full, which means a scorer fix can be applied
+  // to runs that already happened instead of re-running them. That is the only
+  // reason a grading defect found after a suite is cheap to correct.
+  if (command === "rescore") {
+    const path = positional[0];
+    if (!path) throw new Error("rescore needs a results file");
+    const record = JSON.parse(readFileSync(path, "utf8"));
+    const byId = new Map(loadCases().map((item) => [item.id, item]));
+    const changes = [];
+    for (const run of record.runs) {
+      const text = run.verifierRuns?.[0]?.verdictText;
+      if (!run.valid || text == null) continue;
+      const before = run.outcome;
+      const scored = scoreVerdict(byId.get(run.caseId), text);
+      if (scored.outcome !== before) {
+        changes.push({ caseId: run.caseId, variant: run.variant, repeat: run.repeat, before, after: scored.outcome });
+      }
+      Object.assign(run, scored);
+    }
+    record.rescoredAt = new Date().toISOString();
+    record.summary = summarize(record.runs, [...byId.values()]);
+    writeFileSync(path, `${JSON.stringify(record, null, 2)}\n`);
+    process.stdout.write(`${changes.length} outcome(s) changed\n`);
+    for (const change of changes) {
+      process.stdout.write(
+        `  ${change.caseId} / ${change.variant} / r${change.repeat}: ${change.before} -> ${change.after}\n`,
+      );
+    }
+    process.stdout.write(`\n${renderReport(record)}\n`);
+    return;
+  }
+
+  if (command === "capture-briefs") {
+    // Replay inputs come from runs that actually happened. Writing a brief by
+    // hand would make the measurement a test of my prose rather than of the
+    // primary's.
+    if (positional.length === 0) throw new Error("capture-briefs needs one or more result files");
+    const store = captureBriefs(positional);
+    const path = writeBriefs(store, options.briefsPath);
+    const counts = briefCounts(store);
+    for (const [id, count] of Object.entries(counts)) {
+      process.stdout.write(`ok  ${id}: ${count} distinct brief(s)\n`);
+    }
+    const missing = cases.filter((item) => !counts[item.id]);
+    for (const item of missing) {
+      process.stdout.write(`--  ${item.id}: none captured; replay cannot cover this case yet\n`);
+    }
+    process.stdout.write(`\nWrote ${path}\n`);
+    return;
+  }
+
   if (command === "validate") {
     // Offline: proves every case builds into a two-commit repository and that
     // its ground truth is well-formed, without touching a provider.
@@ -442,21 +712,40 @@ async function main() {
     return;
   }
 
-  const seed = options.seed ?? (Date.now() & 0x7fffffff);
+  // A suite is long enough that a laptop lid, a dropped network, or a provider
+  // wall will end one partway. Resuming reads back what already completed and
+  // runs only the remainder, which matters most for the runs that cost money:
+  // re-running a finished cell buys nothing but spend.
+  const prior = options.resume ? JSON.parse(readFileSync(options.resume, "utf8")) : null;
+  if (prior) assertResumable(prior, options);
+
+  const seed = prior?.seed ?? options.seed ?? (Date.now() & 0x7fffffff);
   const resolvedVariants = Object.fromEntries(
     options.variants.map((name) => [name, resolveVariant(name)]),
   );
   const byId = new Map(cases.map((item) => [item.id, item]));
-  const queue = buildQueue(cases, options.variants, options.repeats, seed);
+  const fullQueue = buildQueue(cases, options.variants, options.repeats, seed);
+
+  // Only successful runs are treated as done. An invalid one is re-queued the
+  // same way a fresh suite would re-queue it -- it produced no measurement.
+  const done = new Set(
+    (prior?.runs ?? []).filter((run) => run.valid).map((run) => cellKey(run)),
+  );
+  const queue = fullQueue.filter((entry) => !done.has(cellKey(entry)));
+  // Count against the queue, not against the prior file: a resumed run whose
+  // cell is not in this queue is carried in the record but is not progress
+  // toward it, and reporting it as such would overstate how much is done.
+  const alreadyDone = fullQueue.length - queue.length;
 
   mkdirSync(RESULTS_DIR, { recursive: true });
   const startedAt = new Date().toISOString();
   const outPath =
-    options.out ?? join(RESULTS_DIR, `${startedAt.replace(/[:.]/g, "-")}-verifier-correctness.json`);
+    options.out ?? prior?.options?.out ??
+    join(RESULTS_DIR, `${startedAt.replace(/[:.]/g, "-")}-verifier-correctness.json`);
 
   const record = {
     schema: SCHEMA,
-    startedAt,
+    startedAt: prior?.startedAt ?? startedAt,
     seed,
     options: { ...options, out: outPath },
     variants: Object.fromEntries(
@@ -466,9 +755,21 @@ async function main() {
       ]),
     ),
     environment: environmentRecord(),
-    runs: [],
+    runs: [...(prior?.runs ?? [])],
     summary: null,
   };
+  if (prior) {
+    // Environments can differ between the two halves -- a different machine, a
+    // changed AGENTS.md. Recorded rather than rejected, because the alternative
+    // is discarding runs that already cost real money.
+    record.resumedFrom = {
+      path: options.resume,
+      priorRuns: prior.runs?.length ?? 0,
+      priorValid: alreadyDone,
+      priorEnvironment: prior.environment ?? null,
+      resumedAt: startedAt,
+    };
+  }
   const flush = () => {
     record.summary = summarize(record.runs, cases);
     writeFileSync(outPath, `${JSON.stringify(record, null, 2)}\n`);
@@ -476,10 +777,23 @@ async function main() {
   flush();
 
   process.stdout.write(`${planText(cases, options.variants, options)}\n\n`);
+  if (prior) {
+    process.stdout.write(
+      `Resuming ${options.resume}: ${alreadyDone} of ${fullQueue.length} cells already measured, ` +
+        `${queue.length} to run. Seed ${seed} carried over, so the remaining order is the ` +
+        "one the original suite would have used.\n",
+    );
+  }
   process.stdout.write(`Writing to ${outPath}\n\n`);
+  if (queue.length === 0) {
+    flush();
+    process.stdout.write(`Nothing left to run.\n\n${renderReport(record)}\n`);
+    return;
+  }
 
   const pending = queue.map((entry) => ({ entry, attempt: 1 }));
   let completed = 0;
+  let standingFailures = 0;
   while (pending.length > 0) {
     const { entry, attempt } = pending.shift();
     completed += 1;
@@ -518,6 +832,26 @@ async function main() {
         ? `${run.outcome} (${(run.durationMs / 60000).toFixed(1)}m, chain ${run.verifierChainDepth})\n`
         : `INVALID: ${run.healthReasons.join(",")} — re-runnable\n`,
     );
+
+    // A quota wall or an entitlement refusal is a property of the account, not
+    // of the run, so the queue behind it cannot succeed either. Retrying into
+    // one produces nothing but a longer transcript of the same error.
+    standingFailures = run.valid || !isStandingFailure(run.healthReasons) ? 0 : standingFailures + 1;
+    if (standingFailures >= STANDING_FAILURE_LIMIT) {
+      record.stoppedEarly = {
+        after: completed,
+        remaining: pending.length,
+        reasons: run.healthReasons,
+        detail: (run.stderrTail ?? "").slice(-600),
+      };
+      process.stdout.write(
+        `\nStopped after ${STANDING_FAILURE_LIMIT} consecutive ${run.healthReasons.join(",")} ` +
+          `failures: the account cannot run right now, so the ${pending.length} queued runs would ` +
+          "fail the same way. Resume with --seed to replay this order once it can.\n",
+      );
+      break;
+    }
+
     if (!run.valid && attempt <= options.retryInvalid) {
       pending.push({ entry, attempt: attempt + 1 });
     }

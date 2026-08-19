@@ -1,0 +1,26 @@
+{
+  "class": "B",
+  "title": "A containment check inverted in the same file the claim's function lives in",
+  "claim": "joinUnderRoot in src/paths.mjs now normalizes the joined path and throws if a relative input would resolve past the root, returning the normalized path otherwise. test/paths.test.mjs covers the rejection and passes.",
+  "changeCommitMessage": "fix(paths): confine joined paths to the sync root",
+  "defect": {
+    "file": "src/paths.mjs",
+    "summary": "isUnderRoot, changed by the same commit but absent from the claim, now returns `!path.startsWith(root)`: the containment test is inverted, so it reports contained paths as outside and outside paths as contained.",
+    "markers": {
+      "all": [
+        "isUnderRoot"
+      ],
+      "any": [
+        "invert",
+        "negat",
+        "backwards",
+        "opposite",
+        "revers",
+        "flipped",
+        "bypass",
+        "returns true for paths outside",
+        "returns false for"
+      ]
+    }
+  }
+}

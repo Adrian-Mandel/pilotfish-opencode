@@ -9,12 +9,16 @@
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, test } from "node:test";
 
 import { briefFor, loadCases, materializeCase } from "./lib/cases.mjs";
+import { loadProfiles, resolvePrimary } from "./lib/routing.mjs";
+import { classifyRunHealth, isStandingFailure } from "./lib/telemetry.mjs";
+import { BRIEFS_SCHEMA, briefFor as storeBriefFor, captureBriefs } from "./lib/briefs.mjs";
+import { assertResumable, cellKey } from "./verifier-correctness.mjs";
 import {
   OUTCOMES,
   mentionsDefect,
@@ -79,6 +83,49 @@ describe("defect detection", () => {
   test("matching is case-insensitive", () => {
     assert.equal(mentionsDefect("PARSETIMEOUT returns -5", markers), true);
   });
+
+  test("a discriminator far from the anchor is not a finding", () => {
+    const text = `parseTimeout is mentioned here.${" filler.".repeat(60)} a negative value elsewhere.`;
+    assert.equal(mentionsDefect(text, markers), false);
+  });
+
+  // The real b-timeout markers, and the shape that credited five real runs with
+  // a finding they never made: a passing-test list where the discriminator
+  // belongs to the *claimed* function and the adjacent one is merely named. It
+  // is defeated by the marker list, not by proximity -- "negative" describes
+  // parsePort's own behaviour, so it never discriminated anything.
+  const real = { all: ["parseTimeout"], any: ["&&", "||", "logic bug"] };
+
+  test("a passing-test list naming the adjacent function is not a finding", () => {
+    const testList = [
+      "All tests pass:",
+      "- `parsePort rejects zero and negative ports` ✓",
+      "- `parseTimeout reads a numeric string` ✓",
+      "",
+      "The claim is fully verified.",
+    ].join("\n");
+    assert.equal(mentionsDefect(testList, real), false);
+  });
+
+  test("noting the adjacent function changed, without the defect, is not a finding", () => {
+    const text = "CONFIRMED\n\n- The commit also changes `parseTimeout`, but that was not part of the claim.";
+    assert.equal(mentionsDefect(text, real), false);
+  });
+
+  test("the defect described in the models' own vocabulary is a finding", () => {
+    const text =
+      "**Observation:** `parseTimeout` has a logic bug: `!Number.isInteger(ms) && ms < 0` uses `&&` instead of `||`.";
+    assert.equal(mentionsDefect(text, real), true);
+  });
+
+  test("the finding still counts when it is the second mention", () => {
+    const text = [
+      "- `parseTimeout reads a numeric string` ✓",
+      "",
+      "Observation: `parseTimeout` uses && where it should use ||.",
+    ].join("\n");
+    assert.equal(mentionsDefect(text, real), true);
+  });
 });
 
 describe("outcome scoring", () => {
@@ -87,13 +134,13 @@ describe("outcome scoring", () => {
 
   test("REFUTED naming the defect is a catch", () => {
     assert.equal(
-      scoreVerdict(seeded, "REFUTED\n\nparseTimeout accepts a negative value.").outcome,
+      scoreVerdict(seeded, "REFUTED\n\nparseTimeout uses && where || was meant.").outcome,
       OUTCOMES.CAUGHT,
     );
   });
 
   test("CONFIRMED naming the defect is an observation, not a miss", () => {
-    const text = "CONFIRMED\n\nThe claim holds.\n\nObservation: parseTimeout accepts a negative value.";
+    const text = "CONFIRMED\n\nThe claim holds.\n\nObservation: parseTimeout has a logic bug: && should be ||.";
     assert.equal(scoreVerdict(seeded, text).outcome, OUTCOMES.OBSERVED);
   });
 
@@ -232,9 +279,207 @@ describe("the case set", () => {
   });
 });
 
+// A suite run against another provider is only worth having if the result can
+// say which model produced it. That depends entirely on resolution, so the
+// resolution is tested rather than assumed.
+describe("primary model resolution", () => {
+  const data = loadProfiles();
+
+  test("no primary means the preset's own default, untouched", () => {
+    assert.equal(resolvePrimary(null, "chatgpt", data), null);
+  });
+
+  test("a primary resolves to its profile and that profile's verifier", () => {
+    const resolved = resolvePrimary("google/antigravity-gemini-3.1-pro", "antigravity", data);
+    assert.equal(resolved.profile, "google/antigravity-gemini-3.1-pro");
+    assert.equal(resolved.verifier.model, data.profiles[resolved.profile].workers.verifier.model);
+  });
+
+  // The preset default's variant belongs to the preset default's model. Under
+  // `antigravity` that is Opus at `max`, and carrying `max` onto a Gemini
+  // primary is exactly the leak the router refuses for its own worker bindings.
+  test("the variant comes from the profile, not from the preset default", () => {
+    const resolved = resolvePrimary("google/antigravity-gemini-3.1-pro", "antigravity", data);
+    assert.equal(resolved.variant, data.profiles[resolved.profile].primary.variant);
+  });
+
+  test("an explicit @variant overrides the profile's", () => {
+    const resolved = resolvePrimary("google/antigravity-gemini-3.1-pro@low", "antigravity", data);
+    assert.equal(resolved.model, "google/antigravity-gemini-3.1-pro");
+    assert.equal(resolved.variant, "low");
+  });
+
+  // Both of these would otherwise surface as a fail-closed router refusal on
+  // every run of a queue that takes hours.
+  test("a primary outside the preset is rejected, naming what is available", () => {
+    assert.throws(
+      () => resolvePrimary("google/antigravity-gemini-3.1-pro", "chatgpt", data),
+      /selects no profile in preset "chatgpt".*openai\/gpt-5\.6-sol/s,
+    );
+  });
+
+  test("an unknown preset is rejected before any run", () => {
+    assert.throws(() => resolvePrimary(null, "nope", data), /unknown preset "nope"/);
+  });
+
+  // Every profile in every preset must be selectable, or --primary silently
+  // cannot reach part of the shipped matrix.
+  test("every profile in every preset resolves by its own primary model", () => {
+    for (const [preset, members] of Object.entries(data.presets)) {
+      for (const name of members) {
+        const resolved = resolvePrimary(data.profiles[name].primary.model, preset, data);
+        assert.equal(resolved.profile, name, `${preset}/${name}`);
+        assert.ok(resolved.verifier?.model, `${preset}/${name} has no verifier binding`);
+      }
+    }
+  });
+});
+
+// A suite outlives a sitting. Resume exists so a laptop lid does not cost the
+// runs already paid for -- and must not silently pool runs measuring different
+// things, which would be worse than losing them.
+describe("resuming a partial suite", () => {
+  const base = { replay: true, model: "openrouter/qwen/qwen3.6-27b", preset: "chatgpt",
+    primary: null, repeats: 20, variants: ["current", "pre-scope"], cases: null, classes: ["A", "B"] };
+
+  test("a cell is identified by what it measures, not when it ran", () => {
+    assert.equal(cellKey({ caseId: "a", variant: "current", repeat: 3 }), "a::current::3");
+    assert.equal(
+      cellKey({ caseId: "a", variant: "current", repeat: 3, attempt: 2, startedAt: "later" }),
+      cellKey({ caseId: "a", variant: "current", repeat: 3 }),
+    );
+  });
+
+  test("identical options resume", () => {
+    assert.doesNotThrow(() => assertResumable({ options: { ...base } }, { ...base }));
+  });
+
+  // Each of these would produce a result file whose rows are not comparable.
+  test("a changed model, variant set, or repeat count refuses to resume", () => {
+    for (const [key, value] of [
+      ["model", "openrouter/deepseek/deepseek-v4-pro"],
+      ["repeats", 10],
+      ["preset", "antigravity"],
+      ["variants", ["current"]],
+      ["classes", ["B"]],
+    ]) {
+      assert.throws(
+        () => assertResumable({ options: { ...base } }, { ...base, [key]: value }),
+        /cannot resume/,
+        `${key} must block resume`,
+      );
+    }
+  });
+
+  test("switching between replay and in-situ refuses to resume", () => {
+    assert.throws(
+      () => assertResumable({ options: { ...base } }, { ...base, replay: false, model: null }),
+      /cannot resume/,
+    );
+  });
+});
+
+// Replay is only defensible if its inputs are real. A brief invented here would
+// turn the measurement into a test of my prose rather than of the primary's.
+describe("replayed briefs", () => {
+  const store = {
+    schema: BRIEFS_SCHEMA,
+    cases: {
+      "a-case": [
+        { brief: "first", source: "r.json", variant: "current" },
+        { brief: "second", source: "r.json", variant: "pre-scope" },
+      ],
+    },
+  };
+
+  // The pairing that makes the A/B comparison meaningful: both variants at
+  // repeat 3 answer the identical brief, so a difference between them cannot be
+  // a difference in what they were asked.
+  test("a repeat index selects the same brief for every variant", () => {
+    for (const repeat of [0, 1, 2, 3, 7]) {
+      assert.equal(
+        storeBriefFor(store, "a-case", repeat).brief,
+        storeBriefFor(store, "a-case", repeat).brief,
+      );
+    }
+    assert.equal(storeBriefFor(store, "a-case", 0).brief, "first");
+    assert.equal(storeBriefFor(store, "a-case", 1).brief, "second");
+    assert.equal(storeBriefFor(store, "a-case", 2).brief, "first", "must cycle, not run out");
+  });
+
+  test("a case with no captured brief fails loudly rather than replaying nothing", () => {
+    assert.throws(() => storeBriefFor(store, "absent", 0), /no captured brief/);
+  });
+
+  test("capture keeps provenance and drops duplicates", () => {
+    const dir = mkdtempSync(join(tmpdir(), "briefs-"));
+    try {
+      const path = join(dir, "result.json");
+      const brief = "An executor claims ...";
+      writeFileSync(
+        path,
+        JSON.stringify({
+          runs: [
+            { caseId: "a-case", variant: "current", promptDigests: { "pilotfish.md": "abc" },
+              verifierRuns: [{ dispatchPrompt: brief }, { dispatchPrompt: brief }] },
+          ],
+        }),
+      );
+      const captured = captureBriefs([path]);
+      assert.equal(captured.schema, BRIEFS_SCHEMA);
+      assert.equal(captured.cases["a-case"].length, 1, "identical briefs must collapse");
+      assert.equal(captured.cases["a-case"][0].pilotfishPrompt, "abc");
+      assert.equal(captured.cases["a-case"][0].source, "result.json");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// Both patterns are taken from one real suite: the AntiGravity quota guard
+// tripped, and every subsequent call came back as an IAM permission refusal
+// rather than a quota message. Only the first was recognised, so 120 runs were
+// retried into a wall whose reset was 73 hours away.
+describe("standing provider failures", () => {
+  const health = (stderr) =>
+    classifyRunHealth({ telemetry: { present: true, errors: [], cwdResets: 0, foreignPathMentions: 0 }, stderr, exitCode: 1 });
+
+  test("a quota guard message is recognised as a standing failure", () => {
+    const { reasons } = health(
+      "Error: Quota protection: All 1 account(s) are over 90% usage for gemini. Quota resets in 73h 1m.",
+    );
+    assert.ok(reasons.includes("throttled-or-quota"));
+    assert.ok(isStandingFailure(reasons));
+  });
+
+  test("an IAM permission refusal is recognised too, not left as a bare exit code", () => {
+    const { reasons } = health(
+      'Error: Forbidden: {"code":403,"status":"PERMISSION_DENIED","reason":"IAM_PERMISSION_DENIED"}',
+    );
+    assert.ok(reasons.includes("provider-denied"), `got ${reasons.join(",")}`);
+    assert.ok(isStandingFailure(reasons));
+  });
+
+  // The distinction the retry path depends on: a run that merely failed should
+  // still be retried, or a flaky timeout would end a suite.
+  test("an ordinary failure is not standing", () => {
+    const { reasons } = health("Error: something went wrong");
+    assert.deepEqual(reasons, ["exit-1"]);
+    assert.equal(isStandingFailure(reasons), false);
+  });
+
+  test("a timeout is not standing", () => {
+    const { reasons } = classifyRunHealth({
+      telemetry: { present: true, errors: [], cwdResets: 0, foreignPathMentions: 0 },
+      timedOut: true,
+    });
+    assert.equal(isStandingFailure(reasons), false);
+  });
+});
+
 describe("the harness cannot reach the real installation", () => {
   const source = readFileSync(new URL("./verifier-correctness.mjs", import.meta.url), "utf8");
-  const libNames = ["cases", "variants", "telemetry", "scoring"];
+  const libNames = ["cases", "variants", "telemetry", "scoring", "routing"];
   const libs = libNames.map((name) =>
     readFileSync(new URL(`./lib/${name}.mjs`, import.meta.url), "utf8"),
   );

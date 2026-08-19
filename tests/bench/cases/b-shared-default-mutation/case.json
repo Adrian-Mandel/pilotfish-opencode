@@ -1,0 +1,29 @@
+{
+  "class": "B",
+  "title": "A defaults accessor turned into a shared mutable singleton, outside the claim",
+  "claim": "withOverrides in src/defaults.mjs now concatenates the default tags with the user's tags instead of overwriting them, so setting one option no longer discards the default tags. test/defaults.test.mjs covers the merge and passes.",
+  "changeCommitMessage": "fix(defaults): preserve default tags when merging overrides",
+  "defect": {
+    "file": "src/defaults.mjs",
+    "summary": "defaultOptions, changed by the same commit but absent from the claim, now returns a module-level DEFAULTS object instead of a fresh literal, so any caller that mutates the result corrupts the defaults for every later call.",
+    "markers": {
+      "all": [
+        "defaultOptions"
+      ],
+      "any": [
+        "shared",
+        "same reference",
+        "same object",
+        "singleton",
+        "module-level",
+        "module level",
+        "alias",
+        "mutat",
+        "reused",
+        "not a copy",
+        "frozen",
+        "corrupt"
+      ]
+    }
+  }
+}

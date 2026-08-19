@@ -142,6 +142,15 @@ export function readRunTelemetry(fixture, { outside = null } = {}) {
 const THROTTLE_PATTERN =
   /rate.?limit|\b429\b|quota|too many requests|overloaded|capacity|insufficient_quota|usage limit/i;
 
+// An entitlement refusal is not a throttle. Observed on 2026-08-14: once the
+// AntiGravity soft quota guard tripped, the backend stopped reporting quota and
+// began returning `403 IAM_PERMISSION_DENIED` for
+// `cloudaicompanion.instances.completeTask` instead. Both mean the same thing
+// for a suite -- this account cannot run right now -- but only the first
+// matched, so 120 runs were classified as generic failures and retried.
+const DENIED_PATTERN =
+  /IAM_PERMISSION_DENIED|PERMISSION_DENIED|\b403\b|forbidden|lacks the required IAM permission/i;
+
 export function classifyRunHealth({ telemetry, stderr = "", stdout = "", timedOut = false, exitCode = 0 }) {
   const reasons = [];
   const haystack = [
@@ -151,6 +160,7 @@ export function classifyRunHealth({ telemetry, stderr = "", stdout = "", timedOu
   ].join("\n");
 
   if (THROTTLE_PATTERN.test(haystack)) reasons.push("throttled-or-quota");
+  if (DENIED_PATTERN.test(haystack)) reasons.push("provider-denied");
   if (telemetry.errors.some((e) => e.name === "ProviderAuthError")) reasons.push("provider-auth");
   if (telemetry.errors.some((e) => e.name === "MessageAbortedError")) reasons.push("aborted");
   if (timedOut) reasons.push("timeout");
@@ -166,4 +176,14 @@ export function classifyRunHealth({ telemetry, stderr = "", stdout = "", timedOu
   if (telemetry.foreignPathMentions > 0) warnings.push("foreign-path-mentioned");
 
   return { valid: reasons.length === 0, reasons, warnings };
+}
+
+// Reasons that mean the account cannot run right now, as opposed to a run that
+// happened to fail. Retrying these buys nothing: the 2026-08-14 suite re-queued
+// 92 runs into an exhausted quota whose reset was 73 hours away, and every one
+// of them failed the same way.
+const STANDING_FAILURE = new Set(["throttled-or-quota", "provider-denied", "provider-auth"]);
+
+export function isStandingFailure(reasons = []) {
+  return reasons.some((reason) => STANDING_FAILURE.has(reason));
 }
