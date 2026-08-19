@@ -139,6 +139,10 @@ function soloAgentConfig(agents, role, model) {
   return { [role]: agent };
 }
 
+// `extraPlugins` appends plugin entries after the router's, `agentModel` binds
+// every agent to one model, and `env` reaches the spawned host through
+// fixtureEnv. Host-fact probes need all three: an observer plugin, a model that
+// costs no credentials, and a path to write observations to.
 export function createFixture({
   preset = "chatgpt",
   primary = null,
@@ -147,6 +151,9 @@ export function createFixture({
   auth = true,
   plugin = true,
   inheritGlobal = false,
+  extraPlugins = [],
+  agentModel = null,
+  env = {},
 } = {}) {
   const root = mkdtempSync(join(tmpdir(), "pilotfish-fixture-"));
   const configHome = join(root, "config");
@@ -189,7 +196,14 @@ export function createFixture({
   config.plugin = [
     ...providerPlugins,
     ...(plugin && !soloAgent ? [["./pilotfish/profile-router.mjs", { preset }]] : []),
+    ...extraPlugins,
   ];
+  if (agentModel) {
+    config.model = agentModel;
+    for (const name of Object.keys(config.agent ?? {})) {
+      config.agent[name] = { ...config.agent[name], model: agentModel };
+    }
+  }
   writeFileSync(join(configDir, "opencode.json"), `${JSON.stringify(config, null, 2)}\n`);
   for (const stale of ["opencode.jsonc", "config.json"]) {
     rmSync(join(configDir, stale), { force: true });
@@ -210,7 +224,7 @@ export function createFixture({
     copyProviderAccounts(configDir);
   }
 
-  return { root, configHome, dataHome, configDir, project };
+  return { root, configHome, dataHome, configDir, project, env };
 }
 
 export function fixtureEnv(fixture) {
@@ -224,6 +238,7 @@ export function fixtureEnv(fixture) {
     PWD: fixture.project,
     INIT_CWD: fixture.project,
     OPENCODE_DISABLE_AUTOUPDATE: "1",
+    ...(fixture.env ?? {}),
   };
 }
 
