@@ -240,7 +240,15 @@ function validatePublicWorkers(agents, workers) {
 }
 
 function taskPatternMatches(pattern, agentName) {
-  // Mirrors OpenCode v1.18.10 packages/core/src/util/wildcard.ts.
+  // Mirrors OpenCode 1.18.18 packages/core/src/util/wildcard.ts.
+  //
+  // Host fact H9: the host builds this regex with the flags `si` on every
+  // platform — there is no `process.platform` branch upstream. An earlier
+  // mirror here enabled `i` only on win32, which made the G9 guard below
+  // case-sensitive on posix: a rule such as "PILOTFISH-PROFILE-*" passed the
+  // guard while the host still read it as matching every internal clone, so
+  // G9 accepted a configuration it promises to refuse. Any platform
+  // condition added here re-opens that gap.
   const normalized = agentName.replaceAll("\\", "/");
   let escaped = pattern
     .replaceAll("\\", "/")
@@ -248,9 +256,7 @@ function taskPatternMatches(pattern, agentName) {
     .replace(/\*/g, ".*")
     .replace(/\?/g, ".");
   if (escaped.endsWith(" .*")) escaped = `${escaped.slice(0, -3)}( .*)?`;
-  return new RegExp(`^${escaped}$`, process.platform === "win32" ? "si" : "s").test(
-    normalized,
-  );
+  return new RegExp(`^${escaped}$`, "si").test(normalized);
 }
 
 function lastMatchingTaskRule(entries, agentName) {

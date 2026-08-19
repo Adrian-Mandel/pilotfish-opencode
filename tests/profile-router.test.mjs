@@ -428,26 +428,108 @@ test("configuration rejects a clone's own Task key when it does not resolve to a
 });
 
 
-test("ChatGPT Task pattern matching follows platform case behavior", async () => {
-  const config = chatgptConfig();
-  const pattern = internalAgentName(SOL, "executor").toUpperCase();
-  config.agent.pilotfish.permission.task[pattern] = "deny";
-
-  if (process.platform === "win32") {
-    await assertChatGPTConfigurationRejected(
-      config,
-      /configuration failed.*Task rule.*can match internal profile agent/i,
-    );
-    return;
+// Issue #38: a mirror that is case-insensitive only on win32 passes every
+// case-sensitivity assertion when the tests themselves run on win32, so a
+// platform branch in the matcher is invisible from one CI host. The matcher
+// reads `process.platform` per call, which lets these tests simulate each host
+// platform around the call and mean the same thing wherever they run.
+async function forEachPlatform(run) {
+  const original = Object.getOwnPropertyDescriptor(process, "platform");
+  for (const platform of ["win32", "linux", "darwin"]) {
+    Object.defineProperty(process, "platform", { ...original, value: platform });
+    try {
+      await run(platform);
+    } finally {
+      Object.defineProperty(process, "platform", original);
+    }
   }
+}
 
-  const hooks = await router({ preset: "chatgpt" });
-  hooks.config(config);
-  assert.equal(config.agent.pilotfish.permission.task[pattern], "deny");
-  assert.equal(
-    config.agent.pilotfish.permission.task[internalAgentName(SOL, "executor")],
-    "allow",
+// Host fact H9: the host's wildcard matcher is case-insensitive on every
+// platform, but this router's mirror enabled `i` only on win32. On a posix
+// host that made G9 accept a rule it promises to refuse — the host reads
+// "PILOTFISH-PROFILE-*" as matching every internal clone, the case-sensitive
+// mirror saw no match, and the guard passed the configuration in silence. The
+// refusal must therefore not depend on `process.platform`.
+test("ChatGPT configuration refuses a mixed-case Task rule that can match an internal agent", async () => {
+  const patterns = [
+    internalAgentName(SOL, "executor").toUpperCase(),
+    "PILOTFISH-PROFILE-*",
+    "Pilotfish-Profile-OpenAI--GPT-5.6-Sol-*",
+    "pilotfish-PROFILE-?penai--gpt-5.6-sol-executor",
+  ];
+
+  await forEachPlatform(async () => {
+    for (const pattern of patterns) {
+      const config = chatgptConfig();
+      config.agent.pilotfish.permission.task[pattern] = "deny";
+      await assertChatGPTConfigurationRejected(
+        config,
+        /configuration failed.*Task rule.*can match internal profile agent/i,
+      );
+    }
+  });
+});
+
+// The divergence issue #38 closes was found by reading the shipped runtime,
+// not by a failing test. `hostTaskPatternMatches` is the host's own matcher
+// transcribed from OpenCode 1.18.18 `packages/core/src/util/wildcard.ts`, so
+// the table below fails if the mirror drifts from it again — on any platform,
+// for the case flag or for anything else the mirror encodes.
+function hostTaskPatternMatches(pattern, agentName) {
+  const normalized = agentName.replaceAll("\\", "/");
+  let escaped = pattern
+    .replaceAll("\\", "/")
+    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*/g, ".*")
+    .replace(/\?/g, ".");
+  if (escaped.endsWith(" .*")) escaped = `${escaped.slice(0, -3)}( .*)?`;
+  return new RegExp(`^${escaped}$`, "si").test(normalized);
+}
+
+test("the mirrored Task matcher agrees with the host matcher on every platform", async () => {
+  const cloneNames = profiles.presets.chatgpt.flatMap((profile) =>
+    workers.map((role) => internalAgentName(profile, role)),
   );
+  const patterns = [
+    internalAgentName(SOL, "executor").toUpperCase(),
+    "PILOTFISH-PROFILE-*",
+    "pilotfish-profile-*",
+    "Pilotfish-Profile-OpenAI--GPT-5.6-Sol-*",
+    "pilotfish-PROFILE-?penai--gpt-5.6-sol-executor",
+    "pilotfish-profile-openai--gpt-5.6-sol-exec?tor",
+    "PILOTFISH-PROFILE-OPENAI--GPT-5.6-TERRA-*",
+    "PILOTFISH-PROFILE",
+    "unrelated-*",
+    "UNRELATED",
+    "pilotfish-profile-openai--gpt-5.6-sol-executor-extra",
+  ];
+
+  await forEachPlatform(async (platform) => {
+    for (const pattern of patterns) {
+      const config = chatgptConfig();
+      config.agent.pilotfish.permission.task[pattern] = "deny";
+      // A pattern the host reads as matching any clone must be refused; one it
+      // matches none of must survive generation untouched.
+      if (cloneNames.some((name) => hostTaskPatternMatches(pattern, name))) {
+        await assertChatGPTConfigurationRejected(
+          config,
+          /configuration failed.*Task rule.*can match internal profile agent/i,
+        );
+        continue;
+      }
+      const hooks = await router({ preset: "chatgpt" });
+      hooks.config(config);
+      assert.equal(
+        config.agent.pilotfish.permission.task[pattern],
+        "deny",
+        `${pattern} matches no clone on the host and must survive generation on ${platform}`,
+      );
+      for (const name of cloneNames) {
+        assert.equal(config.agent.pilotfish.permission.task[name], "allow");
+      }
+    }
+  });
 });
 
 test("ChatGPT configuration requires base wildcard ordering and explicit public-role resolution", async () => {
