@@ -437,3 +437,282 @@ so the previously reported qwen null is unaffected.
 Remaining limits are unchanged: two class B cases, replay measures the verifier
 prompt rather than the gate end to end, and classes C and D are still unmeasured
 though their briefs now exist.
+
+## bambi/qwen3.8-27b: a free local verifier on classes B, C, and D (2026-08-19)
+
+Closes the gap the previous section leaves open — *"classes C and D are still unmeasured though their
+briefs now exist"* — and extends the question to a free local model, the configuration this project is
+ultimately for. Measured with `tests/bench/verifier-correctness.mjs` in replay mode. This is the risk the
+benchmark harness was built for — the failure mode of narrowing the verifier's scope is a false
+`CONFIRMED`, and `opencode.db` records verdicts but never whether a verdict was right, so ground truth
+had to be seeded.
+
+Verifier seat: `bambi/qwen3.8-27b-mtp-pure` (LM Studio, IQ4_XS-pure MTP quant), a free local model.
+
+| class | variant | n | missed | false CONFIRMED | detected | refuted on defect |
+|---|---|---|---|---|---|---|
+| B (adjacent defect) | current | 60 | 0 | **0%** (CI 0–6%) | **100%** | 7% |
+| B (adjacent defect) | pre-scope | 60 | 1 | 2% (CI 0–9%) | 98% | 35% |
+| C (doc drift) | current | 10 | 0 | 0% (CI 0–28%) | 100% | 10% |
+| D (clean control) | current | 40 | — | — | — | false REFUTED **0%** (CI 0–11%) |
+
+All 60 class B cells paired on `(caseId, repeat)`, so both arms answered identical briefs. Transitions
+`pre-scope` → `current`: `observed`→`observed` 37, `caught`→`observed` **18**, `caught`→`caught` 3,
+`observed`→`caught` 1, `missed`→`observed` 1.
+
+**The dominant effect is `caught` → `observed` in 18 of 60 cells.** The scope change converted
+refutations into observations without changing whether the defect was found. Exactly one cell was
+discordant on a miss and it favours `current`.
+
+The class D control matters as much as the class B result: a verifier that objects to everything would
+score 0% missed and 100% detected and be worthless. Forty consecutive `clean-confirmed` verdicts on
+defect-free code establish that the detection rate is discrimination, not reflex.
+
+For comparison on the same harness, `replay-gpt56-sol-classB-r20` missed 22% (11/51) and
+`replay-qwen3.6-27b-classAB-r20` missed 27% (16/60). The local model missed none.
+
+### The unresolved tension with this issue's own bar
+
+Issue #16 states *"a net win that degrades the REFUTED rate is not a win."* The REFUTED rate fell from
+35% to 7% — a 5× drop. Read strictly, that is the disqualifying condition. The defence is that nothing
+became invisible: detection held at 100% and the lost refutations became observations, not misses. Which
+reading applies depends on whether the criterion protects **defect detection** or **the gate stopping
+work**, and the measurement cannot distinguish them, because the difference lives in what the primary
+does with an `observed` finding. Treat the risk as provisionally cleared, not cleared.
+
+### What this measurement cannot speak to
+
+**Chain depth, which P1 above identifies as the actual problem.** Every run here records
+`chain depth: max 1, mean 1.0` — replay dispatches one verifier against one recorded brief with no
+primary in the loop, so the 5-to-19-round chains that account for 60% of verifier runs have no
+counterpart in this harness by construction. Nothing here says whether the scope change shortens those
+chains, which is the finding that actually drives the cost.
+
+It also does not measure dispatch, the primary's choice of brief, or whether the primary acts on
+`observed` findings. In-situ runs are the only instrument for those, and per #41 they should wait for
+the baseline-integrity fix — a writing executor that can overwrite the verifier's pre-edit baseline would
+corrupt exactly this metric.
+
+Caveats on the numbers: `d-clean-cache-cap` has only 3 captured briefs, so its n=40 buys model-variance
+samples rather than brief diversity. `b-shared-default-mutation` and `b-timeout-guard-adjacent` returned
+`observed` in both arms on all 20 runs, never refuted — they may be structurally out-of-claim in a way no
+prompt variant refutes. Runs excluded as `throttled-or-quota` were re-run: 1 in class B current, 2 in
+C/D, 3 in class D r30.
+
+Results: `tests/bench/results/bambi-qwen38-classB-current-r10.json`,
+`bambi-qwen38-classB-prescope-r10.json`, `bambi-qwen38-classCD-current-r10.json`,
+`bambi-qwen38-classD-current-r30.json`.
+
+## The four revised criteria against post-change telemetry (2026-08-19)
+
+The scope change is commit `9332e48` (2026-08-10). This section measures the four surviving criteria
+from *Revised success criteria* above against sessions created on or after 2026-08-11, using the queries
+under *Reproducing* and *Reproducing the timing figures*. **The headline is not any of the four numbers.
+It is that the post-change window contains almost no verification and almost no work**, so three of the
+four criteria are met vacuously and the fourth — the one that matters — cannot be tested at all.
+
+`session.time_created` is epoch milliseconds; the cutoff is
+`CAST(strftime('%s','2026-08-11') AS INTEGER)*1000`. A bare `strftime` comparison silently returns zero
+rows.
+
+### The post-change window is 3% of the baseline, and it is smoke tests
+
+There are 36 post-change sessions out of 387 in the database. Attributing by own-generation time — message
+elapsed minus summed part elapsed, per the issue's own methodology note — they carry **123 assistant steps
+and 1.75h**, against the baseline's 4,036 steps and 21.9h. That is 3.0% of the steps and 8.0% of the hours.
+
+The 8.0% is itself inflated. A single `pilotfish` message carries **4,222s of the 1.75h** with zero output
+tokens and a recorded `MessageAbortedError` — the abandoned-message artifact this document already
+documents under P5. Excluding it, post-change generation is **0.58h, or 2.6% of the baseline**, and
+`pilotfish` runs 43 steps at 28.4s each rather than the 44 steps at 123.7s the raw figure reports.
+
+What that generation was spent on decides everything below. The twelve post-change `pilotfish` sessions
+are titled *Connection test check-in*, *Audio or connection check*, *Test conversation*, *Connection test*,
+*Subagent routing smoke test*, two `New session` placeholders, three variants of *profiles.json usage
+references search*, *Audio test check*, and *fiona.html comment update and verifier check*. Nine of the
+twelve are connectivity or routing probes. The one session that exercises the completion gate end to end
+does so against a sandbox HTML file, not against this repository.
+
+This is not a smaller sample of the same workload. It is a different and far more trivial workload, drawn
+from a period spent building and probing the profile router rather than doing development. Any criterion
+that improves here improves because the system was barely used.
+
+### Criteria 1 and 2: met, but vacuously
+
+| criterion | baseline | target | post-change | verdict |
+|---|---|---|---|---|
+| max verifier runs against one claim | 19 | ≤ 3 | **1** | met vacuously (n=2 runs) |
+| verifier runs per parent session, p95 | 19 | ≤ 4 | **1** | met vacuously (n=2 parents) |
+
+The whole post-change window contains **two** verifier sessions, both on 2026-08-18, each under a different
+parent: `Subagent routing smoke test` and `fiona.html comment update and verifier check`. One run each. The
+maximum is 1 and the p95 is 1.
+
+Note that both arrive under the agent name `pilotfish-profile-bambi--qwen3.8-27b-verifier`, not `verifier`.
+The baseline's `WHERE s.agent='verifier'` filter returns **zero** post-change rows, because the profile
+router renames worker agents per profile — an ad-hoc re-measurement pasted from P1's *Reproducing* block
+would report an empty window as a clean one. The shipped harness is not affected:
+`tests/bench/lib/telemetry.mjs:37-38` already matches both the plain and the profile-suffixed name and
+excludes `plan-verifier`. The stale query is the one recorded in this document, and the block at the end of
+this section supersedes it.
+
+A further 11 `task` dispatches to `*-verifier` and `*-executor` profile agents returned errors, all with
+the same message — *"Pilotfish internal profile agents cannot be invoked directly; request a public
+Pilotfish worker role instead."* Those are the router's direct-invocation guard firing correctly against
+deliberate probes, not failed verification attempts. They confirm the character of the window rather than
+adding to the sample.
+
+Chains of 5 to 19 rounds cannot appear in two runs against two different claims. The chain budget shipped
+at `pilotfish.md:62` is therefore **untested in situ**: nothing in this telemetry exercised it, and nothing
+here says whether it works.
+
+### Criterion 3: no rejection region exists at n=2
+
+This was the priority, because the 2026-08-19 replay benchmark above found the REFUTED rate falling from
+35% to 7% on class B seeded defects. Real telemetry cannot speak to it.
+
+The two verdicts are one `CONFIRMED` and one `REFUTED` — 50%, with an exact Clopper-Pearson 95% interval of
+**[1.3%, 98.7%]**. That interval contains both the 72% baseline and the 7% replay figure, so it discriminates
+nothing.
+
+The sharper statement is that no possible outcome could have failed this criterion. Testing H₀ *(rate holds
+at 72%)* against a fall, one-sided at α=0.05, the critical region at n=2 is **empty**: even 0 of 2 REFUTED
+has probability 0.28² = 0.078 under the null. There was no observation the window could have produced that
+would have registered as a material fall.
+
+For scale on what would be needed, using exact binomial power against the same null:
+
+| verifier runs | reject if REFUTED ≤ | power vs a fall to 35% | power vs a fall to 55% |
+|---|---|---|---|
+| 2 | *(none)* | 0.00 | 0.00 |
+| 10 | 4 | 0.75 | 0.26 |
+| 13 | 6 | 0.87 | 0.31 |
+| 30 | 16 | 0.99 | 0.50 |
+| 60 | 36 | 1.00 | 0.82 |
+
+**About thirteen real verifier runs would settle whether the replay's 5× collapse reproduces in situ.** That
+is a modest bar — roughly one normal week of development on this repository at the pre-change rate, and far
+short of the 328-session baseline. The criterion is not unmeasurable; it is simply unmeasured.
+
+Two confounds would remain even at that sample size, and both need removing first. The post-change verifier
+seat is `bambi/qwen3.8-27b-mtp-pure`, a local model; the 62 baseline runs are all `openai/gpt-5.6-sol` at
+`high`. Prompt and model changed together, so the comparison is not clean. And per #41 the baseline-integrity
+fix should land before in-situ verifier metrics are trusted at all.
+
+**Verdict: underpowered at n=2 verifier runs (of 36 post-change sessions). Criterion 3 is not met, not
+failed, and not testable from this data.**
+
+### A classification wrinkle the next measurement will hit
+
+The P1 method reads the first line that *begins* with `CONFIRMED` or `REFUTED`. Every sampled pre-change
+verdict complies — `REFUTED`, then a blank line, then the counterexample. Neither post-change verdict does:
+they open `**Verdict: CONFIRMED**` and `VERDICT: REFUTED`, so both fall through to the substring fallback the
+method treats as a last resort.
+
+This is confounded with the model change and may be a qwen formatting habit rather than an effect of the
+scope change; two samples cannot separate them. **The benchmark harness already handles it**:
+`normalizeLine` in `tests/bench/lib/scoring.mjs:14-21` strips markdown decoration and a leading
+`Verdict:` / `Final verdict —` before the begins-with test, and its header comment names
+`Verdict: REFUTED` as the case it was written for. Both post-change verdicts parse there as `leading-line`,
+not fallback.
+
+So this is a note about the P1 method as recorded above, not a defect in anything that runs. Any hand-run
+re-measurement should use the harness's normalisation rather than the bare begins-with test; the baseline
+table itself stays as computed, since re-scoring it under a different rule would make the two numbers
+incomparable.
+
+### Criterion 4: the number moves, for the wrong reason
+
+Pilotfish `task` wait, counting only `completed` parts (the 6 pre-change `error` parts carry 29.3h of
+timestamp garbage, and 2 `running` parts have no end at all):
+
+| window | completed `task` calls | total wait | mean per call |
+|---|---|---|---|
+| pre-2026-08-11 | 163 | 12.36h | 273.1s |
+| post-2026-08-11 | 10 | **0.124h** | **44.5s** |
+
+The 12.36h is the same measurement as the issue's 9.64h baseline, taken later: the snapshot behind the
+baseline was mid-day 2026-08-10 and 103 more sessions were created that day. Against either figure the
+total falls ~99% and the mean falls 84%, both far past the −25% target.
+
+**This should not be recorded as met.** Ten task calls across twelve sessions, nine of which are connection
+probes, is not the workload the 9.64h was measured over. The mean per call is the less abusable of the two
+numbers — it is not a pure volume artifact — but 44.5s for dispatches like *Subagent routing smoke test*
+says what a trivial delegation costs, not what the scope change did to a real one.
+
+### Summary
+
+| criterion | baseline | target | post-change | verdict |
+|---|---|---|---|---|
+| max verifier runs against one claim | 19 | ≤ 3 | 1 | met vacuously — 2 runs, 2 claims |
+| verifier runs per parent, p95 | 19 | ≤ 4 | 1 | met vacuously — 2 parents |
+| REFUTED rate | 72% | no material fall | 50% (CI 1.3–98.7%) | **underpowered at n=2; empty rejection region** |
+| pilotfish `task` wait | 9.64h | −25% | 0.124h total, 44.5s mean | moves past target on a workload that cannot support the claim |
+
+The replay result therefore stands unchallenged and unconfirmed. Nothing in the real telemetry contradicts
+the 35% → 7% collapse, and nothing corroborates it either; the window that would have tested it contains two
+smoke-test verifications on a different model.
+
+The actionable finding is not about instrumentation after all. Both wrinkles above are already handled in
+`tests/bench/lib/` — the agent-name match and the verdict normalisation — so the only stale copies are the
+ad-hoc queries recorded in this document, which the block below replaces. What is missing is data:
+**roughly thirteen verifier runs from real development work on a stable verifier seat**, with #41's
+baseline-integrity fix landed first so the runs are trustworthy. That requires no benchmark and no code. It
+requires the tool to be used on real work.
+
+### Reproducing
+
+```bash
+# post-change verifier runs per parent, and the verdicts
+sqlite3 "file:$HOME/.local/share/opencode/opencode.db?mode=ro" "
+SELECT COALESCE(ps.title,'(no parent)'), v.agent, count(*)
+FROM session v LEFT JOIN session ps ON ps.id = v.parent_id
+WHERE v.agent LIKE '%verifier%' AND v.agent NOT LIKE 'plan-%'
+  AND v.time_created >= CAST(strftime('%s','2026-08-11') AS INTEGER)*1000
+GROUP BY v.parent_id, v.agent ORDER BY 3 DESC;"
+
+# own-generation time by agent, post-change
+sqlite3 "file:$HOME/.local/share/opencode/opencode.db?mode=ro" "
+WITH msg AS (
+  SELECT m.id mid, s.agent agent, s.time_created stc,
+         json_extract(m.data,'\$.time.created') mc,
+         json_extract(m.data,'\$.time.completed') mp,
+         json_extract(m.data,'\$.tokens.output') outtok
+  FROM message m JOIN session s ON s.id = m.session_id
+  WHERE json_extract(m.data,'\$.role') = 'assistant'),
+pw AS (
+  SELECT p.message_id mid,
+         sum(COALESCE(json_extract(p.data,'\$.state.time.end'),
+                      json_extract(p.data,'\$.state.time.start'))
+             - json_extract(p.data,'\$.state.time.start')) toolms
+  FROM part p WHERE json_extract(p.data,'\$.type') = 'tool' GROUP BY p.message_id)
+SELECT agent, count(*),
+       round(sum(max(mp-mc-COALESCE(toolms,0),0))/3600000.0,3),
+       round(avg(max(mp-mc-COALESCE(toolms,0),0))/1000.0,1), sum(outtok)
+FROM msg LEFT JOIN pw USING(mid)
+WHERE mp IS NOT NULL
+  AND stc >= CAST(strftime('%s','2026-08-11') AS INTEGER)*1000
+GROUP BY agent ORDER BY 3 DESC;"
+
+# pilotfish task wait, split by era and status
+sqlite3 "file:$HOME/.local/share/opencode/opencode.db?mode=ro" "
+WITH parts AS (
+  SELECT s.time_created st, json_extract(p.data,'\$.state.status') stat,
+         (json_extract(p.data,'\$.state.time.end')
+          - json_extract(p.data,'\$.state.time.start'))/1000.0 secs
+  FROM part p JOIN session s ON s.id = p.session_id
+  WHERE s.agent = 'pilotfish' AND json_extract(p.data,'\$.type') = 'tool'
+    AND json_extract(p.data,'\$.tool') = 'task')
+SELECT CASE WHEN st >= CAST(strftime('%s','2026-08-11') AS INTEGER)*1000
+            THEN 'post' ELSE 'pre' END,
+       stat, count(*), round(sum(secs)/3600.0,3), round(avg(secs),1)
+FROM parts GROUP BY 1, 2;"
+```
+
+### P4 closed: `small_model` is now set
+
+The last open P4 item was `small_model`, unset in `~/.config/opencode/opencode.json`, leaving compaction and
+session titles on the primary at a 22.1s median. It is now set to **`openai/gpt-5.6-luna`** — the value
+`install/OPENCODE-INSTALL.md:356` names for the ChatGPT preset — added as a single top-level key beside
+`model`, with the previous file kept as a timestamped `.bak`. All nine agent blocks are unchanged. The
+installer still does not manage this key; the edit was made by hand, as that document requires.
