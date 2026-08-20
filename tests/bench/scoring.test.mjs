@@ -278,6 +278,51 @@ describe("the case set", () => {
     }
   });
 
+  // B2 exists only if its commits are actually harder to read than B's. A B2
+  // case that degenerated back to "the claim plus the defect" would answer the
+  // calibration question with the same fixture that raised it, so the property
+  // is asserted rather than intended.
+  //
+  // The check is on the commit, not on the file. A 200-line module whose
+  // commit touches two functions still produces a two-hunk diff -- growing the
+  // module without growing the change buys nothing and looks like it did.
+  test("every B2 commit spreads the defect among other legitimate changes", () => {
+    const root = mkdtempSync(join(tmpdir(), "bench-b2-"));
+    try {
+      const b2 = CASES.filter((item) => item.defectClass === "B2");
+      assert.ok(b2.length > 0, "no B2 cases");
+      for (const item of b2) {
+        const target = join(root, item.id);
+        materializeCase(item, target);
+        const show = (args) =>
+          execFileSync("git", ["show", ...args, "HEAD"], { cwd: target, encoding: "utf8" });
+        const files = show(["--name-only", "--format="]).trim().split("\n").filter(Boolean);
+        const hunks = show([]).split("\n").filter((line) => line.startsWith("@@")).length;
+        assert.ok(files.length >= 3, `${item.id}: ${files.length} file(s), expected 3+`);
+        assert.ok(hunks >= 3, `${item.id}: ${hunks} hunk(s), expected 3+`);
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  // The counterpart, and the reason the comparison is a comparison: every B2
+  // case must restate a B case's defect exactly. Different markers or a
+  // different mutation would make a difference between the tiers a difference
+  // in the defect rather than in the commit around it.
+  test("each B2 case mirrors a B case's defect exactly", () => {
+    const byId = new Map(CASES.map((item) => [item.id, item]));
+    for (const item of CASES.filter((entry) => entry.defectClass === "B2")) {
+      const original = byId.get(item.id.replace(/^b2-/, "b-"));
+      assert.ok(original, `${item.id} has no class B counterpart`);
+      assert.deepEqual(
+        item.defect.markers,
+        original.defect.markers,
+        `${item.id}: markers differ from ${original.id}`,
+      );
+    }
+  });
+
   test("class D seeds nothing and every other class seeds something", () => {
     for (const item of CASES) {
       if (item.defectClass === "D") assert.equal(item.defect, null, item.id);

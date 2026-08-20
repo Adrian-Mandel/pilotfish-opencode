@@ -18,7 +18,22 @@ import { fileURLToPath } from "node:url";
 
 const CASES_DIR = fileURLToPath(new URL("../cases/", import.meta.url));
 
-export const CLASSES = ["A", "B", "C", "D"];
+// B2 is class B's defect in a realistic commit. The class B fixtures are
+// 10-19 line files with exactly two exported functions, so their commit is a
+// two-hunk diff and detection reduces to noticing that a second hunk exists --
+// a diff-reading task, not a defect-finding one. Against the 44 historical
+// REFUTED sessions that shape is about 5% of real defects.
+//
+// B2 seeds the identical mutation, with identical markers, into a commit that
+// also carries four to six legitimate changes across two or three files: an
+// extracted helper that has its own reason to touch the defective function, a
+// rename propagated through call sites, an added test for the claimed
+// function, a documentation table brought up to date. The defect becomes one
+// hunk among several instead of one of two.
+//
+// Scored exactly as B -- only class D is special-cased anywhere -- so the two
+// tiers pool separately and can be compared directly on the same seat.
+export const CLASSES = ["A", "B", "B2", "C", "D"];
 
 // Commits are made with explicit identity so a run never depends on, or picks
 // up, whatever `user.email` the host happens to have configured.

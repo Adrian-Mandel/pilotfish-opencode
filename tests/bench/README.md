@@ -244,8 +244,59 @@ anything is wrong.
 |---|---|---|
 | A | inside the stated claim | control — a miss here means the gate is broken outright, not merely narrowed |
 | B | in a file the change touched, outside the claim | the risk zone: precisely what "don't audit the surrounding code" tells it to skip |
+| B2 | the same defect, in a realistic commit | whether B measured defect-finding or only diff-reading |
 | C | documentation drift on a trivial edit | the class the #16 historical sample proved it catches today |
 | D | no defect | false-REFUTED noise floor |
+
+### Why B2 exists
+
+Every class B fixture is a 10–19 line file with exactly two exported functions,
+one claimed and one defective, so its commit is a **two-hunk diff**. Detection
+reduces to reading `git show HEAD` and noticing that a second hunk exists. That
+is a diff-reading task, and it explains 60/60 detection with live probes better
+than any claim about model capability.
+
+Against the 44 historical `REFUTED` verifier sessions, that shape — a one-token
+operator mutation in a sibling function, decidable by calling it twice — is
+about **5% of real defects**. The rest are adversarial input (34%), host or
+external contract mismatches (16%), documentation contradicting code (16%),
+races (14%), and lifecycle or spec problems. Real refutations cite a mean of 1.3
+distinct files, and 41% of them note that the test suite passed anyway.
+
+B2 seeds the **byte-identical mutation with identical markers** into a commit
+that also carries four to six legitimate changes across three files: a helper
+extracted that has its own reason to touch the defective function, a rename
+propagated through call sites, a test added for the claimed function, a
+documentation table brought up to date. The defect becomes one hunk among
+several instead of one of two.
+
+Note what B2 does *not* do. It does not merely grow the module — a 200-line file
+whose commit touches two functions still produces a two-hunk diff.
+Conspicuousness is a property of the **commit**, not of the file. Two tests
+enforce both halves of the design: every B2 commit must touch 3+ files with 3+
+hunks, and every B2 case's markers must match its class B counterpart exactly,
+so a difference between the tiers is a difference in the commit rather than in
+the defect.
+
+Read the result this way. If B2 detection stays near 100%, the calibration
+worry is answered and every existing class B number stands. If it collapses,
+class B measured diff-reading and every conclusion drawn from it — including any
+seat comparison — is scoped to that, not to verification quality.
+
+B2 has **no captured briefs**, so it cannot be replayed until one in-situ run of
+each case is recorded. Six in-situ runs, then unlimited cheap repeats:
+
+```bash
+node tests/bench/verifier-correctness.mjs run --confirm --classes B2 --variants current --repeats 1
+node tests/bench/verifier-correctness.mjs capture-briefs tests/bench/results/<that file>.json
+node tests/bench/verifier-correctness.mjs run --confirm --replay \
+  --model bambi/qwen3.8-27b-mtp-pure,openai/gpt-5.6-sol \
+  --classes B,B2 --variants current --repeats 10
+```
+
+That last command is the experiment: both tiers, both seats, one randomized
+queue, so the B-versus-B2 difference and the seat difference are measured under
+identical conditions.
 
 **The prediction under test is that A and D hold while B degrades.** If B
 degrades materially against the `9332e48~1` prompt, revert #16's scope change.

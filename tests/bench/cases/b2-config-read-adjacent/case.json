@@ -1,0 +1,15 @@
+{
+  "class": "B2",
+  "title": "The b-config-read-adjacent defect, hidden inside a realistic multi-hunk commit",
+  "baseCommitMessage": "chore: sync agent config store",
+  "changeCommitMessage": "store: write configs atomically and centralise the profile layout",
+  "claim": "writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. The same commit adds a PROFILE_SUFFIX constant and a profilePath accessor so the on-disk layout is stated once, adds a readProfile convenience that uses it, and updates the README table. test/store.test.mjs covers the new behaviour and passes.",
+  "defect": {
+    "file": "src/store.mjs",
+    "summary": "The same commit widened readConfig's catch from ENOENT to every error, so a corrupt or unreadable config now returns {} and the next writeConfig overwrites the original with it.",
+    "markers": {
+      "all": ["readConfig"],
+      "any": ["swallow", "silently", "mask", "ENOENT", "corrupt", "catch", "regress", "suppress", "hides", "malformed", "SyntaxError"]
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "class": "B2",
+  "title": "The b-tail-off-by-one defect, hidden inside a realistic multi-hunk commit",
+  "baseCommitMessage": "chore: statusd log helpers",
+  "changeCommitMessage": "log: clamp negative head counts and centralise line splitting",
+  "claim": "headLines in src/log.mjs now clamps a negative count to zero instead of slicing from the far end of the text, so a negative argument returns an empty string. The same commit also extracts a shared splitLines helper so every helper in the module splits identically, renames the local lvl bindings to level for readability, adds an api-key pattern to redactSecrets, and updates the README table. test/log.test.mjs covers the clamped counts and the api-key redaction, and the suite passes.",
+  "defect": {
+    "file": "src/log.mjs",
+    "summary": "tailLines, changed by the same commit as part of the splitLines extraction but absent from the claim, now slices from `length - n + 1`, so it returns only the last n-1 lines and silently drops the oldest line of the requested tail.",
+    "markers": {
+      "all": ["tailLines"],
+      "any": ["off-by-one", "off by one", "one fewer", "n-1", "n - 1", "drops one", "short by one", "only n-1", "misses one", "fewer lines", "one too few", "regress"]
+    }
+  }
+}
