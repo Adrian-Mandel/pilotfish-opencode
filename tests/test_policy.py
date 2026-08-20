@@ -511,6 +511,23 @@ class PolicyContractTests(unittest.TestCase):
         # The artifact-inspection prohibition survives the new positive case.
         self.assertIn("new, not resumed, read-only reconnaissance worker session", policy)
 
+    def test_installer_checks_subagent_depth(self) -> None:
+        # Host fact H14: an agent mention skips the Task permission check for a
+        # whole turn, and Task resolves mentions in its own prompt argument, so
+        # a worker's `task` deny can be bypassed from the parent's prompt text.
+        # The host default `subagent_depth` of 1 is what actually holds the
+        # worker boundary, and Pilotfish neither sets nor owns it -- so the
+        # installer has to say out loud that it is relied upon.
+        installer = text("install/OPENCODE-INSTALL.md")
+        self.assertIn("### Check `subagent_depth`", installer)
+        for phrase in (
+            "this step writes nothing",
+            "a safety check rather than a preference",
+            "a worker session already has a parent",
+            "Do not change it, do not block the install over it",
+        ):
+            self.assertIn(phrase, installer)
+
     def test_installer_preserves_historical_lifecycle_safeguards(self) -> None:
         installer = text("install/OPENCODE-INSTALL.md")
         for phrase in (

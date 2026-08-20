@@ -355,6 +355,14 @@ OpenCode uses `small_model` for background chores — session titles and context
 
 If the key is already set, say nothing. Otherwise report that it is unset, name a cheap model from the installed preset as a starting point — `openai/gpt-5.6-luna` for ChatGPT, `google/antigravity-gemini-3-flash` for AntiGravity, and the selected profile's cheap model for OpenRouter (`openrouter/qwen/qwen3.6-35b-a3b` or `openrouter/deepseek/deepseek-v4-flash-0731`) — and state the trade honestly: faster and cheaper titles and compaction, against a weaker summariser producing the context the session continues from. Do not set it, and do not record it in install state.
 
+### Check `subagent_depth`
+
+Pilotfish does not manage this key either, and this step writes nothing. Unlike the `small_model` advice above, this one is a safety check rather than a preference: report it whatever the answer, because silence here reads as "nothing to say" about a key that is load-bearing.
+
+Host fact H14: a `@token` in any prompt that resolves to an agent name becomes an `agent` part, and one such part makes OpenCode skip the Task permission check for that entire turn. Task passes its own `prompt` argument through the same resolver, so a primary that writes `@executor` into a worker's prompt turns the bypass on inside that worker's session, where it skips the `task` deny that is supposed to stop a worker spawning further workers. What actually stops it is `subagent_depth`: a worker session already has a parent, so at the host default of `1` the depth check fails the call before the skipped permission would have mattered.
+
+Read `subagent_depth` from the resolved config. If it is unset or `1`, say so in one line — the worker boundary rests on it and it holds. If it is greater than `1`, report that plainly: workers can now spawn workers, and on any turn carrying an agent mention they can do so without the `task` deny being consulted. Name the value found, say that Pilotfish neither set it nor needs it raised, and leave the decision with the user. Do not change it, do not block the install over it, and do not record it in install state.
+
 Summarize the selected preset, created and replaced files, preserved customizations, validation results, and backup location.
 
 ## Uninstall
