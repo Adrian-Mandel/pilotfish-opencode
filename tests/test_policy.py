@@ -798,6 +798,9 @@ class PolicyContractTests(unittest.TestCase):
             "so nothing was observed",
             "the role the prompt asked for",
             "refused before execute", "run killed at its cap",
+            "the host asked permission for this call before execute",
+            "the bogus call failed for some reason other than its role",
+            "not this list of exemplars",
             "not a host verdict", "external_directory",
             "never relax the assertion instead",
         ):
