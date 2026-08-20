@@ -60,7 +60,7 @@ The `pilotfish` primary may invoke only the eight Pilotfish workers. Each public
 
 Read-only roles start with a deny-all rule and then allow only explicit evidence tools. Environment files remain denied. `security-reviewer` additionally allows web fetches; the verifier denies file-edit tools and Task while retaining bash so it can reproduce tests after implementation.
 
-Permissions provide stronger guarantees than prompts alone, but they are not a complete sandbox. In particular, arbitrary shell commands can write files. The verifier prompt and focused bash denials preserve the read-and-run contract where OpenCode cannot express it perfectly.
+Permissions provide stronger guarantees than prompts alone, but they are not a complete sandbox. In particular, arbitrary shell commands can write files. The verifier prompt and focused bash denials preserve the read-and-run contract where OpenCode cannot express it perfectly. The corollary governs verification evidence: because a writing worker's shell can write any path it can reach, the verification baseline cannot be a file. A `chmod` does not fix it either, since the worker runs as the uid that owns the file and can change the mode back. The baseline is instead an immutable VCS object named by a concrete commit SHA, which content addressing makes unforgeable — a worker can move a branch pointer but cannot change the bytes a given SHA names — or content the primary session holds and passes inline in the brief. The Completion Gate names one of those two, and the writing-role prompts forbid creating, refreshing, or restoring it, because a baseline overwritten with the post-edit file produces an empty diff and a false `CONFIRMED` rather than a visible error.
 
 ## Profile Routing Contract
 
