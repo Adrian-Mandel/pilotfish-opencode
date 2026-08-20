@@ -149,7 +149,7 @@ Use only this checkout. Keep my recorded preset unless I ask to switch it.
 Show the changelog and exact plan, then get my approval before writing anything.
 ```
 
-If `install-state.json` already records this checkout's version, the installer reports that it is current and stops without asking for a preset or writing anything. Otherwise it follows the normal install Steps 1–4: identical agents, plugins, runtime files, and prompts skip; changed custom content is shown as a diff and requires a keep-or-replace decision. The original pre-install agent, prompt, plugin, and runtime state remains preserved for uninstall.
+The installer reports that it is current and stops without asking for a preset or writing anything only when every managed agent, prompt, runtime file, and the plugin tuple is already byte-identical to this checkout. A recorded version equal to `VERSION` is not sufficient: `VERSION` is not bumped per commit, so content can move a long way inside one unreleased version, and a version-only check reports success while leaving merged changes uninstalled. Otherwise it follows the normal install Steps 1–4: identical agents, plugins, runtime files, and prompts skip; changed custom content is shown as a diff and requires a keep-or-replace decision. The original pre-install agent, prompt, plugin, and runtime state remains preserved for uninstall.
 
 ## Uninstalling
 

@@ -219,8 +219,143 @@ class PolicyContractTests(unittest.TestCase):
     def test_installer_retains_update_contract(self) -> None:
         installer = text("install/OPENCODE-INSTALL.md")
         self.assertIn("An update is an idempotent re-run", installer)
-        self.assertIn("Do not ask for a preset, present a write plan, or write any file", installer)
+        # The stop condition used to be version equality alone, and this test
+        # used to pin that sentence unconditionally. It is now pinned together
+        # with the condition that guards it, so the skip cannot drift back to
+        # firing on anything cheaper than a full content comparison.
+        self.assertIn(
+            "in that case, and only in that case, do not ask for a preset, present a write plan, "
+            "or write any file",
+            installer,
+        )
         self.assertIn("Never replace an existing entry during an update", installer)
+
+    def test_installer_update_gate_is_content_based_not_version_based(self) -> None:
+        # `VERSION` read 0.2.0 unchanged from 2026-08-09 through 69 later
+        # commits, 21 of them touching templates/ or install/, so a real install
+        # recording 0.2.0 matched a checkout whose content had moved a long way
+        # from it. The old rule stopped the update on version equality, and on
+        # 2026-08-20 a live install was found still running the pre-#38 router
+        # with its Windows-only case-insensitive Task-permission mirror -- a
+        # merged security fix undelivered behind a runbook reporting "up to
+        # date". This is pinned because the failure is silent and points the
+        # reassuring way, and because the tempting repair (bump VERSION every
+        # change) still fails anyone tracking main between bumps.
+        installer = text("install/OPENCODE-INSTALL.md")
+        for phrase in (
+            "Run preflight regardless of the recorded version",
+            "Version equality is not a stop condition",
+            "It suppresses only the changelog replay; it never suppresses a write",
+            "It does not decide the preset question either, which rule 5 owns",
+            "A version number cannot detect a change that landed inside an unreleased version",
+            "Decide the stop condition from content, not from the version",
+            "Report that Pilotfish is up to date and stop only when every one of them is "
+            "byte-identical to desired",
+            "present a write plan covering only the items that differ",
+            "Do not answer this by bumping `VERSION` for every change",
+            "Content comparison is the primitive.",
+            "pre-#38 `profile-router.mjs`",
+            # A content-identical stop leaves the recorded version behind, so
+            # the changelog replay repeats cumulatively. That is chosen, not
+            # overlooked: a path that promises to write no file must not write
+            # `install-state.json` to tidy one field.
+            "One consequence of stopping is deliberate",
+            "a path promising to write no file must not write `install-state.json` either",
+        ):
+            self.assertIn(phrase, installer)
+
+    def test_installer_records_installed_prompt_hashes(self) -> None:
+        # Without an installed-prompt hash the update table could only say
+        # "identical" or "differs", so a merely stale prompt and a hand-edited
+        # one asked the user the same keep-or-replace question. Telling them
+        # apart by hand required diffing the installed prompt against an older
+        # Git ref, which the runbook never prescribed and an installer cannot
+        # do. `installedPrompts` mirrors `installedRuntimeFiles`; it is a
+        # separate map from `previousPrompts`, which still holds first-install
+        # pre-install state and is still never replaced.
+        installer = text("install/OPENCODE-INSTALL.md")
+        for phrase in (
+            "installedPrompts",
+            "The `installedPrompts` first-touch migration follows that same pattern",
+            "read the SHA-256 of each managed prompt's exact current installed bytes "
+            "before any write, and classify the prompt from that",
+            "recording the pre-write hash there would leave the entry describing content that is no longer installed",
+            "The first-touch migration is required.",
+            "Never infer it from the templates",
+            "`installedPrompts` is not `previousPrompts` and never substitutes for it",
+            "`installedPrompts` must contain all nine prompt filenames",
+            "Current matches the recorded `installedPrompts[filename]` hash and that entry "
+            "is not marked preserved",
+            "Current differs from the recorded hash, or that entry is marked preserved",
+            "compare each managed prompt with both `installedPrompts[filename]` and its "
+            "desired template",
+            # A preserved prompt is bytes the installer did NOT write. Recording
+            # its hash bare makes it indistinguishable from one the installer
+            # produced, and every consumer downstream then misreads it: the
+            # update table loses the case entirely and uninstall stops diffing
+            # it. The marker is what keeps `installedPrompts` honest.
+            'record it with `"preserved": true`, because the installer did not write those bytes',
+            "`installedPrompts` means what the installer last wrote",
+            'Set `"preserved": false` on every entry the installer did write',
+            "each mapped to an object carrying the `sha256` of the bytes actually left on disk "
+            "and a `preserved` flag",
+            # The migrating run has no marker to read, so it must not classify a
+            # hand-edited prompt as merely stale in order to acquire the field.
+            "The migrating update is the one run that cannot read its own marker",
+            'Never write `"preserved": true` from a guess',
+            # The schema example is what an installer copies, so the marker has
+            # to be visible there and not only described in prose.
+            '"scout.md": { "sha256": "<SHA-256>", "preserved": true }',
+        ):
+            self.assertIn(phrase, installer)
+        # The false claim the new field replaces must not survive anywhere.
+        for stale in (
+            "this state schema does not store them",
+            "Prompts have no old-version hash field in the existing schema",
+            "Because state stores no installed prompt hashes",
+        ):
+            self.assertNotIn(stale, installer)
+
+    def test_prompt_table_is_exhaustive_and_uninstall_honors_preservation(self) -> None:
+        # The three-row prompt table replaced a two-row one whose second row was
+        # a catch-all, so the rewrite could drop a state without anything
+        # failing. It did: a prompt preserved on an earlier update matches its
+        # recorded hash and differs from the template, which the first draft of
+        # the table classified nowhere at all. This table is executed by a human
+        # reading it, so an unclassifiable state has no default to fall through
+        # to -- it is a stall mid-install. The same marker is what keeps
+        # uninstall from restoring or removing deliberately preserved content
+        # without ever showing it; the action may be identical, the informed
+        # consent is not.
+        installer = text("install/OPENCODE-INSTALL.md")
+        for phrase in (
+            "Evaluate the rows in order, and keep them exhaustive.",
+            "whether current equals desired, whether current equals the recorded "
+            "`installedPrompts` hash, and whether that entry is marked preserved",
+            "that exhaustiveness is the point of the table rather than a property it "
+            "happens to have",
+            "it is an unhandled case in the middle of someone's install",
+            "Any future edit must leave every combination landing on exactly one row.",
+            "Classify it as a customization when the bytes differ from the recorded hash "
+            "**or** the entry is marked preserved",
+            "content the user deliberately kept would pass through Phase 2 undiffed",
+            "what would be lost is the user's chance to decide it",
+        ):
+            self.assertIn(phrase, installer)
+
+    def test_installer_asserts_installed_content_after_install(self) -> None:
+        # An install can resolve its config, load its plugin, and pass every
+        # behavioral check while still running a file the update never wrote.
+        # That is exactly how the pre-#38 router survived on a live install, so
+        # verification now compares bytes against the checkout they came from.
+        installer = text("install/OPENCODE-INSTALL.md")
+        for phrase in (
+            "Assert that the installed content matches the checkout it came from",
+            "compare the SHA-256 of the file now on disk with the SHA-256 of the "
+            "corresponding source file in this checkout",
+            "Treat any other mismatch as a validation failure and roll back.",
+        ):
+            self.assertIn(phrase, installer)
 
     def test_installer_retains_six_uninstall_phases(self) -> None:
         installer = text("install/OPENCODE-INSTALL.md")
