@@ -254,7 +254,7 @@ Use only this checkout. Keep my recorded preset unless I ask to switch it.
 Show the changelog and exact plan, then get my approval before writing anything.
 ```
 
-The installer stops without writing when `install-state.json` already records this checkout's version. Otherwise it reruns the normal install flow: unchanged agents, plugin/runtime files, and prompts are skipped, and any customization is diffed and requires a keep-or-replace decision. Raw `main` remains mutable; do not use it to mix refs or bypass safety checks. The original pre-install values remain preserved for uninstall.
+The installer stops without writing only when every managed agent, prompt, runtime file, and the plugin tuple already match this checkout byte for byte. A matching recorded version is not enough — `VERSION` does not change on every commit, so a version-only check reports "up to date" while merged fixes sit undelivered. Otherwise it reruns the normal install flow: unchanged agents, plugin/runtime files, and prompts are skipped, and any customization is diffed and requires a keep-or-replace decision. Raw `main` remains mutable; do not use it to mix refs or bypass safety checks. The original pre-install values remain preserved for uninstall.
 
 ## Uninstall
 
