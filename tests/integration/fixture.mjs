@@ -16,7 +16,7 @@
 //   node tests/integration/fixture.mjs destroy <root>
 
 import { spawn } from "node:child_process";
-import { closeSync, cpSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, symlinkSync, writeFileSync, existsSync } from "node:fs";
+import { closeSync, cpSync, mkdirSync, mkdtempSync, openSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync, existsSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -155,7 +155,15 @@ export function createFixture({
   agentModel = null,
   env = {},
 } = {}) {
-  const root = mkdtempSync(join(tmpdir(), "pilotfish-fixture-"));
+  // Canonical, because the host compares a tool's target path against the
+  // project directory it resolved for itself. On macOS `tmpdir()` is
+  // `/var/folders/…`, and `/var` is a symlink to `/private/var`: the host
+  // resolves its own cwd through the link and a fixture path handed to it
+  // literally does not prefix-match, so a file *inside* the fixture project is
+  // refused as `external_directory`. That refusal lands between
+  // `tool.execute.before` and execute — exactly the shape H6 exists to tell
+  // apart from a genuine throw — which is how it stayed invisible until #39.
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "pilotfish-fixture-")));
   const configHome = join(root, "config");
   const dataHome = join(root, "data");
   const configDir = join(configHome, "opencode");
