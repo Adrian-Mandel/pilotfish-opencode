@@ -790,6 +790,16 @@ class PolicyContractTests(unittest.TestCase):
             "transient marker", "pre-existing sibling", "exact `task_id`", "without marker mutation",
             "`session.created`", "30 seconds", "after is skipped",
             "update-failure revocation without unhandled rejection", "manual child-title cleanup",
+            # The host-fact gate's triage taxonomy (issue #39). A releaser acts
+            # on the difference between an environmental failure and a moved
+            # host guarantee, so the marker word, all three inconclusive shapes,
+            # and the standing refusal to relax an assertion are pinned here.
+            "INCONCLUSIVE", "three shapes, not one",
+            "so nothing was observed",
+            "the role the prompt asked for",
+            "refused before execute", "run killed at its cap",
+            "not a host verdict", "external_directory",
+            "never relax the assertion instead",
         ):
             self.assertIn(phrase, release)
 

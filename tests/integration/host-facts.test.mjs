@@ -33,7 +33,60 @@ const PROBE = fileURLToPath(new URL("./host-fact-probe.mjs", import.meta.url));
 const MODEL = "opencode/deepseek-v4-flash-free";
 
 // Live turns on a small free model; the host also pays a cold start per run.
-const RUN_TIMEOUT_MS = 300_000;
+//
+// Two caps, because the three tool-observation scenarios and the two H7 turns
+// need opposite things from a timeout.
+//
+// The tool scenarios only need the host to *reach* the call. Everything their
+// assertions read — the before-hook, the child's `session.created`, the child's
+// `chat.message`, and the call's terminal record — lands in one burst a few
+// seconds in, and the probe writes with `appendFileSync`, so every one of those
+// records is already on disk when the run is killed. What runs long afterwards
+// is the free model looping on `task` with the assertions already satisfied.
+//
+// Measured 2026-08-20 over 12 runs (macOS, `opencode 1.18.16`, canonical
+// fixture root), timing the last record any assertion reads:
+//
+//   H3(a)/H4  5.6  6.0  6.2  8.1     H3(b)  4.7  4.8  6.4  20.4
+//   H6        4.6  4.7  4.8  5.6
+//
+// Whole runs over the same 12: 6.3s to 56s, plus one that was still calling
+// `task` at a 120s cap — 32 calls — having produced its last asserted record at
+// 6.2s. That run is the case this cap exists for, and it is also the proof that
+// cutting it loses nothing.
+//
+// 90s is a 4.4x margin over the slowest evidence ever observed and ~15x over
+// the median, and it takes the worst case for these three from 15 minutes to
+// 4.5. Truncation is not a silent risk here either: `absence()` below turns any
+// record missing from a capped run into an inconclusive verdict rather than a
+// refutation, so the cost of picking this too low is a repeated run, never a
+// false block.
+const TOOL_RUN_TIMEOUT_MS = 90_000;
+// H7 is the opposite case and keeps the original generous cap. Its second turn
+// asserts `persistedCount === 2`, so turn one has to genuinely finish and
+// persist its assistant reply before turn two can read it: there is no early
+// burst to wait for, and a turn killed mid-reply fails the test for a reason
+// that is not about the host. The measured pair completes in 6.5–8.0s, so this
+// is not a cap the scenario is expected to approach — it is headroom against a
+// provider stalling a turn that has to run to completion, which is exactly the
+// risk the tool scenarios do not carry.
+const TURN_RUN_TIMEOUT_MS = 300_000;
+
+// A failure the release checklist must not read as a host change. Marked
+// failures mean the scenario's precondition was never reached, so the host
+// claim went untested in either direction; RELEASING.md item 5 sends those back
+// for a repeat rather than blocking the release. Anything unmarked is a real
+// refutation. The prefix is the machine-readable half of that taxonomy: a
+// releaser can grep for it instead of judging each message.
+const INCONCLUSIVE = "INCONCLUSIVE:";
+
+// A record that never appeared refutes a host claim only if the run ended on
+// its own. Killed at its cap, the same absence may just mean the host had not
+// got there yet — so under a cap the identical assertion is inconclusive. This
+// is what keeps the shorter cap above from converting into false blocks.
+function absence(run, message) {
+  return run?.timedOut ? `${INCONCLUSIVE} run killed at its cap, so ${message}` : message;
+}
 
 const openFixtures = new Set();
 
@@ -65,10 +118,8 @@ function readProbe(fixture) {
     .map((line) => JSON.parse(line));
 }
 
-function prompt(fixture, args) {
-  return runOpencode(fixture, ["run", ...args, "--agent", "pilotfish"], {
-    timeoutMs: RUN_TIMEOUT_MS,
-  });
+function prompt(fixture, args, timeoutMs = TOOL_RUN_TIMEOUT_MS) {
+  return runOpencode(fixture, ["run", ...args, "--agent", "pilotfish"], { timeoutMs });
 }
 
 // Every scenario asserts this first. A weak model that simply never emitted the
@@ -77,7 +128,7 @@ function requireBefore(records, tool) {
   const found = records.filter((entry) => entry.hook === "tool.execute.before" && entry.tool === tool);
   assert.ok(
     found.length > 0,
-    `the model never called \`${tool}\`, so nothing was observed: ${JSON.stringify(records)}`,
+    `${INCONCLUSIVE} the model never called \`${tool}\`, so nothing was observed: ${JSON.stringify(records)}`,
   );
   return found;
 }
@@ -100,7 +151,7 @@ function requireBogusTask(records) {
   );
   assert.ok(
     bogus.length > 0,
-    "the model never called `task` with the role the prompt asked for, so the hook was " +
+    `${INCONCLUSIVE} the model never called \`task\` with the role the prompt asked for, so the hook was ` +
       `never handed an unresolved role name: ${JSON.stringify(records.filter((e) => e.tool === "task"))}`,
   );
   // The hook must see the model's original, unresolved role name; that this
@@ -185,6 +236,9 @@ describe("OpenCode host facts H3, H4, H6 and H7", () => {
   let thrown;
   // H7: two turns in one session.
   let twoTurns;
+  // Whether each scenario's host process ended on its own or was killed at its
+  // cap, which is what decides whether a missing record refutes anything.
+  const runs = {};
 
   before(async () => {
     const rewrite = {
@@ -193,20 +247,26 @@ describe("OpenCode host facts H3, H4, H6 and H7", () => {
     };
 
     const inPlaceFixture = startProbe(rewrite);
-    await prompt(inPlaceFixture, [TASK_PROMPT]);
+    runs.inPlace = await prompt(inPlaceFixture, [TASK_PROMPT]);
     inPlace = readProbe(inPlaceFixture);
 
     const reassignFixture = startProbe({ ...rewrite, PILOTFISH_PROBE_REASSIGN: "1" });
-    await prompt(reassignFixture, [TASK_PROMPT]);
+    runs.reassigned = await prompt(reassignFixture, [TASK_PROMPT]);
     reassigned = readProbe(reassignFixture);
 
     const throwFixture = startProbe();
-    await prompt(throwFixture, [readPrompt(throwFixture)]);
+    runs.thrown = await prompt(throwFixture, [readPrompt(throwFixture)]);
     thrown = readProbe(throwFixture);
 
     const turnsFixture = startProbe();
-    await prompt(turnsFixture, ["Reply with the single word: alpha"]);
-    await prompt(turnsFixture, ["--continue", "Reply with the single word: beta"]);
+    const first = await prompt(turnsFixture, ["Reply with the single word: alpha"], TURN_RUN_TIMEOUT_MS);
+    const second = await prompt(
+      turnsFixture,
+      ["--continue", "Reply with the single word: beta"],
+      TURN_RUN_TIMEOUT_MS,
+    );
+    // Either turn hitting the cap can leave the other's evidence unwritten.
+    runs.twoTurns = { timedOut: first.timedOut || second.timedOut };
     twoTurns = readProbe(turnsFixture);
   });
 
@@ -222,11 +282,14 @@ describe("OpenCode host facts H3, H4, H6 and H7", () => {
   test("tool.execute.before runs before Task permission and agent resolution", () => {
     const task = requireBogusTask(inPlace);
     const child = childOf(inPlace, task);
-    assert.ok(child, `no child session was created: ${JSON.stringify(taskCallWindow(inPlace, task))}`);
+    assert.ok(
+      child,
+      absence(runs.inPlace, `no child session was created: ${JSON.stringify(taskCallWindow(inPlace, task))}`),
+    );
     const childMessage = inPlace.find(
       (entry) => entry.hook === "chat.message" && entry.sessionID === child.sessionID,
     );
-    assert.ok(childMessage, "the child session never received a message");
+    assert.ok(childMessage, absence(runs.inPlace, "the child session never received a message"));
     assert.equal(childMessage.agent, REWRITE_TO, "the rewritten role must be the one that resolved");
   });
 
@@ -244,7 +307,10 @@ describe("OpenCode host facts H3, H4, H6 and H7", () => {
     const terminal = terminalOf(reassigned, task);
     assert.ok(
       terminal,
-      `the bogus call never reached a terminal state: ${JSON.stringify(taskCallWindow(reassigned, task))}`,
+      absence(
+        runs.reassigned,
+        `the bogus call never reached a terminal state: ${JSON.stringify(taskCallWindow(reassigned, task))}`,
+      ),
     );
     assert.equal(
       terminal.hook,
@@ -257,7 +323,10 @@ describe("OpenCode host facts H3, H4, H6 and H7", () => {
     assert.match(
       terminal.error,
       /prevents you from using this specific tool call|unknown agent type/i,
-      `the bogus call failed for some reason other than its role: ${terminal.error}`,
+      // Inconclusive rather than a refutation: some other refusal reached the
+      // call first, so execute never saw the role and nothing was learned about
+      // whether a reassignment would have propagated.
+      `${INCONCLUSIVE} the bogus call failed for some reason other than its role: ${terminal.error}`,
     );
 
     assert.equal(
@@ -279,7 +348,10 @@ describe("OpenCode host facts H3, H4, H6 and H7", () => {
     // `sessionID` is the parent: the child is created later, and names this
     // same id as its own parent.
     const child = childOf(inPlace, task);
-    assert.ok(child, "no child session named the before-hook sessionID as its parent");
+    assert.ok(
+      child,
+      absence(runs.inPlace, "no child session named the before-hook sessionID as its parent"),
+    );
     assert.notEqual(child.sessionID, task.sessionID);
 
     // Asserting the child appears after this call's hook would restate itself,
@@ -311,7 +383,7 @@ describe("OpenCode host facts H3, H4, H6 and H7", () => {
     assert.equal(
       reads.length,
       1,
-      `expected exactly one read of ${MISSING_FILE}: ${JSON.stringify(thrown.filter((e) => e.tool === "read"))}`,
+      `${INCONCLUSIVE} expected exactly one read of ${MISSING_FILE}: ${JSON.stringify(thrown.filter((e) => e.tool === "read"))}`,
     );
     const [read] = reads;
 
@@ -321,26 +393,44 @@ describe("OpenCode host facts H3, H4, H6 and H7", () => {
     const failure = thrown.find(
       (entry) => entry.hook === "part" && entry.type === "tool.error" && entry.callID === read.callID,
     );
-    assert.ok(failure, `the read call never reached a terminal error state: ${JSON.stringify(thrown)}`);
-    assert.match(
-      failure.error,
-      /file not found/i,
-      `the read failed for some reason other than the missing file: ${failure.error}`,
+    assert.ok(
+      failure,
+      absence(runs.thrown, `the read call never reached a terminal error state: ${JSON.stringify(thrown)}`),
     );
-    // The two ways the host can refuse before execute, named so that either one
-    // silently replacing the execution error fails loudly here rather than
-    // passing as an untested H6.
+    // The three ways the host can refuse before execute, named so that any of
+    // them silently replacing the execution error fails loudly here rather than
+    // passing as an untested H6. The guard is unchanged and deliberately not
+    // relaxed; what #39 settled is what its firing *means*.
+    //
+    // A refusal is inconclusive, not a refutation, and for the same reason the
+    // other inconclusive shapes are: the host never called execute, so H6's
+    // claim about what happens when execute throws was not exercised in either
+    // direction. Blocking a release on it would report a host change the run
+    // has no evidence for; passing it would report a guarantee the run never
+    // checked. Repeat is the only honest verdict, and #39 found the cause of
+    // every observed instance outside the host entirely — an uncanonical
+    // fixture root made the host read an in-project path as `external_directory`
+    // (see the `realpathSync` note in fixture.mjs). If this fires again, suspect
+    // the fixture's path handling before the contract.
     assert.doesNotMatch(
       failure.error,
       /rejected permission|permission denied|resolves outside the working directory/i,
-      `the call was refused before execute, so H6 was never exercised: ${failure.error}`,
+      `${INCONCLUSIVE} the call was refused before execute, so H6 was never exercised: ${failure.error}`,
     );
     assert.deepEqual(
       thrown.filter(
         (entry) => entry.hook === "permission" && entry.type === "permission.asked" && entry.callID === read.callID,
       ),
       [],
-      "the host asked permission for this call before execute, so the failure may predate execute",
+      `${INCONCLUSIVE} the host asked permission for this call before execute, so the failure may predate execute`,
+    );
+    // Ordered after the refusal guards on purpose: a refusal also fails this
+    // one, and the classification a releaser acts on has to be the specific
+    // reason rather than the generic mismatch.
+    assert.match(
+      failure.error,
+      /file not found/i,
+      `the read failed for some reason other than the missing file: ${failure.error}`,
     );
 
     const afters = thrown.filter(
@@ -353,7 +443,7 @@ describe("OpenCode host facts H3, H4, H6 and H7", () => {
     const task = requireBogusTask(inPlace);
     assert.ok(
       inPlace.some((entry) => entry.hook === "tool.execute.after" && entry.callID === task.callID),
-      "a successful call must still produce an after-hook, or this test proves nothing",
+      absence(runs.inPlace, "a successful call must still produce an after-hook, or this test proves nothing"),
     );
   });
 
@@ -361,7 +451,11 @@ describe("OpenCode host facts H3, H4, H6 and H7", () => {
   // is visible *at hook time*.
   test("chat.message runs before the current message is persisted", () => {
     const messages = twoTurns.filter((entry) => entry.hook === "chat.message");
-    assert.equal(messages.length, 2, `expected one chat.message per turn: ${JSON.stringify(messages)}`);
+    assert.equal(
+      messages.length,
+      2,
+      absence(runs.twoTurns, `expected one chat.message per turn: ${JSON.stringify(messages)}`),
+    );
     for (const message of messages) {
       assert.equal(message.messagesError, undefined, "client.session.messages failed inside the hook");
       assert.equal(
@@ -377,10 +471,23 @@ describe("OpenCode host facts H3, H4, H6 and H7", () => {
   // earlier turns are already readable when the hook fires.
   test("prior turns are readable from client.session.messages inside the hook", () => {
     const [first, second] = twoTurns.filter((entry) => entry.hook === "chat.message");
+    // Guarded rather than destructured straight into the assertions: a turn that
+    // never reached its hook would otherwise fail as a TypeError, which carries
+    // no classification at all.
+    assert.ok(
+      first && second,
+      absence(runs.twoTurns, `both turns must reach chat.message: ${JSON.stringify(twoTurns)}`),
+    );
     assert.equal(first.sessionID, second.sessionID, "both turns must share one session");
     assert.equal(first.persistedCount, 0, "the first turn has no history to read");
     // The first turn's user message and its assistant reply.
-    assert.equal(second.persistedCount, 2, `unexpected history: ${JSON.stringify(second.persistedIDs)}`);
+    // The one place the generous H7 cap earns itself: a turn one killed before
+    // its assistant reply persisted lands here with a count of 1.
+    assert.equal(
+      second.persistedCount,
+      2,
+      absence(runs.twoTurns, `unexpected history: ${JSON.stringify(second.persistedIDs)}`),
+    );
     assert.ok(
       second.persistedIDs.includes(first.messageID),
       "the previous turn's message was not readable from the next turn's hook",
