@@ -465,6 +465,84 @@ class PolicyContractTests(unittest.TestCase):
         ):
             self.assertIn(phrase, outcome)
 
+    def test_verification_baseline_is_unreachable_from_writing_workers(self) -> None:
+        # Writing roles hold both bash and edit, so every path they can reach is
+        # a path they can overwrite. In a 2026-08-18 smoke test an executor
+        # copied the edited file over the temp baseline the orchestrator had
+        # staged for the verifier; it failed only because that path was not
+        # writable from that run's sandbox. This is pinned rather than merely
+        # documented because the failure it prevents is silent and points the
+        # reassuring way: baseline equal to current makes the diff empty, and an
+        # empty diff reads as a clean CONFIRMED on work nobody checked.
+        # Phrases are matched against whitespace-flattened text: these prompts
+        # are one paragraph per line today, and re-wrapping one must not fail a
+        # contract whose subject is the wording, not the line breaks.
+        def flat(path: str) -> str:
+            return " ".join(text(path).split())
+
+        policy = flat("templates/pilotfish/prompts/pilotfish.md")
+        outcome = flat("templates/pilotfish/prompts/verifier.md")
+        for phrase in (
+            "name for the verifier a pre-edit reference it can re-derive itself from an immutable source",
+            "a concrete commit SHA, or content you hold in this session and pass inline in the brief",
+            "Never a path on disk.",
+            "those are names a worker can move while the object a SHA names cannot change",
+            "Never ask a writing worker to create, refresh, or restore that reference",
+            "record it as an object before dispatching the writing worker so that a SHA exists",
+            "it is the only form of baseline the verifier can check for itself",
+            "`git stash create` writes one from the current working tree without changing a file",
+            "Reserve inline content for genuinely unversioned or untracked work",
+            "rests on your own discipline, which is why it is the fallback and never the default",
+            "an empty diff reads as a clean `CONFIRMED` on work nobody checked",
+        ):
+            self.assertIn(phrase, policy)
+        for phrase in (
+            "derive the pre-edit reference yourself from the immutable source the brief names",
+            "Do not accept a baseline file staged on disk",
+            "never one produced by the worker whose work you are checking",
+            "report that the comparison is unavailable and say why",
+            "read a reported diff the same way you read a reported test result",
+            "record in your verdict that the comparison rested on an unverifiable baseline",
+            "the fallback was used where the checkable path existed",
+            "`cat -A` errors on BSD `cat`",
+        ):
+            self.assertIn(phrase, outcome)
+        forbid_baseline = (
+            "Never create, copy, refresh, restore, or delete a snapshot, baseline, or reference copy of the "
+            "files you are changing"
+        )
+        forbid_unrun = "Report only verification you actually ran, with the real command and its real output."
+        for role in ("executor", "mech-executor", "security-executor"):
+            prompt = flat(f"templates/pilotfish/prompts/{role}.md")
+            self.assertIn(forbid_baseline, prompt)
+            self.assertIn(forbid_unrun, prompt)
+            self.assertIn("if you did not run something, say you did not run it.", prompt)
+            # A contract test cannot prove the absence of an instruction to
+            # stage a baseline -- any author can reword around a grep. What it
+            # can catch is the accident: the flow that actually occurred was a
+            # temp-file copy, so a temp path in a writing prompt is the likeliest
+            # way this returns. The prohibition itself is asserted against the
+            # whole file above, not per line, so hard-wrapping cannot trip it.
+            for token in ("$TMPDIR", "/tmp"):
+                self.assertNotIn(token, prompt, f"{role} names a temp staging path")
+        # Running the project's own tests is not what was removed; only
+        # self-verification against the verifier's reference was.
+        self.assertIn(
+            "Exercise the changed behavior with focused tests or a relevant runtime flow",
+            flat("templates/pilotfish/prompts/executor.md"),
+        )
+        self.assertIn(
+            "Verify the result with the focused tests or checks named in the specification",
+            flat("templates/pilotfish/prompts/mech-executor.md"),
+        )
+        self.assertIn(
+            "exercise both expected behavior and abuse cases",
+            flat("templates/pilotfish/prompts/security-executor.md"),
+        )
+        # The ad-hoc temp-file flow must not reappear anywhere in the prompts.
+        for role in AGENTS:
+            self.assertNotIn("pristine", text(f"templates/pilotfish/prompts/{role}.md"))
+
     def test_read_only_delegation_is_parallel_by_default(self) -> None:
         # Only 21.7% of read-only child sessions ever overlapped another, and
         # the serialization rule is about conflicting edits, which read-only

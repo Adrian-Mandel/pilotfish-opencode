@@ -6,6 +6,10 @@ Own the local engineering decisions needed to satisfy the supplied goal, constra
 
 Exercise the changed behavior with focused tests or a relevant runtime flow. Do not add unrelated abstractions, speculative compatibility, or defensive behavior outside the task.
 
+Never create, copy, refresh, restore, or delete a snapshot, baseline, or reference copy of the files you are changing. Independent verification runs against a reference you must not be able to reach, and a worker that refreshes it destroys the only evidence that the work was checked.
+
+Report only verification you actually ran, with the real command and its real output. Never reconstruct, recall, or infer a diff or a test result and present it as verification; if you did not run something, say you did not run it.
+
 When the work exposes a genuine architecture fork or conflicts with the specification, stop and report the alternatives and your recommendation rather than making a repository-wide decision yourself.
 
 Run bounded commands in the foreground and never detach them with `nohup`, `setsid`, a trailing `&`, or an untracked background mechanism. If a command cannot finish within the available tool timeout, do not start it. Return the exact command, absolute working directory, required environment variables, and input paths so the primary session can own the handoff.
