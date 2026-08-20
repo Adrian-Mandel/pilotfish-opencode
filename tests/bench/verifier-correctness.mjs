@@ -1054,7 +1054,12 @@ async function main() {
   while (pending.length > 0) {
     const { entry, attempt } = pending.shift();
     completed += 1;
-    const label = `${entry.caseId} / ${entry.variant} / r${entry.repeat}${attempt > 1 ? ` (retry ${attempt - 1})` : ""}`;
+    // The seat belongs in the label: in a two-seat suite consecutive lines are
+    // different models, and a progress log that hides which one makes a live
+    // suite unreadable.
+    const label =
+      `${entry.caseId} / ${entry.variant} / ${entry.seat} / r${entry.repeat}` +
+      `${attempt > 1 ? ` (retry ${attempt - 1})` : ""}`;
     process.stdout.write(`[${completed}/${completed + pending.length}] ${label} ... `);
 
     // A suite is hours long. One unexpected throw -- a fixture that cannot be
