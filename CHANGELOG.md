@@ -8,6 +8,7 @@ Tested with OpenCode `1.18.18`.
 
 ### Added
 
+- An install-time check that reports `subagent_depth`, the host default that holds the worker boundary. Host fact H14 means a `@token` resolving to an agent name makes OpenCode skip the Task permission check for that whole turn, and Task resolves mentions in its own `prompt` argument — so a primary writing `@executor` into a worker's prompt switches the bypass on inside that worker's session, where it skips the `task` deny meant to stop workers spawning workers. At the host default of `1` the depth check fails such a call first, because a worker session already has a parent. Pilotfish neither sets that key nor needs it raised, and the check writes nothing and blocks nothing; it exists so that a default this project depends on but does not own stops being invisible.
 - Canonical ChatGPT, AntiGravity, and OpenRouter profiles, with a dependency-free runtime profile router. Each profile is named for its primary model identifier — `openai/gpt-5.6-sol`, `openrouter/qwen3.6-27b`, and so on — so a name states which orchestrator it selects rather than a vendor family that ships many models. Provider slashes are flattened to `--` when a profile name becomes a hidden agent name, and two profiles that would flatten together are refused.
 - Session-pinned Task routing to hidden capability-preserving worker clones, plus focused executable router contracts.
 - A profile router contract fixing the router's guarantees, its OpenCode `1.18.18` couplings, its accepted risks, and its threat model.
