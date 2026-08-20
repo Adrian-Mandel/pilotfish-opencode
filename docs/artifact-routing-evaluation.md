@@ -24,6 +24,19 @@ These controlled runs establish artifact-reading capability, not end-to-end rout
 
 The external-path denial occurred on the ChatGPT child Task. The worker reports a denied path and does not request broader access; this evaluation does not imply URL or arbitrary external-path support. Generated frame sheets are images. **No native video claim:** the configured models do not report video input, and native video decoding or extraction is out of scope.
 
+## Decision, 2026-08-20
+
+The routing rule is kept as shipped. Four weeks after the controlled runs above, no field observations were recorded, so this decision rests on capability evidence alone rather than on demonstrated end-to-end routing success. Recording the decision here is what issue #9's completion criterion asks for, and leaving that issue open longer would not have produced the observations: none arrived in the interval it was open.
+
+What the evidence settles, and what it does not:
+
+- **Established.** The configured Explore seats read project-local contact sheets, multi-page PDFs, and large logs, and return exact frame, page, and line references with stated uncertainty. External paths stay denied. No native video claim.
+- **Not established.** Whether delegation is in practice reserved for context-heavy work, whether the primary avoids reloading the delegated artifact set, and whether routing adds delay to otherwise small reviews. Those were the point of the field check-ins and remain unmeasured.
+
+The regression triggers recorded in issue #9 stand as written. Any one of them observed in a real session is grounds to narrow or revert the rule; cite this section in a fresh issue, or reopen #9.
+
+One check-in criterion drifted while this sat. "Whether a new child session was used instead of resuming an old one" was written before `templates/pilotfish/prompts/pilotfish.md:35` began encouraging `task_id` resumption in general. The artifact-specific prohibition survives that change at `:36`, which still requires a new, not resumed, reconnaissance worker for this case. A future observation should therefore record the artifact case specifically rather than resumption generally.
+
 ## Future Check-Ins
 
 Append only sanitized observations: preset, artifact class and scale, routing appropriateness, reference quality, uncertainty handling, duplicate primary reads, access outcome, and workflow impact. Do not append transcripts, private paths, secrets, or runtime logs. This document does not require runtime telemetry or logging.
