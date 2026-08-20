@@ -160,6 +160,12 @@ function parseArgs(argv) {
     primary: null,
     replay: false,
     model: null,
+    // Splits one suite's queue across processes by seat. The seats stay part of
+    // the same design -- same seed, same cell keys, same brief per repeat -- but
+    // execute on separate endpoints at the same time. Only sound when the seats
+    // really are separate endpoints: two processes against one local GPU divide
+    // its throughput rather than adding to it.
+    onlySeat: null,
     briefsPath: BRIEFS_PATH,
     resume: null,
     timeoutMinutes: 20,
@@ -182,6 +188,7 @@ function parseArgs(argv) {
       case "--primary": options.primary = next(); break;
       case "--replay": options.replay = true; break;
       case "--model": options.model = next(); break;
+      case "--only-seat": options.onlySeat = next(); break;
       case "--briefs": options.briefsPath = next(); break;
       case "--resume": options.resume = next(); break;
       case "--timeout": options.timeoutMinutes = Number(next()); break;
@@ -584,11 +591,22 @@ function renderReport(record) {
     if (seats.length > 1) {
       lines.push("");
       lines.push(
-        `**One suite, ${seats.length} seats, one randomized queue.** Seats were interleaved through ` +
-          "the same shuffle as cases and variants, so they share a harness commit, a case set, a " +
-          "brief for every repeat index, and whatever happened to the machine while it ran. That is " +
-          "the controlled comparison a pair of separately-run suites cannot give.",
+        `**One suite, ${seats.length} seats, one randomized queue.** Seats share a harness commit, a ` +
+          "case set, a seed, and a brief for every repeat index. That is the controlled comparison a " +
+          "pair of separately-run suites cannot give.",
       );
+      if (record.mergedFrom) {
+        lines.push("");
+        lines.push(
+          `**Executed as ${record.mergedFrom.length} concurrent halves** (\`${record.mergedFrom.join("`, `")}\`) ` +
+            "split by seat, then merged. The design is unchanged — same seed, same queue, same cell " +
+            "keys — but the seats were *not* temporally interleaved for the whole suite: each ran its " +
+            "own cells on its own endpoint over the same wall-clock window. Sound only because the " +
+            "seats are genuinely separate endpoints, a LAN model server and a hosted subscription, so " +
+            "neither divides the other's throughput. Both still span the same window, so drift over " +
+            "time lands on both rather than on whichever ran second.",
+        );
+      }
     }
   }
   const rewrites = record.runs?.reduce((sum, run) => sum + (run.replayedBrief?.pathRewrites ?? 0), 0) ?? 0;
@@ -923,6 +941,52 @@ async function main() {
     return;
   }
 
+  // Rejoins the halves of a suite that was split across seats with
+  // --only-seat. The halves are one design -- one seed, one case set, one
+  // brief per repeat index -- executed on separate endpoints, so rejoining
+  // them is bookkeeping rather than pooling two suites.
+  //
+  // Cells are unioned by cell key, and a valid run always wins over an invalid
+  // one for the same cell. Both halves carry the shared prior runs, so without
+  // that the same measurement could be counted twice.
+  if (command === "merge") {
+    if (positional.length < 2) throw new Error("merge needs an --out path and two or more result files");
+    const [outPath, ...inputs] = positional;
+    const records = inputs.map((path) => JSON.parse(readFileSync(path, "utf8")));
+    const schemas = new Set(records.map((entry) => entry.schema));
+    if (schemas.size !== 1) throw new Error(`refusing to merge mixed schemas: ${[...schemas].join(", ")}`);
+    const seeds = new Set(records.map((entry) => entry.seed));
+    if (seeds.size !== 1) {
+      throw new Error(
+        `refusing to merge different seeds (${[...seeds].join(", ")}): a different seed is a ` +
+          "different run order and a different brief at each repeat index.",
+      );
+    }
+    const byCell = new Map();
+    for (const entry of records) {
+      for (const run of entry.runs ?? []) {
+        const key = cellKey(run);
+        const existing = byCell.get(key);
+        if (!existing || (!existing.valid && run.valid)) byCell.set(key, run);
+      }
+    }
+    const merged = {
+      ...records[0],
+      mergedFrom: inputs.map((path) => path.split("/").pop()),
+      mergedAt: new Date().toISOString(),
+      options: { ...records[0].options, onlySeat: null, out: outPath },
+      runs: [...byCell.values()],
+    };
+    merged.summary = summarize(merged.runs, cases, options.seats[0].key);
+    writeFileSync(outPath, `${JSON.stringify(merged, null, 2)}\n`);
+    process.stdout.write(
+      `merged ${records.map((entry, index) => `${inputs[index].split("/").pop()}=${entry.runs.length}`).join(" + ")} ` +
+        `-> ${merged.runs.length} distinct cells\n\n`,
+    );
+    process.stdout.write(`${renderReport(merged)}\n`);
+    return;
+  }
+
   if (command === "capture-briefs") {
     // Replay inputs come from runs that actually happened. Writing a brief by
     // hand would make the measurement a test of my prose rather than of the
@@ -988,11 +1052,18 @@ async function main() {
   const done = new Set(
     (prior?.runs ?? []).filter((run) => run.valid).map((run) => cellKey(run)),
   );
-  const queue = fullQueue.filter((entry) => !done.has(cellKey(entry)));
+  const queue = fullQueue
+    .filter((entry) => !done.has(cellKey(entry)))
+    .filter((entry) => !options.onlySeat || entry.seat === options.onlySeat);
   // Count against the queue, not against the prior file: a resumed run whose
   // cell is not in this queue is carried in the record but is not progress
   // toward it, and reporting it as such would overstate how much is done.
-  const alreadyDone = fullQueue.length - queue.length;
+  // Against the queue this process will actually run. With --only-seat the
+  // other seat's cells are not this process's work and must not be counted as
+  // its progress -- reporting them as done would say the suite was nearly
+  // finished when half of it had not started.
+  const mine = fullQueue.filter((entry) => !options.onlySeat || entry.seat === options.onlySeat);
+  const alreadyDone = mine.length - queue.length;
 
   mkdirSync(RESULTS_DIR, { recursive: true });
   const startedAt = new Date().toISOString();
