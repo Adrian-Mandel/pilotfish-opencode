@@ -17,10 +17,17 @@ import { describe, test } from "node:test";
 import { briefFor, loadCases, materializeCase } from "./lib/cases.mjs";
 import { loadProfiles, resolvePrimary } from "./lib/routing.mjs";
 import { classifyRunHealth, isStandingFailure } from "./lib/telemetry.mjs";
-import { BRIEFS_SCHEMA, briefFor as storeBriefFor, captureBriefs } from "./lib/briefs.mjs";
+import {
+  BRIEFS_SCHEMA,
+  briefFor as storeBriefFor,
+  captureBriefs,
+  normalizeFixturePaths,
+} from "./lib/briefs.mjs";
 import { assertResumable, cellKey } from "./verifier-correctness.mjs";
 import {
   OUTCOMES,
+  compareProportions,
+  fisherExact,
   mentionsDefect,
   parseVerdict,
   proportion,
@@ -339,14 +346,24 @@ describe("primary model resolution", () => {
 // runs already paid for -- and must not silently pool runs measuring different
 // things, which would be worse than losing them.
 describe("resuming a partial suite", () => {
-  const base = { replay: true, model: "openrouter/qwen/qwen3.6-27b", preset: "chatgpt",
+  const base = { replay: true, model: "openrouter/qwen/qwen3.6-27b",
+    models: ["openrouter/qwen/qwen3.6-27b"], preset: "chatgpt",
     primary: null, repeats: 20, variants: ["current", "pre-scope"], cases: null, classes: ["A", "B"] };
 
   test("a cell is identified by what it measures, not when it ran", () => {
-    assert.equal(cellKey({ caseId: "a", variant: "current", repeat: 3 }), "a::current::3");
-    assert.equal(
-      cellKey({ caseId: "a", variant: "current", repeat: 3, attempt: 2, startedAt: "later" }),
-      cellKey({ caseId: "a", variant: "current", repeat: 3 }),
+    const cell = { caseId: "a", variant: "current", seat: "qwen", repeat: 3 };
+    assert.equal(cellKey(cell), "a::current::qwen::3");
+    assert.equal(cellKey({ ...cell, attempt: 2, startedAt: "later" }), cellKey(cell));
+  });
+
+  // The seat is what a two-seat suite varies, so two runs that agree on case,
+  // variant and repeat but not on seat are two measurements. Collapsing them
+  // would let a resume skip half the queue as already done.
+  test("the same cell on two seats is two cells", () => {
+    const cell = { caseId: "a", variant: "current", repeat: 3 };
+    assert.notEqual(
+      cellKey({ ...cell, seat: "bambi/qwen3.8-27b-mtp-pure" }),
+      cellKey({ ...cell, seat: "openai/gpt-5.6-sol" }),
     );
   });
 
@@ -357,7 +374,10 @@ describe("resuming a partial suite", () => {
   // Each of these would produce a result file whose rows are not comparable.
   test("a changed model, variant set, or repeat count refuses to resume", () => {
     for (const [key, value] of [
-      ["model", "openrouter/deepseek/deepseek-v4-pro"],
+      ["models", ["openrouter/deepseek/deepseek-v4-pro"]],
+      // Adding a seat changes what the suite measures as surely as swapping
+      // one: the prior runs cover only part of the new queue.
+      ["models", ["openrouter/qwen/qwen3.6-27b", "openai/gpt-5.6-sol"]],
       ["repeats", 10],
       ["preset", "antigravity"],
       ["variants", ["current"]],
@@ -373,7 +393,7 @@ describe("resuming a partial suite", () => {
 
   test("switching between replay and in-situ refuses to resume", () => {
     assert.throws(
-      () => assertResumable({ options: { ...base } }, { ...base, replay: false, model: null }),
+      () => assertResumable({ options: { ...base } }, { ...base, replay: false, model: null, models: null }),
       /cannot resume/,
     );
   });
@@ -514,5 +534,97 @@ describe("the harness cannot reach the real installation", () => {
     );
     assert.ok(variants.includes("fixture.configDir"));
     assert.ok(!variants.includes(".config/opencode"));
+  });
+});
+
+// A brief that names a directory which no longer exists sends the verifier
+// looking for a repository that is not there. The strong seat reconciled it
+// every time; a weaker one could follow the dead path and return a verdict,
+// which scores as data rather than as an invalid run.
+describe("replayed fixture paths", () => {
+  const ROOT = "/private/var/folders/s8/xxxx/T/pilotfish-fixture-AAAAAA";
+  const CAPTURED = "/private/var/folders/s8/xxxx/T/pilotfish-fixture-m1mzl6";
+
+  test("the captured fixture path is repointed at this run's fixture", () => {
+    const result = normalizeFixturePaths(
+      `Verify the repository at ${CAPTURED}/project against its HEAD.`,
+      ROOT,
+    );
+    assert.equal(result.brief, `Verify the repository at ${ROOT}/project against its HEAD.`);
+    assert.equal(result.occurrences, 1);
+    assert.deepEqual(result.from, [CAPTURED]);
+  });
+
+  // Rewritten, not stripped: everything the primary wrote around the path has
+  // to survive, or the replayed brief is no longer the brief that was captured.
+  test("only the path changes", () => {
+    const before = `the repo is \`${CAPTURED}/project\`. Run \`git show HEAD\` there.`;
+    const after = normalizeFixturePaths(before, ROOT).brief;
+    assert.equal(after, `the repo is \`${ROOT}/project\`. Run \`git show HEAD\` there.`);
+    assert.equal(after.replace(ROOT, CAPTURED), before);
+  });
+
+  test("a brief that names no fixture is returned untouched and counted as such", () => {
+    const brief = "Verify this bounded claim about `headLines` in `src/log.mjs`.";
+    const result = normalizeFixturePaths(brief, ROOT);
+    assert.equal(result.brief, brief);
+    assert.equal(result.occurrences, 0);
+  });
+
+  test("a brief already naming this fixture is not counted as a rewrite", () => {
+    const result = normalizeFixturePaths(`repo at ${ROOT}/project`, ROOT);
+    assert.equal(result.occurrences, 0);
+  });
+
+  // The regression this exists for: every stored brief must replay clean.
+  test("no stored brief still names a foreign fixture after normalization", () => {
+    const store = JSON.parse(
+      readFileSync(new URL("./briefs.json", import.meta.url), "utf8"),
+    );
+    for (const [caseId, entries] of Object.entries(store.cases)) {
+      for (const [index, entry] of entries.entries()) {
+        const { brief } = normalizeFixturePaths(entry.brief, ROOT);
+        const stray = brief.match(/pilotfish-fixture-[A-Za-z0-9]{6,}/g) ?? [];
+        for (const match of stray) {
+          assert.ok(
+            ROOT.endsWith(match),
+            `${caseId} #${index} still names a foreign fixture: ${match}`,
+          );
+        }
+      }
+    }
+  });
+});
+
+// The seat comparison rests on this, and 0 of 60 against 11 of 51 is a table
+// no normal approximation grades correctly.
+describe("comparing two seats", () => {
+  test("a clear separation is significant and a null one is not", () => {
+    // 0/60 vs 11/51 -- the uncontrolled result this suite was built to re-test.
+    assert.ok(fisherExact(0, 60, 11, 40) < 0.001);
+    // Identical rates cannot be distinguished at any n.
+    assert.equal(fisherExact(5, 55, 5, 55).toFixed(2), "1.00");
+  });
+
+  // Textbook values, so the implementation is checked against something other
+  // than its own output.
+  test("known tables grade to their published p-values", () => {
+    // Fisher's own tea-tasting table.
+    assert.equal(fisherExact(3, 1, 1, 3).toFixed(4), "0.4857");
+    // Cross-checked against an exact rational computation, not against this
+    // implementation's own output.
+    assert.equal(fisherExact(1, 9, 11, 3).toFixed(5), "0.00276");
+  });
+
+  test("a seat difference is reported with the counts that produced it", () => {
+    const comparison = compareProportions(proportion(0, 60), proportion(11, 51));
+    assert.equal(comparison.left.successes, 0);
+    assert.equal(comparison.right.total, 51);
+    assert.ok(comparison.difference < 0);
+    assert.ok(comparison.p < 0.001);
+  });
+
+  test("an empty cell yields no comparison rather than a spurious one", () => {
+    assert.equal(compareProportions(proportion(0, 0), proportion(11, 51)), null);
   });
 });

@@ -31,12 +31,19 @@ import {
   briefFor as briefFromStore,
   captureBriefs,
   loadBriefs,
+  normalizeFixturePaths,
   writeBriefs,
 } from "./lib/briefs.mjs";
 import { resolvePrimary } from "./lib/routing.mjs";
 import { DEFAULT_VARIANTS, VARIANTS, applyVariant, resolveVariant } from "./lib/variants.mjs";
 import { classifyRunHealth, isStandingFailure, readRunTelemetry } from "./lib/telemetry.mjs";
-import { OUTCOMES, scoreVerdict, summarizeCell, verdictSource } from "./lib/scoring.mjs";
+import {
+  OUTCOMES,
+  compareProportions,
+  scoreVerdict,
+  summarizeCell,
+  verdictSource,
+} from "./lib/scoring.mjs";
 
 const BENCH_DIR = fileURLToPath(new URL("./", import.meta.url));
 const REPO_ROOT = fileURLToPath(new URL("../../", import.meta.url));
@@ -84,11 +91,33 @@ const ESTIMATES = {
   // verifier session. Subscription-billed, so no per-run dollar figure. Roughly
   // four times a qwen replay run and roughly an eighth of an in-situ gpt-5.6
   // run, which is the saving replay exists for.
-  "replay:openai/gpt-5.6-sol": {
+  "replay:openai/gpt-5.6-sol@high": {
     source: "five measured runs (2026-08-15, classes B, replay on gpt-5.6-sol/high)",
     minutesPerRun: 1.25,
     minutesPerRunRange: [1, 3],
     measuredOn: "replay / openai/gpt-5.6-sol@high",
+  },
+  // 60 valid runs, the completed class-B/current suite: mean 2.9 min, median
+  // 2.4, p10-p90 1.4-4.9, one 17.4 min outlier. Local seat, so `cost` is zero
+  // by construction and the time is the whole price. The mean sits well above
+  // the median because the tail is long, and the range below is the p10-p90
+  // rather than the extremes -- a suite estimate built on a 17-minute outlier
+  // would be wrong about every run but one.
+  "replay:bambi/qwen3.8-27b-mtp-pure": {
+    source: "60 measured runs (2026-08-19, class B, replay on bambi/qwen3.8-27b-mtp-pure)",
+    minutesPerRun: 2.9,
+    minutesPerRunRange: [1.4, 5],
+    measuredOn: "replay / bambi/qwen3.8-27b-mtp-pure",
+  },
+  // 88 valid runs from the class-B replay suite: mean 0.67 min, median 0.61,
+  // p10-p90 0.47-0.94. Distinct from the `@high` entry above, which is five
+  // runs on the high-effort variant and about twice as slow -- effort tier
+  // changes the figure enough that they cannot share one estimate.
+  "replay:openai/gpt-5.6-sol": {
+    source: "88 measured runs (2026-08-17, class B, replay on gpt-5.6-sol)",
+    minutesPerRun: 0.7,
+    minutesPerRunRange: [0.5, 1.3],
+    measuredOn: "replay / openai/gpt-5.6-sol",
   },
   "replay:openrouter/qwen/qwen3.6-27b": {
     source: "one measured run (2026-08-15, class B, replay on qwen3.6-27b); the range around it is an assumption",
@@ -99,12 +128,26 @@ const ESTIMATES = {
   },
 };
 
-function estimateFor(options) {
+function estimateForSeat(options, seat) {
   const key = options.replay
-    ? `replay:${options.replayModel.model}`
+    ? `replay:${seat.model}`
     : (options.resolvedPrimary?.profile ?? (options.preset === "chatgpt" ? "openai/gpt-5.6-sol" : null));
   const measured = key ? ESTIMATES[key] : null;
   return { ...(measured ?? ESTIMATE_FALLBACK), measured: !!measured };
+}
+
+// With more than one seat in a suite the estimate is a sum, not an average:
+// each seat runs the same number of cells at its own pace, and quoting the mean
+// would understate a suite whose seats are 10x apart in speed -- which is
+// exactly the pairing a local-vs-frontier comparison creates.
+function estimateFor(options) {
+  const seats = options.seats ?? [{ key: "in-situ", model: null }];
+  const perSeat = seats.map((seat) => ({ seat, estimate: estimateForSeat(options, seat) }));
+  return {
+    perSeat,
+    measured: perSeat.every((entry) => entry.estimate.measured),
+    minutesPerRun: perSeat.reduce((sum, entry) => sum + entry.estimate.minutesPerRun, 0) / seats.length,
+  };
 }
 
 function parseArgs(argv) {
@@ -169,10 +212,30 @@ function parseArgs(argv) {
     if (options.primary) {
       throw new Error("--replay and --primary are exclusive: replay runs no primary at all");
     }
-    options.replayModel = parsePrimary(options.model);
+    // A comma-separated list makes the seat a suite axis rather than a suite
+    // identity. The first two seat results in this issue were compared across
+    // two suites run two days apart at different harness commits, and the
+    // caveat that comparison needed -- "a clean seat comparison needs one
+    // suite, one commit, both seats, order randomized" -- is only satisfiable
+    // if one queue can hold both. Seats interleave through the same shuffle as
+    // cases and variants, so a local server warming up or a subscription
+    // throttling late lands on both seats alike instead of on whichever ran
+    // second.
+    options.models = options.model.split(",").map((name) => name.trim()).filter(Boolean);
+    if (options.models.length === 0) throw new Error("--model needs at least one model");
+    const duplicate = options.models.find((name, i) => options.models.indexOf(name) !== i);
+    if (duplicate) throw new Error(`--model lists ${duplicate} twice; seats must be distinct`);
+    options.seats = options.models.map((name) => ({ key: name, ...parsePrimary(name) }));
+    // Retained so single-seat reports and estimates read exactly as before.
+    options.replayModel = options.seats[0];
     options.replayBriefs = loadBriefs(options.briefsPath);
   } else if (options.model) {
     throw new Error("--model applies to --replay only; use --primary to pick an in-situ profile");
+  } else {
+    // In situ the seat is whatever the profile binds, and it is the same for
+    // every run in the suite -- one seat, named so the axis exists uniformly.
+    options.models = null;
+    options.seats = [{ key: options.resolvedPrimary?.verifier?.model ?? "in-situ", model: null }];
   }
   return { command: positional[0] ?? "plan", positional: positional.slice(1), options };
 }
@@ -201,15 +264,17 @@ function shuffled(items, seed) {
   return copy;
 }
 
-// A cell is identified by what it measures, not by when it ran.
+// A cell is identified by what it measures, not by when it ran. The seat is
+// part of what a cell measures -- the same case, variant and repeat on two
+// models are two measurements, not one -- so it belongs in the key.
 export function cellKey(entry) {
-  return `${entry.caseId}::${entry.variant}::${entry.repeat}`;
+  return `${entry.caseId}::${entry.variant}::${entry.seat ?? "in-situ"}::${entry.repeat}`;
 }
 
 // Resume must not silently pool runs that measure different things. Anything
 // that changes what a run *is* has to match; anything that only changes how
 // many are left does not.
-const RESUME_INVARIANTS = ["replay", "model", "preset", "primary", "repeats"];
+const RESUME_INVARIANTS = ["replay", "models", "preset", "primary", "repeats"];
 
 export function assertResumable(prior, options) {
   const before = prior.options ?? {};
@@ -232,12 +297,14 @@ export function assertResumable(prior, options) {
   }
 }
 
-function buildQueue(cases, variants, repeats, seed) {
+function buildQueue(cases, variants, seats, repeats, seed) {
   const queue = [];
   for (const item of cases) {
     for (const variant of variants) {
-      for (let repeat = 0; repeat < repeats; repeat += 1) {
-        queue.push({ caseId: item.id, variant, repeat });
+      for (const seat of seats) {
+        for (let repeat = 0; repeat < repeats; repeat += 1) {
+          queue.push({ caseId: item.id, variant, seat: seat.key, repeat });
+        }
       }
     }
   }
@@ -273,20 +340,29 @@ async function executeRun(entry, caseDef, resolvedVariant, options, attempt) {
   const replay = options.replayBriefs
     ? briefFromStore(options.replayBriefs, caseDef.id, entry.repeat)
     : null;
+  // The seat comes off the queue entry, not off the options: in a two-seat
+  // suite consecutive runs bind different models, and reading the model from
+  // the suite would silently run the whole queue on the first one.
+  const seat = options.seats.find((candidate) => candidate.key === entry.seat) ?? options.seats[0];
   const fixture = createFixture({
     preset: options.preset,
     primary: replay ? null : options.resolvedPrimary,
     // Replay runs the verifier alone against a recorded brief: one session
     // instead of an orchestration, which is the whole cost saving.
     soloAgent: replay ? "verifier" : null,
-    soloModel: replay ? options.replayModel : null,
+    soloModel: replay ? seat : null,
     auth: true,
     inheritGlobal: true,
   });
   try {
     const digests = applyVariant(fixture, resolvedVariant);
     const { head } = materializeCase(caseDef, fixture.project);
-    const brief = replay ? replay.brief : briefFor(caseDef);
+    // A captured brief may name the fixture directory of the run that produced
+    // it, which no longer exists. Point it at this run's fixture instead, and
+    // record that it was done -- see normalizeFixturePaths for why rewritten
+    // rather than stripped.
+    const normalized = replay ? normalizeFixturePaths(replay.brief, fixture.root) : null;
+    const brief = replay ? normalized.brief : briefFor(caseDef);
 
     const started = Date.now();
     const result = await runOpencode(
@@ -329,8 +405,16 @@ async function executeRun(entry, caseDef, resolvedVariant, options, attempt) {
       timedOut: result.timedOut,
       commit: head,
       promptDigests: digests,
+      seat: seat.key,
       mode: replay ? "replay" : "in-situ",
-      replayedBrief: replay ? { source: replay.source, variant: replay.variant } : null,
+      replayedBrief: replay
+        ? {
+            source: replay.source,
+            variant: replay.variant,
+            pathRewrites: normalized.occurrences,
+            rewrittenFrom: normalized.from,
+          }
+        : null,
       ...scored,
       verdictSource: verdictSource(first?.verdictText ?? ""),
       verifierChainDepth: telemetry.verifierRuns.length,
@@ -356,12 +440,17 @@ async function executeRun(entry, caseDef, resolvedVariant, options, attempt) {
   }
 }
 
-function summarize(runs, cases) {
+function summarize(runs, cases, fallbackSeat = "in-situ") {
   const valid = runs.filter((run) => run.valid);
   const byCase = new Map(cases.map((item) => [item.id, item]));
+  // Result files written before the seat axis existed have no per-run seat.
+  // They were single-seat suites by construction, so naming that seat here
+  // keeps `rescore` working on them instead of grading them into a cell called
+  // "undefined".
+  const seatOf = (run) => run.seat ?? fallbackSeat;
   const cells = {};
   for (const run of valid) {
-    const key = `${run.caseId}::${run.variant}`;
+    const key = `${run.caseId}::${run.variant}::${seatOf(run)}`;
     (cells[key] ??= []).push(run);
   }
 
@@ -374,11 +463,46 @@ function summarize(runs, cases) {
   // class is the point -- a single fixture measures a fixture.
   const perClass = {};
   for (const run of valid) {
-    const key = `${run.defectClass}::${run.variant}`;
+    const key = `${run.defectClass}::${run.variant}::${seatOf(run)}`;
     (perClass[key] ??= []).push(run);
   }
 
+  // The seat comparison the suite exists to make, pooled per (class, variant)
+  // so it rests on every case rather than on whichever one ran cleanest. Only
+  // computed when a suite actually held more than one seat -- a single-seat
+  // suite has nothing to compare against and should not imply that it does.
+  const seats = [...new Set(valid.map(seatOf))].sort();
+  const seatComparison = {};
+  if (seats.length > 1) {
+    const groups = {};
+    for (const run of valid) {
+      (groups[`${run.defectClass}::${run.variant}::${seatOf(run)}`] ??= []).push(run);
+    }
+    for (const defectClass of [...new Set(valid.map((run) => run.defectClass))].sort()) {
+      for (const variant of [...new Set(valid.map((run) => run.variant))].sort()) {
+        for (let i = 0; i < seats.length; i += 1) {
+          for (let j = i + 1; j < seats.length; j += 1) {
+            const left = groups[`${defectClass}::${variant}::${seats[i]}`];
+            const right = groups[`${defectClass}::${variant}::${seats[j]}`];
+            if (!left?.length || !right?.length) continue;
+            const leftCell = summarizeCell(left);
+            const rightCell = summarizeCell(right);
+            const metric = defectClass === "D" ? "falseRefuted" : "falseConfirmed";
+            seatComparison[`${defectClass}::${variant}::${seats[i]} vs ${seats[j]}`] = {
+              metric,
+              primary: compareProportions(leftCell[metric], rightCell[metric]),
+              detected: compareProportions(leftCell.detected, rightCell.detected),
+              refutedOnDefect: compareProportions(leftCell.refutedOnDefect, rightCell.refutedOnDefect),
+            };
+          }
+        }
+      }
+    }
+  }
+
   return {
+    seats,
+    seatComparison,
     totalRuns: runs.length,
     validRuns: valid.length,
     invalidRuns: runs.length - valid.length,
@@ -405,6 +529,26 @@ function summarize(runs, cases) {
     perClass: Object.fromEntries(
       Object.entries(perClass).map(([key, classRuns]) => [key, summarizeCell(classRuns)]),
     ),
+    // Wall clock per seat, which is the cost axis for a local-worker profile:
+    // #15's metric note puts local worker tokens in a latency metric, not a
+    // money one, so a seat comparison that omits time omits half the tradeoff.
+    perSeatDuration: Object.fromEntries(
+      seats.map((seat) => {
+        const seatRuns = valid.filter((run) => seatOf(run) === seat && run.durationMs != null);
+        const minutes = seatRuns.map((run) => run.durationMs / 60000).sort((a, b) => a - b);
+        return [
+          seat,
+          minutes.length
+            ? {
+                runs: minutes.length,
+                meanMinutes: minutes.reduce((sum, value) => sum + value, 0) / minutes.length,
+                medianMinutes: minutes[Math.floor(minutes.length / 2)],
+                maxMinutes: minutes[minutes.length - 1],
+              }
+            : null,
+        ];
+      }),
+    ),
     cases: Object.fromEntries(
       [...byCase.values()].map((item) => [item.id, { class: item.defectClass, title: item.title }]),
     ),
@@ -428,13 +572,32 @@ function renderReport(record) {
       `; seed ${record.seed}; preset ${options.preset}.`,
   );
   if (options.replay) {
+    const seats = options.seats ?? [options.replayModel];
     lines.push("");
     lines.push(
-      `**Replay mode**, verifier \`${options.replayModel.model}\`` +
-        `${options.replayModel.variant ? ` (${options.replayModel.variant})` : ""}. Each run is that ` +
+      `**Replay mode**, verifier seat${seats.length > 1 ? "s" : ""} ` +
+        `${seats.map((seat) => `\`${seat.key ?? seat.model}\``).join(" and ")}. Each run is that ` +
         "model answering a brief a real primary wrote, with no primary in the loop. It measures the " +
         "prompt and the model in the verifier seat; it does not measure dispatch, and a difference " +
         "here is not automatically a difference in situ.",
+    );
+    if (seats.length > 1) {
+      lines.push("");
+      lines.push(
+        `**One suite, ${seats.length} seats, one randomized queue.** Seats were interleaved through ` +
+          "the same shuffle as cases and variants, so they share a harness commit, a case set, a " +
+          "brief for every repeat index, and whatever happened to the machine while it ran. That is " +
+          "the controlled comparison a pair of separately-run suites cannot give.",
+      );
+    }
+  }
+  const rewrites = record.runs?.reduce((sum, run) => sum + (run.replayedBrief?.pathRewrites ?? 0), 0) ?? 0;
+  if (rewrites > 0) {
+    lines.push("");
+    lines.push(
+      `${rewrites} replayed brief(s) named the fixture directory of the run that captured them; the ` +
+        "path was rewritten to point at each run's own fixture. Before this, those runs opened by " +
+        "reconciling a repository that did not exist.",
     );
   }
   if (options.resolvedPrimary) {
@@ -467,34 +630,83 @@ function renderReport(record) {
   lines.push("");
   lines.push("## By defect class (the prediction under test)");
   lines.push("");
-  lines.push("| class | variant | n | false CONFIRMED | detected at all | refuted on the defect |");
-  lines.push("|---|---|---|---|---|---|");
+  lines.push("| class | variant | seat | n | false CONFIRMED | detected at all | refuted on the defect |");
+  lines.push("|---|---|---|---|---|---|---|");
   for (const key of Object.keys(summary.perClass).sort()) {
-    const [defectClass, variant] = key.split("::");
+    const [defectClass, variant, storedSeat] = key.split("::");
+    const seat = storedSeat ?? options.model ?? "in-situ";
     const cell = summary.perClass[key];
     if (defectClass === "D") {
       lines.push(
-        `| D | ${variant} | ${cell.scored} | — | — | false REFUTED: ${percent(cell.falseRefuted)} |`,
+        `| D | ${variant} | ${seat} | ${cell.scored} | — | — | false REFUTED: ${percent(cell.falseRefuted)} |`,
       );
       continue;
     }
     lines.push(
-      `| ${defectClass} | ${variant} | ${cell.scored} | ${percent(cell.falseConfirmed)} | ${percent(cell.detected)} | ${percent(cell.refutedOnDefect)} |`,
+      `| ${defectClass} | ${variant} | ${seat} | ${cell.scored} | ${percent(cell.falseConfirmed)} | ${percent(cell.detected)} | ${percent(cell.refutedOnDefect)} |`,
     );
+  }
+
+  if (Object.keys(summary.seatComparison ?? {}).length > 0) {
+    lines.push("");
+    lines.push("## Seat comparison");
+    lines.push("");
+    lines.push(
+      "Fisher's exact test, two-tailed, on runs from the same queue. The primary metric is false " +
+        "CONFIRMED for seeded-defect classes and false REFUTED for class D. A p-value here is about " +
+        "these cases on this prompt; it is not a general claim about either model.",
+    );
+    lines.push("");
+    lines.push("| class | variant | comparison | primary metric | detected | refuted on defect |");
+    lines.push("|---|---|---|---|---|---|");
+    const cell = (comparison) => {
+      if (!comparison) return "n/a";
+      const { left, right, p } = comparison;
+      return (
+        `${left.successes}/${left.total} vs ${right.successes}/${right.total} ` +
+        `(${(left.rate * 100).toFixed(0)}% vs ${(right.rate * 100).toFixed(0)}%), p = ${p.toFixed(4)}`
+      );
+    };
+    for (const key of Object.keys(summary.seatComparison).sort()) {
+      const [defectClass, variant, pair] = key.split("::");
+      const entry = summary.seatComparison[key];
+      lines.push(
+        `| ${defectClass} | ${variant} | ${pair} | ${cell(entry.primary)} | ${cell(entry.detected)} | ${cell(entry.refutedOnDefect)} |`,
+      );
+    }
+    if (summary.perSeatDuration) {
+      lines.push("");
+      lines.push("| seat | runs | mean | median | max |");
+      lines.push("|---|---|---|---|---|");
+      for (const [seat, timing] of Object.entries(summary.perSeatDuration)) {
+        if (!timing) continue;
+        lines.push(
+          `| ${seat} | ${timing.runs} | ${timing.meanMinutes.toFixed(1)}m | ` +
+            `${timing.medianMinutes.toFixed(1)}m | ${timing.maxMinutes.toFixed(1)}m |`,
+        );
+      }
+      lines.push("");
+      lines.push(
+        "Wall clock, not money. For a local seat the tokens are free and the time is the cost, so " +
+          "the two seats are not comparable on a single number and this table is reported beside " +
+          "the correctness one rather than folded into it.",
+      );
+    }
   }
   lines.push("");
   lines.push("## By case");
   lines.push("");
   lines.push(
-    "| case | class | variant | n | caught | observed | missed | refuted-other | clean ✓ | false REFUTED | no verdict |",
+    "| case | class | variant | seat | n | caught | observed | missed | refuted-other | clean ✓ | false REFUTED | no verdict |",
   );
-  lines.push("|---|---|---|---|---|---|---|---|---|---|---|");
+  lines.push("|---|---|---|---|---|---|---|---|---|---|---|---|");
   for (const key of Object.keys(summary.perCell).sort()) {
-    const [caseId, variant] = key.split("::");
+    const [caseId, variant, storedSeat] = key.split("::");
+    const seat = storedSeat ?? options.model ?? "in-situ";
     const cell = summary.perCell[key];
     const c = cell.counts;
     lines.push(
-      `| ${caseId} | ${summary.cases[caseId].class} | ${variant} | ${cell.scored} | ${c.caught} | ${c.observed} | ${c.missed} | ${c["refuted-other"]} | ${c["clean-confirmed"]} | ${c["false-refuted"]} | ${c["no-verdict"]} |`,
+      `| ${caseId} | ${summary.cases[caseId].class} | ${variant} | ${seat} | ${cell.scored} | ${c.caught} | ${c.observed} | ${c.missed} | ${c["refuted-other"]} | ${c["clean-confirmed"]} | ${c["false-refuted"]} | ${c["no-verdict"]} |`,
     );
   }
   lines.push("");
@@ -524,16 +736,29 @@ function renderReport(record) {
 function routingText(options) {
   const primary = options.resolvedPrimary;
   if (options.replay) {
-    const model = options.replayModel;
+    const seats = options.seats;
     return [
       "  mode      replay (no primary; one verifier session per run)",
-      `  verifier  ${model.model}${model.variant ? ` (${model.variant})` : ""}   <- the seat under test`,
+      ...seats.map(
+        (seat, index) =>
+          `  ${index === 0 ? "verifier" : "        "}  ${seat.model}${seat.variant ? ` (${seat.variant})` : ""}` +
+          `${index === 0 ? "   <- the seat(s) under test" : ""}`,
+      ),
       `  briefs    ${JSON.stringify(briefCounts(options.replayBriefs))}`,
       "",
       "  Each run replays a brief a real primary wrote, so this measures the",
       "  verifier's response to a fixed instruction -- not the primary's choice of",
       "  brief, and not the dispatch. Two variants at the same repeat index get the",
       "  identical brief, which is what makes the comparison paired.",
+      ...(seats.length > 1
+        ? [
+            "",
+            "  Both seats are in one randomized queue, so they share the harness commit,",
+            "  the case set, the brief at each repeat index, and the machine's state over",
+            "  the run. Seats compared across separately-run suites confound the model",
+            "  with everything that changed between them.",
+          ]
+        : []),
     ];
   }
   if (!primary) {
@@ -557,15 +782,30 @@ function routingText(options) {
 }
 
 function planText(cases, variants, options) {
-  const cells = cases.length * variants.length;
+  const seats = options.seats ?? [{ key: "in-situ" }];
+  const cells = cases.length * variants.length * seats.length;
   const runs = cells * options.repeats;
   const estimate = estimateFor(options);
-  const [low, high] = estimate.minutesPerRunRange;
+  const perSeatRuns = cases.length * variants.length * options.repeats;
+  const totalHours = estimate.perSeat.reduce(
+    (sum, entry) => sum + (perSeatRuns * entry.estimate.minutesPerRun) / 60,
+    0,
+  );
+  const lowHours = estimate.perSeat.reduce(
+    (sum, entry) => sum + (perSeatRuns * entry.estimate.minutesPerRunRange[0]) / 60,
+    0,
+  );
+  const highHours = estimate.perSeat.reduce(
+    (sum, entry) => sum + (perSeatRuns * entry.estimate.minutesPerRunRange[1]) / 60,
+    0,
+  );
+  const metered = estimate.perSeat.filter((entry) => entry.estimate.usdPerRun);
   const lines = [
     "Suite plan",
     "",
     `  cases     ${cases.length}  (${cases.map((c) => `${c.id} [${c.defectClass}]`).join(", ")})`,
     `  variants  ${variants.length}  (${variants.join(", ")})`,
+    `  seats     ${seats.length}  (${seats.map((seat) => seat.key).join(", ")})`,
     `  repeats   ${options.repeats} per cell`,
     `  cells     ${cells}`,
     `  runs      ${runs}  ${options.replay ? "single verifier sessions" : "full orchestrated pilotfish runs"}`,
@@ -588,18 +828,27 @@ function planText(cases, variants, options) {
           `  ${options.preset} subscription. It consumes the same quota it is measuring.`,
         ]),
     "",
-    `  Estimate: ~${estimate.minutesPerRun} min/run, so ~${((runs * estimate.minutesPerRun) / 60).toFixed(1)}h`,
-    `  (range ${((runs * low) / 60).toFixed(1)}–${((runs * high) / 60).toFixed(1)}h at ${low}–${high} min/run).`,
-    ...(estimate.usdPerRun
-      ? [`  Metered API cost: ~$${(runs * estimate.usdPerRun).toFixed(2)} for the suite, at $${estimate.usdPerRun}/run.`]
+    ...estimate.perSeat.map(
+      (entry) =>
+        `  ${entry.seat.key}: ${perSeatRuns} runs at ~${entry.estimate.minutesPerRun} min ` +
+        `= ~${((perSeatRuns * entry.estimate.minutesPerRun) / 60).toFixed(1)}h` +
+        `${entry.estimate.measured ? "" : "  (UNMEASURED routing -- see below)"}`,
+    ),
+    `  Estimate: ~${totalHours.toFixed(1)}h total (range ${lowHours.toFixed(1)}–${highHours.toFixed(1)}h).`,
+    ...(metered.length
+      ? metered.map(
+          (entry) =>
+            `  Metered API cost: ~$${(perSeatRuns * entry.estimate.usdPerRun).toFixed(2)} on ` +
+            `${entry.seat.key}, at $${entry.estimate.usdPerRun}/run.`,
+        )
       : []),
-    `  Source: ${estimate.source}. Replace these figures from a completed suite.`,
+    ...estimate.perSeat.map((entry) => `  Source (${entry.seat.key}): ${entry.estimate.source}.`),
     ...(estimate.measured
       ? []
       : [
-          `  No run has been measured on this routing; the figure above is a`,
-          `  ${estimate.measuredOn} measurement and is not evidence about it. Runtime`,
-          "  varies about 19x across the profiles measured so far.",
+          `  At least one seat above has never been measured on this routing; its figure`,
+          `  is borrowed from another and is not evidence about it. Runtime varies about`,
+          "  19x across the profiles measured so far.",
         ]),
     "",
     `  Runs are sequential. Per-run timeout is ${options.timeoutMinutes} min; up to`,
@@ -607,7 +856,15 @@ function planText(cases, variants, options) {
     "",
     "Statistical power",
     "",
-    `  Class B pools ${cases.filter((c) => c.defectClass === "B").length * options.repeats} runs per variant here (${cases.filter((c) => c.defectClass === "B").length} case(s) × ${options.repeats} repeats).`,
+    `  Class B pools ${cases.filter((c) => c.defectClass === "B").length * options.repeats} runs per variant per seat here (${cases.filter((c) => c.defectClass === "B").length} case(s) × ${options.repeats} repeats).`,
+    ...(seats.length > 1
+      ? [
+          `  The seat comparison is Fisher's exact on ${cases.filter((c) => c.defectClass === "B").length * options.repeats} vs ${cases.filter((c) => c.defectClass === "B").length * options.repeats}. At that n a true`,
+          "  0% against a true 20% is detected comfortably; a true 0% against a true 5%",
+          "  is not, so read a null seat difference as 'no large difference', never as",
+          "  'the same'.",
+        ]
+      : []),
     "  Five repeats is the floor this issue sets, not a comfortable sample: at n=5 a",
     "  0/5 result has a 95% upper bound near 45%, so 'B held' is not concludable from",
     "  one cell. Use --repeats 10 or more before acting on a null result. A large",
@@ -654,7 +911,7 @@ async function main() {
       Object.assign(run, scored);
     }
     record.rescoredAt = new Date().toISOString();
-    record.summary = summarize(record.runs, [...byId.values()]);
+    record.summary = summarize(record.runs, [...byId.values()], record.options?.model ?? "in-situ");
     writeFileSync(path, `${JSON.stringify(record, null, 2)}\n`);
     process.stdout.write(`${changes.length} outcome(s) changed\n`);
     for (const change of changes) {
@@ -724,7 +981,7 @@ async function main() {
     options.variants.map((name) => [name, resolveVariant(name)]),
   );
   const byId = new Map(cases.map((item) => [item.id, item]));
-  const fullQueue = buildQueue(cases, options.variants, options.repeats, seed);
+  const fullQueue = buildQueue(cases, options.variants, options.seats, options.repeats, seed);
 
   // Only successful runs are treated as done. An invalid one is re-queued the
   // same way a fresh suite would re-queue it -- it produced no measurement.
@@ -771,7 +1028,7 @@ async function main() {
     };
   }
   const flush = () => {
-    record.summary = summarize(record.runs, cases);
+    record.summary = summarize(record.runs, cases, options.seats[0].key);
     writeFileSync(outPath, `${JSON.stringify(record, null, 2)}\n`);
   };
   flush();

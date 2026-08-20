@@ -68,6 +68,60 @@ subscription quota for the in-situ equivalent on `gpt-5.6`. That is what makes
 n=20 per cell unremarkable, and n is the whole problem — at the n=5 the default
 suite buys, a null result on class B is not concludable.
 
+### Comparing two seats
+
+`--model` takes a comma-separated list, and each seat becomes an axis of the
+same queue alongside cases and variants:
+
+```bash
+node tests/bench/verifier-correctness.mjs run --confirm --replay \
+  --model bambi/qwen3.8-27b-mtp-pure,openai/gpt-5.6-sol \
+  --classes B --variants current --repeats 10
+```
+
+This exists because the first cross-seat comparison could not be defended. A
+local seat scored 0/60 false `CONFIRMED` on the six class B cases and the
+frontier seat scored 11/51, but the two suites ran two days apart at different
+harness commits, with different effort tiers — so the case set matched and
+nothing else did. One queue holding both seats shares the commit, the case set,
+the brief at every repeat index, and whatever the machine was doing at the time;
+a seat difference that survives it is a seat difference.
+
+`report` adds a **Seat comparison** section for any suite with more than one
+seat: Fisher's exact test, two-tailed, on the primary metric, with the raw
+counts beside every p-value. Exact rather than chi-square because these tables
+have zero cells, and two-tailed because the one-tailed variant would report a
+smaller p in whichever direction we were hoping for.
+
+Wall clock is reported per seat and deliberately not folded into the
+correctness table. For a local seat the tokens are free and the time is the
+whole cost, so the two seats have no common denominator — 2.9 min/run on
+`bambi/qwen3.8-27b-mtp-pure` against 0.7 on `openai/gpt-5.6-sol`, for the same
+six cases.
+
+Read the power note `plan` prints before choosing `--repeats`. At 60 per seat a
+true 0% against a true 20% separates comfortably (p ≈ 0.0001 on the observed
+counts); a true 0% against a true 5% does not, so a null seat difference means
+"no large difference", never "the same".
+
+### Fixture paths in captured briefs
+
+A captured brief can name the absolute fixture directory of the run that
+produced it, and that directory is gone by replay time. Three of the 45 stored
+briefs do, unevenly: `b-shared-default-mutation` has two briefs and one carries
+a path, so half of that case's replay runs used to open by reconciling a
+repository that did not exist.
+
+The path is now rewritten to each run's own fixture, and the rewrite is counted
+in the run record and reported. Rewritten rather than stripped — the primary did
+tell the verifier where the repository was, so pointing that sentence at a real
+directory keeps it true, while deleting it would change what the brief says.
+
+`bambi/qwen3.8-27b-mtp-pure` reconciled the dead path every time and proceeded,
+but it spent real effort doing so, and a weaker seat could follow it instead.
+That failure would arrive as a verdict rather than as an invalid run, which is
+the worst shape a harness artifact can take.
+
 `--replay` needs `--model` and refuses `--primary`, because there is no primary.
 The verifier is promoted to a primary agent in a throwaway config, which is how
 a role gets run directly at all: the CLI refuses a subagent for `--agent`. The

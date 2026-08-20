@@ -90,3 +90,36 @@ export function briefCounts(store) {
     Object.entries(store.cases ?? {}).map(([id, entries]) => [id, entries.length]),
   );
 }
+
+// A captured brief carries the absolute fixture path of the run that produced
+// it, and on replay that directory is gone -- a different `mkdtemp` name under
+// the same tmpdir. Three of the 45 stored briefs name one, but they are not
+// spread evenly: `b-shared-default-mutation` has two briefs and one of them
+// carries a path, so half of that case's replay runs opened by reconciling a
+// repository that does not exist.
+//
+// `bambi/qwen3.8-27b-mtp-pure` handled it every time -- found the real repo,
+// matched HEAD against the claim, flagged the discrepancy and proceeded -- but
+// it spent real effort doing so, and a weaker seat could follow the dead path
+// instead. That failure would score as a verdict rather than as an invalid run,
+// which is the worst shape a harness artifact can take.
+//
+// Rewritten rather than stripped. The primary genuinely did tell the verifier
+// where the repository was; deleting the sentence would change what the brief
+// says, while pointing it at this run's fixture makes the same sentence true.
+// The substitution is mechanical and recorded per run, so it stays distinct
+// from authoring a brief -- which this harness never does.
+export const FIXTURE_PATH_PATTERN = /[^\s`'"()[\],;]*\/pilotfish-fixture-[A-Za-z0-9]{6,}/g;
+
+export function normalizeFixturePaths(brief, root) {
+  if (typeof brief !== "string" || !root) return { brief, occurrences: 0, from: [] };
+  const from = new Set();
+  let occurrences = 0;
+  const rewritten = brief.replace(FIXTURE_PATH_PATTERN, (match) => {
+    if (match === root) return match;
+    from.add(match);
+    occurrences += 1;
+    return root;
+  });
+  return { brief: rewritten, occurrences, from: [...from] };
+}

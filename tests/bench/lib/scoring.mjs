@@ -201,3 +201,64 @@ export function summarizeCell(runs) {
         }),
   };
 }
+
+// Fisher's exact test on a 2x2, two-tailed. The seat comparison is a
+// small-sample count of a rare event -- 0 of 60 against 11 of 51 is the shape
+// this has to grade -- and a chi-square approximation is not valid on a cell of
+// zero. Exact is cheap at these n and needs no assumption.
+//
+// Two-tailed by summing every table at most as probable as the observed one,
+// which is the conventional definition and the conservative one; the one-tailed
+// variant would report a smaller p for the direction we happen to be hoping
+// for, which is exactly the thing to avoid here.
+const LOG_FACTORIAL = [0, 0];
+function logFactorial(n) {
+  for (let i = LOG_FACTORIAL.length; i <= n; i += 1) {
+    LOG_FACTORIAL[i] = LOG_FACTORIAL[i - 1] + Math.log(i);
+  }
+  return LOG_FACTORIAL[n];
+}
+
+function logHypergeometric(a, b, c, d) {
+  return (
+    logFactorial(a + b) + logFactorial(c + d) + logFactorial(a + c) + logFactorial(b + d) -
+    logFactorial(a) - logFactorial(b) - logFactorial(c) - logFactorial(d) -
+    logFactorial(a + b + c + d)
+  );
+}
+
+export function fisherExact(a, b, c, d) {
+  const total = a + b + c + d;
+  if (total === 0) return null;
+  const observed = logHypergeometric(a, b, c, d);
+  const row1 = a + b;
+  const col1 = a + c;
+  const low = Math.max(0, col1 - (c + d));
+  const high = Math.min(row1, col1);
+  let p = 0;
+  for (let x = low; x <= high; x += 1) {
+    const lp = logHypergeometric(x, row1 - x, col1 - x, total - row1 - col1 + x);
+    // 1e-9 of slack: tables that are equally probable in exact arithmetic can
+    // differ in the last bits of a float, and dropping one of them would
+    // understate p.
+    if (lp <= observed + 1e-9) p += Math.exp(lp);
+  }
+  return Math.min(1, p);
+}
+
+// Two seats compared on one outcome, with the raw table kept: a p-value with no
+// counts beside it is not readable, and the counts are what a reader checks.
+export function compareProportions(left, right) {
+  if (!left || !right || left.total === 0 || right.total === 0) return null;
+  return {
+    left: { successes: left.successes, total: left.total, rate: left.rate, ci95: left.ci95 },
+    right: { successes: right.successes, total: right.total, rate: right.rate, ci95: right.ci95 },
+    difference: left.rate - right.rate,
+    p: fisherExact(
+      left.successes,
+      left.total - left.successes,
+      right.successes,
+      right.total - right.successes,
+    ),
+  };
+}
