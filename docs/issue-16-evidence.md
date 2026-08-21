@@ -468,8 +468,18 @@ The class D control matters as much as the class B result: a verifier that objec
 score 0% missed and 100% detected and be worthless. Forty consecutive `clean-confirmed` verdicts on
 defect-free code establish that the detection rate is discrimination, not reflex.
 
-For comparison on the same harness, `replay-gpt56-sol-classB-r20` missed 22% (11/51) and
-`replay-qwen3.6-27b-classAB-r20` missed 27% (16/60). The local model missed none.
+For comparison on the same harness, `replay-qwen3.6-27b-classAB-r20` missed 27% (16/60). The local
+model missed none.
+
+> **Withdrawn:** this paragraph previously cited `replay-gpt56-sol-classB-r20` at 22% (11/51). That
+> figure does not survive audit and should not be quoted. Six of the eleven were detections the marker
+> list failed to match, and the suite was 88 valid runs of 240 planned with cells between 4 and 11 of
+> 20. Corrected, that cell is 5/51 = 9.8%. The controlled two-seat re-run puts the frontier seat at
+> 4/60 = 6.7% against the local seat's 0/44, Fisher p = 0.14 — not a significant separation. See
+> [`issue-15-gpt56-miss-audit.md`](issue-15-gpt56-miss-audit.md) and
+> [`issue-15-seat-comparison-audit.md`](issue-15-seat-comparison-audit.md). The `qwen3.6-27b` and
+> `gpt-5.6@high` class-A/B figures in this document are unaffected: re-scoring under the corrected
+> scorer moves zero of their runs.
 
 ### The unresolved tension with this issue's own bar
 

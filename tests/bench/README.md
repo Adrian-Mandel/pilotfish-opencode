@@ -87,6 +87,14 @@ nothing else did. One queue holding both seats shares the commit, the case set,
 the brief at every repeat index, and whatever the machine was doing at the time;
 a seat difference that survives it is a seat difference.
 
+That 11/51 turned out not to be a seat difference at all. Audited, six of the
+eleven were detections the marker list did not match, and the suite was 88 valid
+runs of 240 planned. The controlled run this section describes puts the two
+seats at 6.7% and 0%, Fisher p = 0.14 — no significant separation. Both audits
+are in [`docs/issue-15-gpt56-miss-audit.md`](../../docs/issue-15-gpt56-miss-audit.md)
+and [`docs/issue-15-seat-comparison-audit.md`](../../docs/issue-15-seat-comparison-audit.md),
+and the section below carries what they cost.
+
 `report` adds a **Seat comparison** section for any suite with more than one
 seat: Fisher's exact test, two-tailed, on the primary metric, with the raw
 counts beside every p-value. Exact rather than chi-square because these tables
@@ -152,9 +160,20 @@ cheap repeats.
 
 ## Before you trust a number from a new model
 
-Two mistakes were made repeatedly while producing the results in
-`docs/issue-16-evidence.md`. Both are cheap to avoid and both changed the answer
-when they were not.
+Five mistakes have now been made here. Every one of them changed the answer, and
+every one was cheap to catch. Work down this list before quoting any rate.
+
+**Start with the anchor test — it sorts most of it in one pass.** Detection
+evaluates `markers.all` first and short-circuits, so for each run scored
+`missed`, ask only whether the verdict contains the case's `markers.all` anchor:
+
+- **Absent** — the verifier never named the function. A real miss, and no
+  marker change can rescue it. Stop.
+- **Present** — `markers.any` or the proximity window is what failed. Read the
+  window and judge the phrasing.
+
+Applied to `replay-gpt56-sol-classB-r20`, that single question separated 7
+artifacts from 10 real misses without reading a full verdict.
 
 **Marker vocabulary is model-sensitive. Validate it per model.** Detection is
 deterministic substring matching against markers declared in the case — there is
@@ -178,11 +197,56 @@ than a re-run — which is the reason every verdict is retained in full. Check t
 correction in both directions: a broadened marker that flips runs *toward* your
 preferred conclusion deserves more suspicion than one that flips them away.
 
-**Do not report a direction from a partial suite.** This was done twice and was
-wrong both times. At 40 of 120 runs one comparison looked like 8 misses in 12
-against 4 in 13; the finished suite was 40% against 43% with p = 1.00, and the
-nominal direction had flipped. Cells fill unevenly because the queue is
-randomized, so a half-finished suite is a biased sample, not a small one. Wait
+Two shapes recur and neither is covered by a longer word list:
+
+- **Demonstrative phrasing.** Every marker on `b-tail-off-by-one` names the bug
+  class — `off-by-one`, `one fewer`, `n-1`. `gpt-5.6` describes that defect by
+  showing an input and an output: *"`tailLines("a\nb\nc\nd", 2)` now returns
+  `"d"` instead of `"c\nd"`"*. Twelve markers credited 2 of 10 detecting runs,
+  and both credits came from the incidental word "regress" in *"an unrelated
+  regression"*. A discriminator that only fires on a bug-class noun will miss any
+  seat that argues from behaviour.
+- **Formatting.** `b-cap-boundary-strict` carries the marker `<= to <`, written
+  for exactly the sentence one run produced — and missed it, because the run
+  wrote ``from `<=` to `<` ``. Backticks are now stripped before matching.
+
+**A discriminator can also be present and simply too far away.** The proximity
+window was 200 characters, justified as a plateau because all 120 runs of the
+`gpt-5.6` class-A/B suite graded identically at 200 and 400. That plateau was a
+property of one seat's prose. `gpt-5.6` writes 300–700 character verdicts;
+`bambi/qwen3.8-27b-mtp-pure` writes 2,700–3,200 with structured observation
+paragraphs that separate the function name from the diagnosis. Both of that
+seat's misses in the controlled suite had the marker present at 224–250
+characters — one of them reading *"An off-by-one regression with its coverage
+deleted"* — and were scored as non-detections. The window is now 400, which is a
+floor rather than a settled plateau: `replay-qwen3.6-27b-classAB-r20` moves three
+further runs at 800 and a fourth at 2000, and those want hand-reading first,
+because a wider window is exactly the over-crediting the rule exists to prevent.
+
+**Never ship a correction that fixes one arm of a comparison and not the other.**
+This is the newest mistake and the most dangerous, because the result looks
+better rather than broken. Widening the window and stripping backticks fixed
+*both* of the local seat's artifacts and only *one* of the frontier seat's five —
+the other four being vocabulary-shaped and deliberately left pending validation.
+The stored summary moved from p = 0.14 to p = 0.0195, crossing into significance
+in the flattering direction, on the asymmetry alone. If a fix reaches one seat's
+failure mode and not another's, either finish it or annotate the result so the
+partial state cannot be quoted.
+
+**Do not report a direction from a partial suite.** This was done three times
+and was wrong every time. At 40 of 120 runs one comparison looked like 8 misses
+in 12 against 4 in 13; the finished suite was 40% against 43% with p = 1.00, and
+the nominal direction had flipped. The third was `replay-gpt56-sol-classB-r20`,
+reported at 11/51 from a suite that was 88 valid runs of 240 with cells between
+4 and 11 of 20 — and the incompleteness was not a choice. The suite crashed at
+run 88 because `--resume` was passed without a path and swallowed the following
+`--timeout` flag as its value; the retyped command resumed with a 4-minute
+per-run cap where the original had 20, which is why every invalid run in that
+file is a timeout. A missing option value is now a hard error, but **check
+`validRuns` against `repeats × cells` before quoting anything** — a truncated
+suite still writes a complete-looking summary block. Cells fill unevenly because
+the queue is randomized, so a half-finished suite is a biased sample, not a small
+one. Wait
 for the suite, then run the paired test.
 
 ## Choosing which model is measured
