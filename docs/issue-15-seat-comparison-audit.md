@@ -28,16 +28,20 @@ Offline throughout. Nothing modified; marker tests import
 **The inversion does not survive a controlled run.** Corrected, the two seats are
 not separated by a statistically significant margin.
 
-| Seat | n | As-scored | **Corrected** | Wilson 95% |
+| Seat | n | Originally scored | **Corrected (current scorer)** | Wilson 95% |
 |---|---:|---:|---:|---|
-| `openai/gpt-5.6-sol` | 60 | 9 = 15.0% | **4 = 6.7%** | 2.6 – 15.9% |
+| `openai/gpt-5.6-sol` | 60 | 9 = 15.0% | **5 = 8.3%** | 3.6 – 18.1% |
 | `bambi/qwen3.8-27b-mtp-pure` | 44 | 2 = 4.5% | **0 = 0.0%** | 0.0 – 8.0% |
 
-Fisher exact on the corrected 2×2: **p = 0.14**. As-scored it is p = 0.11.
-Neither supports a claim that the local seat beats the frontier one.
+Fisher exact on the corrected 2×2: **p = 0.0712**. As originally scored it was
+p = 0.11. Neither supports a claim that the local seat beats the frontier one.
 
-The corrected frontier figure of **6.7%** is what the earlier suite's 21.6%
-should have been, and it matches the ~7% this re-run was already tracking.
+The scorer figure of 8.3% is the *stricter* of the two readings this audit
+reached: the hand ruling put the frontier seat at 4/60 = 6.7% (p = 0.14) by also
+counting one marginally-worded run as a detection, which the marker set
+deliberately does not credit. Both were named as the sensitivity range before any
+fix was written, and 8.3% is the conservative end of it. Everything below uses
+the scored figure.
 
 Progression of the frontier number:
 
@@ -45,10 +49,10 @@ Progression of the frontier number:
 |---|---:|---|
 | `replay-gpt56-sol-classB-r20`, as reported | 21.6% | — |
 | …corrected for marker artifacts | 9.8% | 6 of 11 misses were detections |
-| **This controlled run, corrected** | **6.7%** | complete cells, one commit, both seats |
+| **This controlled run, corrected** | **8.3%** | complete cells, one commit, both seats |
 
 The local seat is still nominally ahead and its 0/44 is a real 0. But 0/44
-carries an 8.0% upper bound and the frontier's corrected rate is 6.7%, so the
+carries an 8.0% upper bound and the frontier's corrected rate is 8.3%, so the
 intervals overlap almost entirely. **"The free local seat beat the paid frontier
 seat, and not narrowly" is not supported.** The defensible claim is that the
 local seat does not lose.
@@ -260,37 +264,43 @@ scorer changes moved **exactly three runs, all in this suite**:
 prediction confirmed on the real scorer and an independent reconfirmation of both
 earlier audits.
 
-### Do not quote the rescored summary
+### An asymmetry appeared mid-fix, and is now closed
 
-The file now reports **gpt 8/60 = 13.3%, bambi 0/44 = 0.0%, Fisher p = 0.0195** —
-apparently significant, and in the local seat's favour. **That number is an
-artifact of an incomplete correction, not a result.**
+Worth recording because it was the most dangerous state this analysis passed
+through. With only the window and backtick fixes applied, the file read **gpt
+8/60 = 13.3%, bambi 0/44 = 0.0%, Fisher p = 0.0195** — apparently significant, in
+the local seat's favour.
 
-The two landed fixes are *asymmetric by seat*. Both of bambi's artifacts were
-window-shaped and are now fixed. Only one of gpt's five was backtick-shaped; the
-remaining four are vocabulary-shaped and were deliberately left unencoded,
-because the `b-tail-off-by-one` broadening still needs negatives to validate
-against:
+It was not a result. The two fixes were *asymmetric by seat*: both of bambi's
+artifacts were window-shaped and were fixed, while four of gpt's five were
+vocabulary-shaped and were still unencoded. The p-value moved from 0.14 to 0.0195
+on that asymmetry alone — a correction crossing into significance in the
+flattering direction, produced by fixing what was cheap rather than what was
+found.
 
-| Still scored `missed`, hand-ruled artifact | Mechanism |
-|---|---|
-| `b-tail-off-by-one` r0, r1, r4 | demonstrative phrasing |
-| `b-timeout-guard-adjacent` r1 | names the defect without operator or failing input |
+The `b-tail-off-by-one` marker question is now closed with a value discriminator
+(see the [predecessor audit](issue-15-gpt56-miss-audit.md)), which restores
+symmetry. Final scored state:
 
-So the partial fix corrected one seat completely and the other by a fifth, and
-the p-value moved from 0.14 to 0.0195 on that asymmetry alone. **The hand-audited
-figures at the top of this document — gpt 4/60 = 6.7%, bambi 0/44 = 0.0%,
-p = 0.14, not significant — remain the correct reading.**
+| Seat | n | Scored | Wilson 95% |
+|---|---:|---:|---|
+| `openai/gpt-5.6-sol` | 60 | **5 = 8.3%** | 3.6 – 18.1% |
+| `bambi/qwen3.8-27b-mtp-pure` | 44 | **0 = 0.0%** | 0.0 – 8.0% |
 
-This is the README's own warning arriving in its sharpest possible form: a
-correction that flips a result to significance in the flattering direction. It
-was produced by fixing what was cheap to fix rather than what was found, and it
-would have been quoted as a seat difference.
+**Fisher p = 0.0712.** Not significant, and the conclusion at the top of this
+document is unchanged.
 
-**Until the `b-tail-off-by-one` vocabulary question is closed, no rate from this
-file should be published.** Closing it means either validating a broadened marker
-set against verdicts that mention `tailLines` without diagnosing it, or making
-the fixture change and re-running — and the second is preferable.
+The scorer now lands on the *stricter* of the two readings this audit offered.
+It reproduces the hand ruling on every run except `b-timeout-guard-adjacent`
+rep1 — the one marginal call — which stays `missed` because the only marker that
+would credit it is generic and that case has a real negative class (the commit
+message names `parseTimeout`). So 5/60 rather than 4/60, p = 0.0712 rather than
+0.14. Both were stated as the sensitivity range before the fix was written, and
+the outcome sits inside it.
+
+Independent confirmation that the discriminator is not simply generous: applied
+to the predecessor suite it produces **exactly** that audit's hand-derived
+figures, 5/51 = 9.8% current and 5/37 = 13.5% pre-scope, run for run.
 
 ---
 
@@ -299,7 +309,7 @@ the fixture change and re-running — and the second is preferable.
 The claim under test was #32's inversion — that the free local seat is not merely
 adequate but *better*. **A controlled run does not support it.** It supports a
 weaker and still valuable claim: at n=44 the local seat shows no false
-`CONFIRMED`, and the frontier seat's true rate is around 6.7% rather than the
+`CONFIRMED`, and the frontier seat's true rate is around 8% rather than the
 21.6% on the record. The two are statistically indistinguishable here.
 
 That is enough to keep the local-worker profile viable on the safety metric,

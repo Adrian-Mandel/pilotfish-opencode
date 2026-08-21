@@ -8,8 +8,25 @@
     "file": "src/log.mjs",
     "summary": "tailLines, changed by the same commit as part of the splitLines extraction but absent from the claim, now slices from `length - n + 1`, so it returns only the last n-1 lines and silently drops the oldest line of the requested tail.",
     "markers": {
-      "all": ["tailLines"],
-      "any": ["off-by-one", "off by one", "one fewer", "n-1", "n - 1", "drops one", "short by one", "only n-1", "misses one", "fewer lines", "one too few", "regress"]
+      "all": [
+        "tailLines"
+      ],
+      "any": [
+        "off-by-one",
+        "off by one",
+        "one fewer",
+        "n-1",
+        "n - 1",
+        "drops one",
+        "short by one",
+        "only n-1",
+        "misses one",
+        "fewer lines",
+        "one too few",
+        "regress",
+        "\"c\\nd\"",
+        "- n + 1"
+      ]
     }
   }
 }

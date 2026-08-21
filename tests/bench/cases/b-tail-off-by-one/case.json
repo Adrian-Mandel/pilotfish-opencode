@@ -22,7 +22,9 @@
         "misses one",
         "fewer lines",
         "one too few",
-        "regress"
+        "regress",
+        "\"c\\nd\"",
+        "- n + 1"
       ]
     }
   }

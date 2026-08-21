@@ -2185,8 +2185,8 @@
         "rewrittenFrom": []
       },
       "verdict": "CONFIRMED",
-      "mentioned": false,
-      "outcome": "missed",
+      "mentioned": true,
+      "outcome": "observed",
       "verdictSource": "leading-line",
       "verifierChainDepth": 1,
       "verifierRuns": [
@@ -2833,8 +2833,8 @@
         "rewrittenFrom": []
       },
       "verdict": "CONFIRMED",
-      "mentioned": false,
-      "outcome": "missed",
+      "mentioned": true,
+      "outcome": "observed",
       "verdictSource": "leading-line",
       "verifierChainDepth": 1,
       "verifierRuns": [
@@ -3017,8 +3017,8 @@
         "rewrittenFrom": []
       },
       "verdict": "CONFIRMED",
-      "mentioned": false,
-      "outcome": "missed",
+      "mentioned": true,
+      "outcome": "observed",
       "verdictSource": "leading-line",
       "verifierChainDepth": 1,
       "verifierRuns": [
@@ -3387,8 +3387,8 @@
         "rewrittenFrom": []
       },
       "verdict": "REFUTED",
-      "mentioned": false,
-      "outcome": "refuted-other",
+      "mentioned": true,
+      "outcome": "caught",
       "verdictSource": "leading-line",
       "verifierChainDepth": 1,
       "verifierRuns": [
@@ -5226,16 +5226,16 @@
             ]
           },
           "right": {
-            "successes": 8,
+            "successes": 5,
             "total": 60,
-            "rate": 0.13333333333333333,
+            "rate": 0.08333333333333333,
             "ci95": [
-              0.0691402697830964,
-              0.24165394590072103
+              0.03611992405048589,
+              0.18069168468112481
             ]
           },
-          "difference": -0.13333333333333333,
-          "p": 0.019548004753511115
+          "difference": -0.08333333333333333,
+          "p": 0.07119770097643549
         },
         "detected": {
           "left": {
@@ -5248,16 +5248,16 @@
             ]
           },
           "right": {
-            "successes": 44,
+            "successes": 48,
             "total": 60,
-            "rate": 0.7333333333333333,
+            "rate": 0.8,
             "ci95": [
-              0.6099104639810865,
-              0.8286750351292115
+              0.6821795390818299,
+              0.8817161026314104
             ]
           },
-          "difference": 0.2666666666666667,
-          "p": 0.00006172959991111753
+          "difference": 0.19999999999999996,
+          "p": 0.0010879399429204637
         },
         "refutedOnDefect": {
           "left": {
@@ -5270,16 +5270,16 @@
             ]
           },
           "right": {
-            "successes": 15,
+            "successes": 16,
             "total": 60,
-            "rate": 0.25,
+            "rate": 0.26666666666666666,
             "ci95": [
-              0.1577638557841185,
-              0.372323109454848
+              0.17132496487078852,
+              0.3900895360189135
             ]
           },
-          "difference": -0.18181818181818182,
-          "p": 0.01825718270022874
+          "difference": -0.1984848484848485,
+          "p": 0.01046777091447465
         }
       }
     },
@@ -5564,36 +5564,16 @@
         "runs": 10,
         "scored": 10,
         "counts": {
-          "caught": 0,
-          "observed": 6,
-          "missed": 3,
-          "refuted-other": 1,
+          "caught": 1,
+          "observed": 9,
+          "missed": 0,
+          "refuted-other": 0,
           "clean-confirmed": 0,
           "false-refuted": 0,
           "no-verdict": 0,
           "not-dispatched": 0
         },
         "falseConfirmed": {
-          "successes": 3,
-          "total": 10,
-          "rate": 0.3,
-          "sd": 0.14491376746189438,
-          "ci95": [
-            0.10778928748621183,
-            0.6032267800204347
-          ]
-        },
-        "detected": {
-          "successes": 6,
-          "total": 10,
-          "rate": 0.6,
-          "sd": 0.15491933384829668,
-          "ci95": [
-            0.3126695474501863,
-            0.8318224187964902
-          ]
-        },
-        "refutedOnDefect": {
           "successes": 0,
           "total": 10,
           "rate": 0,
@@ -5601,6 +5581,26 @@
           "ci95": [
             0,
             0.2775401687666166
+          ]
+        },
+        "detected": {
+          "successes": 10,
+          "total": 10,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.7224598312333834,
+            1
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 1,
+          "total": 10,
+          "rate": 0.1,
+          "sd": 0.09486832980505139,
+          "ci95": [
+            0.01787574951572113,
+            0.4041563854975721
           ]
         }
       },
@@ -5830,43 +5830,43 @@
         "runs": 60,
         "scored": 60,
         "counts": {
-          "caught": 15,
-          "observed": 29,
-          "missed": 8,
-          "refuted-other": 8,
+          "caught": 16,
+          "observed": 32,
+          "missed": 5,
+          "refuted-other": 7,
           "clean-confirmed": 0,
           "false-refuted": 0,
           "no-verdict": 0,
           "not-dispatched": 0
         },
         "falseConfirmed": {
-          "successes": 8,
+          "successes": 5,
           "total": 60,
-          "rate": 0.13333333333333333,
-          "sd": 0.043885372573625556,
+          "rate": 0.08333333333333333,
+          "sd": 0.03568120160740314,
           "ci95": [
-            0.0691402697830964,
-            0.24165394590072103
+            0.03611992405048589,
+            0.18069168468112481
           ]
         },
         "detected": {
-          "successes": 44,
+          "successes": 48,
           "total": 60,
-          "rate": 0.7333333333333333,
-          "sd": 0.057089922571845024,
+          "rate": 0.8,
+          "sd": 0.05163977794943222,
           "ci95": [
-            0.6099104639810865,
-            0.8286750351292115
+            0.6821795390818299,
+            0.8817161026314104
           ]
         },
         "refutedOnDefect": {
-          "successes": 15,
+          "successes": 16,
           "total": 60,
-          "rate": 0.25,
-          "sd": 0.05590169943749474,
+          "rate": 0.26666666666666666,
+          "sd": 0.05708992257184502,
           "ci95": [
-            0.1577638557841185,
-            0.372323109454848
+            0.17132496487078852,
+            0.3900895360189135
           ]
         }
       },
@@ -6010,5 +6010,5 @@
     "seat-bambi.json"
   ],
   "mergedAt": "2026-08-21T00:26:11.111Z",
-  "rescoredAt": "2026-08-21T00:51:02.445Z"
+  "rescoredAt": "2026-08-21T01:14:42.501Z"
 }

@@ -222,48 +222,73 @@ correction to a figure that should not have been quoted in the first place.
 
 ## Recommendation on `markers.any`
 
-| Case | Recommendation |
-|---|---|
-| `b-tail-off-by-one` | **Broaden — but validate first.** See below. |
-| `b-timeout-guard-adjacent` | **No change.** Misses fail at the `parseTimeout` anchor; `markers.any` is never reached. A ceiling test on the sibling suite confirms no broadening flips anything. |
-| `b-shared-default-mutation` | **No change.** Its one miss fails at the `defaultOptions` anchor. |
-| `b-cap-boundary-strict`, `b-containment-inverted`, `b-config-read-adjacent` | **No change.** Zero misses between them across 48 runs. |
+| Case | Recommendation | Status |
+|---|---|---|
+| `b-tail-off-by-one` | **Broaden**, with a value discriminator rather than vocabulary. See below. | **Landed** |
+| `b-timeout-guard-adjacent` | **No change.** Misses fail at the `parseTimeout` anchor; `markers.any` is never reached. A ceiling test on the sibling suite confirms no broadening flips anything. | — |
+| `b-shared-default-mutation` | **No change.** Its one miss fails at the `defaultOptions` anchor. | — |
+| `b-cap-boundary-strict`, `b-containment-inverted`, `b-config-read-adjacent` | **No change** to `markers.any`. `b-cap-boundary-strict`'s `<= to <` was being hidden by backticks; that is a scorer fix, not a marker one. | Scorer fixed |
 
-### The broadening, and why it is offered with a caveat
+One deliberate non-change is worth recording, because it is the only run in any
+suite still scored `missed` that a reader might argue about.
+`b-timeout-guard-adjacent` rep1 in the controlled suite says *"the unclaimed
+`parseTimeout` validation condition appears incorrect; it accepts some invalid
+timeout values"* — a correct identification with no operator and no failing
+input. Adding `incorrect` would credit it. It was rejected because **the commit
+message itself names the function** — `fix(config): validate parsePort and
+parseTimeout input` — so every verdict quoting the commit message carries the
+anchor without diagnosing anything. Unlike `b-tail-off-by-one`, this case has a
+real and common negative class, and a generic marker would land in it. Leaving
+the run scored `missed` is the conservative reading and it moves the seat
+comparison *away* from the flattering direction.
 
-A set reaching 10/10 on this corpus is
-`["now returns", "instead of", "should return", "removes its test"]` added to the
-existing twelve.
+### Resolved — and both of the fixes first proposed here were wrong
 
-**Do not adopt it on this evidence alone.** It is fitted to ten positives with
-**zero negatives available to test against** — every valid run of this case
-detected the defect, so this corpus cannot demonstrate that the set fails to
-credit a non-detecting verdict. Three of the four entries are generic
-connectives, and a plausible non-diagnosing sentence such as *"the test now
-covers `headLines` instead of `tailLines`"* would be credited by two of them.
-`removes its test` is worse in kind: test removal is a real observation but it is
-not the off-by-one, and crediting it repeats precisely the error `054a27e`
-corrected — grading on shared words rather than on the defect.
+**The fixture change proposed in the first version of this document cannot
+work.** The idea was to rename the sample lines so the expected output stopped
+being a substring of the input literal. `tailLines` returns a **suffix**, so its
+expected output is a substring of the input for *every possible* sample text —
+`alpha/beta/gamma/delta` gives expected `"gamma\ndelta"` inside input
+`"alpha\nbeta\ngamma\ndelta"`, exactly as before. Renaming buys nothing.
 
-Before adoption, the set must be checked against a corpus containing verdicts
-that mention `tailLines` **without** diagnosing it. The local-seat suites are the
-obvious source.
+**The connective-based broadening was also wrong**, for the reason given at the
+time: `now returns`, `instead of` and `removes its test` are generic, and a
+non-diagnosing sentence such as *"the test now covers `headLines` instead of
+`tailLines`"* would be credited by two of them.
 
-### The better fix is to the fixture, not the vocabulary
+What actually resolves it is a **value discriminator**, available because of a
+detail the substring worry missed. The contamination is only real for the
+*unquoted* value. The input literal is `"a\nb\nc\nd"`, whose final characters are
+`\nd"` — so the three-character token `"d"` and the six-character token `"c\nd"`,
+**with their surrounding quotes**, never occur in it. Quoting `"c\nd"` requires
+having determined what `tailLines` should return, which is knowable only from
+`HEAD~1` or from the test the commit deleted. It cannot be produced by echoing
+the call.
 
-The natural discriminator for a demonstrative diagnosis is the concrete wrong
-output. It is unusable here for an avoidable reason: the correct value `c\nd` is
-a **substring of the input literal** `a\nb\nc\nd`, so any verdict that merely
-quotes the call — diagnosis or not — would match it.
+Adopted, in both `b-tail-off-by-one` and `b2-tail-off-by-one`:
 
-Changing the fixture's sample text so the input and the expected output share no
-substring (for example lines `alpha / beta / gamma / delta`, expected
-`"gamma\ndelta"`) makes the expected output an unambiguous discriminator. That is
-a more robust fix than a vocabulary list, it needs no new judgement about which
-words count as a diagnosis, and it leaves the seeded defect and the scoring
-semantics untouched. It does invalidate the existing `b-tail-off-by-one`
-transcripts for re-scoring, so it should land with a re-run rather than a
-`rescore`.
+```json
+"any": [ …the existing twelve…, "\"c\\nd\"", "- n + 1" ]
+```
+
+`"c\nd"` alone covers **27 of 27** valid runs of this case across every stored
+suite. `- n + 1` is the mutation itself, quoted by 9 of the 27, and is included
+because it is the one marker that proves the verifier read the diff rather than
+only probed the behaviour.
+
+The specificity argument here is **semantic rather than empirical**, and that
+distinction should be kept: there are still no negatives: all 27 runs that name
+`tailLines` diagnose it correctly, so no corpus can currently show the set
+failing to credit a non-detection. What replaces the missing negatives is that
+the marker is a *value the function cannot be evaluated without producing*,
+rather than a word a verdict might happen to use — which is the property the
+twelve bug-class markers lacked.
+
+Measured effect: the twelve shipped markers credited **15 of 27**, and `regress`
+alone accounted for 15 of those credits, twice from the incidental phrases *"an
+unrelated regression"* and *"its regression test"*. With the two additions the
+case grades 27 of 27, which matches the hand ruling in this document run for
+run.
 
 ---
 

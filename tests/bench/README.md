@@ -90,7 +90,7 @@ a seat difference that survives it is a seat difference.
 That 11/51 turned out not to be a seat difference at all. Audited, six of the
 eleven were detections the marker list did not match, and the suite was 88 valid
 runs of 240 planned. The controlled run this section describes puts the two
-seats at 6.7% and 0%, Fisher p = 0.14 — no significant separation. Both audits
+seats at 8.3% and 0%, Fisher p = 0.07 — no significant separation. Both audits
 are in [`docs/issue-15-gpt56-miss-audit.md`](../../docs/issue-15-gpt56-miss-audit.md)
 and [`docs/issue-15-seat-comparison-audit.md`](../../docs/issue-15-seat-comparison-audit.md),
 and the section below carries what they cost.
