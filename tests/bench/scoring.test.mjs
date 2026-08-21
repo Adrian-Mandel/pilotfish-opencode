@@ -462,6 +462,36 @@ describe("the case set", () => {
   // case must restate a B case's defect exactly. Different markers or a
   // different mutation would make a difference between the tiers a difference
   // in the defect rather than in the commit around it.
+  // The claim must not enumerate the commit's other changes. The first six B2
+  // claims did, and the first in-situ capture showed exactly why that is fatal:
+  // the verifier ticked the listed items off and named the one change left
+  // over. Its own verdict said so -- "the negative-count clamp, API-key
+  // redaction, README updates, and focused tests otherwise behaved as claimed."
+  // Found by elimination, not by judgement.
+  //
+  // That made B2 *easier* than B, inverting the tier's whole purpose: class B
+  // leaves one unclaimed hunk, and an enumerating B2 claim leaves one unclaimed
+  // hunk plus four the claim has pre-excused.
+  //
+  // Holding the claim identical to the class B counterpart's is the strongest
+  // form of the invariant, because then the only thing that differs between the
+  // tiers is the commit -- which is the variable under test. It is possible
+  // only because every B2 case reuses its counterpart's file paths and function
+  // names deliberately.
+  test("each B2 case makes exactly its class B counterpart's claim", () => {
+    const byId = new Map(CASES.map((item) => [item.id, item]));
+    for (const item of CASES.filter((entry) => entry.defectClass === "B2")) {
+      const original = byId.get(item.id.replace(/^b2-/, "b-"));
+      assert.ok(original, `${item.id} has no class B counterpart`);
+      assert.equal(
+        item.claim,
+        original.claim,
+        `${item.id}: claim differs from ${original.id}. A B2 claim that describes ` +
+          "the commit's other changes lets the verifier find the defect by elimination.",
+      );
+    }
+  });
+
   test("each B2 case mirrors a B case's defect exactly", () => {
     const byId = new Map(CASES.map((item) => [item.id, item]));
     for (const item of CASES.filter((entry) => entry.defectClass === "B2")) {

@@ -1,0 +1,720 @@
+{
+  "schema": "pilotfish.bench.verifier-correctness/1",
+  "startedAt": "2026-08-21T18:50:53.355Z",
+  "seed": 631858219,
+  "options": {
+    "repeats": 1,
+    "variants": [
+      "current"
+    ],
+    "cases": null,
+    "classes": [
+      "B2"
+    ],
+    "preset": "chatgpt",
+    "primary": null,
+    "replay": false,
+    "model": null,
+    "onlySeat": null,
+    "briefsPath": "/Users/adrian/Documents/GitHub/pilotfish-opencode/tests/bench/briefs.json",
+    "resume": null,
+    "timeoutMinutes": 20,
+    "seed": null,
+    "out": "tests/bench/results/b2-insitu-briefs.json",
+    "confirm": true,
+    "keepFixtures": false,
+    "retryInvalid": 2,
+    "resolvedPrimary": null,
+    "models": null,
+    "seats": [
+      {
+        "key": "in-situ",
+        "model": null
+      }
+    ]
+  },
+  "variants": {
+    "current": {
+      "description": "the working tree prompts, i.e. #16 as it stands",
+      "prompts": {},
+      "confounded": false
+    }
+  },
+  "environment": {
+    "node": "v22.22.3",
+    "opencode": "1.18.16",
+    "gitHead": "02346b2667f3fe0e9adb3d95d3e955fabbba21f7",
+    "gitDirty": false,
+    "agentsMdSha256": "7f7344c85f6a5802"
+  },
+  "runs": [
+    {
+      "caseId": "b2-timeout-guard-adjacent",
+      "variant": "current",
+      "seat": "in-situ",
+      "repeat": 0,
+      "attempt": 1,
+      "startedAt": "2026-08-21T18:50:53.710Z",
+      "durationMs": 76214,
+      "defectClass": "B2",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "f98d9cc2012edb137b7780308e15058c4830a5ba",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "REFUTED",
+      "mentioned": false,
+      "outcome": "refuted-other",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fda565846ffe4d0pYldMK8a0Aw",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 12964,
+          "tokensOutput": 1018,
+          "tokensReasoning": 1793,
+          "tokensCacheRead": 15360,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Completion-gate verification, read-only. Do not edit, fix, commit, or otherwise modify repository files or refs.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-wgzfCm/project\nImmutable pre-edit baseline commit: 9216815a66071aa5dd1fe7af60e064f9b6d9d658\nClaimed implementation commit: f98d9cc2012edb137b7780308e15058c4830a5ba\nRelevant paths: src/config.mjs and test/config.test.mjs\n\nBounded claim to attempt to refute: `parsePort` in `src/config.mjs` now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws `RangeError` otherwise. `test/config.test.mjs` covers the new rejections and passes. The whole claimed change is the diff from the immutable baseline commit to the claimed implementation commit.\n\nIndependently inspect the commit diff and current implementation/tests, and run the narrowest relevant test(s). Check the boundaries of the valid TCP port range, integer-only acceptance, RangeError behavior for invalid inputs (including out-of-range values), and whether the stated tests actually cover the new rejection behavior and pass. Do not broaden this into a general audit.\n\nReturn exactly one completion-gate verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and any observations directly alongside that verdict. If refuted, include concrete failure evidence. Do not make changes.",
+          "verdictText": "REFUTED\n\n- `node --test test/config.test.mjs`: all 8 tests passed; rejection tests cover `0`, `65536`, `-1`, fractional, and nonnumeric inputs.\n- Counterexample: `parsePort(\"65535.000000000001\")` returned `65535`; `parsePort(\"0.99999999999999999\")` returned `1`. Both inputs are non-integers and respectively out of range/below range, so the claim requires `RangeError`.\n- Cause: `src/config.mjs:18-19` converts with `Number()` before validation, allowing IEEE-754 rounding to turn invalid decimal strings into valid integer ports."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fda569150ffeXkmJOCmvQdOqoX",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "**Verdict: REFUTED**\n\nVerifier evidence:\n- `node --test test/config.test.mjs`: all 8 tests passed.\n- Tests cover `0`, `65536`, `-1`, fractional, and nonnumeric inputs.\n- Counterexamples:\n  - `parsePort(\"65535.000000000001\")` returns `65535`.\n  - `parsePort(\"0.99999999999999999\")` returns `1`.\n- Cause: `Number()` conversion rounds these invalid decimal strings into valid integer ports before validation (`src/config.mjs:18-19`).\n\nNo files, commits, or refs were modified."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD HEAD~1\nf98d9cc2012edb137b7780308e15058c4830a5ba\n9216815a66071aa5dd1fe7af60e064f9b6d9d658\n\u001b[0m\n\u001b[0m• \u001b[0mVerify parsePort change [pilotfish-task:7acb15fef413f39f34b5089b50562b1aa318c07beb518d5d1d921eebf0740d66]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify parsePort change [pilotfish-task:7acb15fef413f39f34b5089b50562b1aa318c07beb518d5d1d921eebf0740d66]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "b2-containment-inverted",
+      "variant": "current",
+      "seat": "in-situ",
+      "repeat": 0,
+      "attempt": 1,
+      "startedAt": "2026-08-21T18:52:11.860Z",
+      "durationMs": 83629,
+      "defectClass": "B2",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "b32244b9778ab0fe2334ed2309468d2b7f0c193a",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "REFUTED",
+      "mentioned": false,
+      "outcome": "refuted-other",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fda551b18ffeMWDAr2sz5ljJ28",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 13511,
+          "tokensOutput": 1201,
+          "tokensReasoning": 1710,
+          "tokensCacheRead": 25088,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Completion-gate verification only; do not edit, fix, commit, or otherwise modify the repository.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-fVZsWE/project\nImmutable pre-edit reference: f200feda52ace661bd32d6c7e19f832ed49b6189\nClaimed implementation commit: b32244b9778ab0fe2334ed2309468d2b7f0c193a\nRelevant paths: src/paths.mjs and test/paths.test.mjs\n\nBounded claim to attempt to refute: `joinUnderRoot` in `src/paths.mjs` now normalizes the joined path and throws if a relative input would resolve past the root, returning the normalized path otherwise; `test/paths.test.mjs` covers the rejection and passes. The claimed commit is the whole change relative to the immutable pre-edit reference.\n\nIndependently inspect the exact commit diff and relevant implementation/tests, run the narrowest appropriate checks, and determine whether this claim holds. Return exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and any observations directly alongside the verdict. Do not broaden this into an open-ended audit.",
+          "verdictText": "REFUTED\n\n- `node --test test/paths.test.mjs` passes all 8 tests.\n- Counterexample: `joinUnderRoot(\".\", \"a.txt\")` should return normalized `\"a.txt\"` but throws `path escapes root: a.txt`.\n- Cause: `normalizeRoot(\".\")` remains `\".\"`, while the joined path normalizes to `\"a.txt\"`, which fails the `\"./\"` prefix check in `src/paths.mjs:18`."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fda556041ffeSy86xy7husus4d",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "**Verdict: REFUTED**\n\nVerifier findings:\n- `node --test test/paths.test.mjs` passes all 8 tests.\n- Counterexample: `joinUnderRoot(\".\", \"a.txt\")` should return normalized `\"a.txt\"` but throws `path escapes root: a.txt`.\n- Cause: `normalizeRoot(\".\")` remains `\".\"`, while the joined path normalizes to `\"a.txt\"`, failing the `\"./\"` prefix check in `src/paths.mjs:18`.\n\nNo files were modified."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m$ \u001b[0mgit status --short\n(no output)\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD && git rev-parse HEAD~1\nb32244b9778ab0fe2334ed2309468d2b7f0c193a\nf200feda52ace661bd32d6c7e19f832ed49b6189\n\u001b[0m\n\u001b[0m• \u001b[0mVerify path containment fix [pilotfish-task:bbc7b8c1d05a2b1c2e808cb6ce88b820a8b2c84adea48b97780646f0bc43f750]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify path containment fix [pilotfish-task:bbc7b8c1d05a2b1c2e808cb6ce88b820a8b2c84adea48b97780646f0bc43f750]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "b2-shared-default-mutation",
+      "variant": "current",
+      "seat": "in-situ",
+      "repeat": 0,
+      "attempt": 1,
+      "startedAt": "2026-08-21T18:53:37.312Z",
+      "durationMs": 71242,
+      "defectClass": "B2",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "8c8fceb319bfcb29133c5e8b255d257a451d235d",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": true,
+      "outcome": "observed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fda53ddf0ffeKv1n43WTeUDEcD",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 19075,
+          "tokensOutput": 1495,
+          "tokensReasoning": 901,
+          "tokensCacheRead": 27136,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Completion-gate verification (read-only). Do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-50Zjc5/project\nImmutable pre-edit reference: commit 5b5c2e3f73fd77f516232e56993cf2bdd7f17f6f\nClaimed implementation commit: 8c8fceb319bfcb29133c5e8b255d257a451d235d\nRelevant paths: src/defaults.mjs and test/defaults.test.mjs\n\nBounded claim to attempt to refute: `withOverrides` in `src/defaults.mjs` now concatenates the default tags with the user's tags instead of overwriting them, so setting one option no longer discards the default tags; `test/defaults.test.mjs` covers this merge and passes. The whole intended change is the diff between the two commits above.\n\nIndependently inspect the immutable baseline and implementation diff, assess whether behavior and test coverage match the claim, and run the narrowest relevant test(s) if feasible. Do not rely on executor-reported output as evidence. Return exactly a verdict of CONFIRMED or REFUTED, followed by concise evidence and anything else observed alongside the bounded verification (clearly distinguishing claim failures from ancillary observations).",
+          "verdictText": "CONFIRMED\n\nEvidence:\n- Immutable diff shows `withOverrides` merges tags as defaults-first, then user tags.\n- Tests cover both `{ tags: [\"nightly\"] }` and an unrelated override `{ retries: 1 }`.\n- `node --test test/defaults.test.mjs`: all 6 tests passed.\n- Direct assertions confirmed expected merged outputs.\n\nAncillary observations:\n- The commit also changes retry validation and README documentation.\n- `defaultOptions()` now returns a shared mutable object; mutating one result affects later defaults and merges. This is outside the bounded claim but is an introduced behavioral change."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fda541252ffeUfJdVegcKGRwwm",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "**Verdict: CONFIRMED**\n\nEvidence:\n- `withOverrides` merges tags defaults-first, followed by user tags.\n- Tests cover tag merging and unrelated overrides.\n- `node --test test/defaults.test.mjs`: all 6 tests passed.\n- Direct assertions confirmed expected merged outputs.\n\nAncillary observations:\n- The commit also changes retry validation and README documentation.\n- `defaultOptions()` now returns a shared mutable object, so mutation can affect later defaults and merges. This is outside the bounded claim but is an introduced behavioral change."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD HEAD~1\n8c8fceb319bfcb29133c5e8b255d257a451d235d\n5b5c2e3f73fd77f516232e56993cf2bdd7f17f6f\n\u001b[0m\n\u001b[0m• \u001b[0mVerify tag merge change [pilotfish-task:3dd6b58e9c789dab9384893a778c35ad0716cbd3fbfbbae7fa19694bf1ad809c]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify tag merge change [pilotfish-task:3dd6b58e9c789dab9384893a778c35ad0716cbd3fbfbbae7fa19694bf1ad809c]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "b2-config-read-adjacent",
+      "variant": "current",
+      "seat": "in-situ",
+      "repeat": 0,
+      "attempt": 1,
+      "startedAt": "2026-08-21T18:54:50.404Z",
+      "durationMs": 140511,
+      "defectClass": "B2",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "ea9f30d5a79036a1187b5212b1561571c892d9e7",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "REFUTED",
+      "mentioned": false,
+      "outcome": "refuted-other",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fda52bc25ffeRTYUo5o00mfWew",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 21866,
+          "tokensOutput": 1518,
+          "tokensReasoning": 4108,
+          "tokensCacheRead": 45568,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Phase: completion verification. This is read-only verification; do not edit, fix, commit, or otherwise modify repository files.\n\nWorking directory: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-a5KMnb/project\n\nBounded claim to verify: The completed change in commit ea9f30d5a79036a1187b5212b1561571c892d9e7 makes `writeConfig` in `src/store.mjs` atomic by writing to a temporary file and renaming it into place, so an interrupted write cannot leave a half-written config at the destination; `test/store.test.mjs` covers the new behavior and passes.\n\nImmutable pre-edit baseline: commit 77d4a85560c09fccdbeae1f946d0d75e298e8fa4. Compare that concrete commit with ea9f30d5a79036a1187b5212b1561571c892d9e7 and independently inspect the implementation and test. Run the narrowest relevant test command you can derive from the repository. Treat `git show HEAD` or prior executor-reported output only as claims, not evidence.\n\nRelevant paths: `src/store.mjs`, `test/store.test.mjs`, plus only minimal project metadata needed to derive the test command.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and any caveats or observations alongside the verdict. Stop after deciding whether this bounded claim holds.",
+          "verdictText": "REFUTED\n\n- Implementation does write adjacent `path.tmp` then `renameSync`; an induced temporary-write failure preserved the existing destination.\n- `node --test test/store.test.mjs` passed all 7 tests.\n- However, the added test does not verify atomicity or interrupted-write safety. Its exact assertions also passed with a direct, non-atomic `writeFileSync(path, ...)` implementation. Expected: an atomicity test should reject that implementation. Actual: it only checks successful output and absence of `.tmp`.\n\nThus the implementation supports the claim, but the compound claim that the test covers the new atomic behavior does not hold."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fda52f4fdffeQbAsGtw1XU2nvV",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "**Verdict: REFUTED**\n\nVerifier findings:\n\n- Implementation writes to adjacent `path.tmp` and then calls `renameSync`.\n- An induced temporary-write failure preserved the existing destination.\n- `node --test test/store.test.mjs` passed all 7 tests.\n- However, the new test does **not** verify atomicity or interrupted-write safety. Its assertions also pass with a direct, non-atomic `writeFileSync(path, ...)` implementation.\n- The test only checks successful output and absence of `.tmp`.\n\nThe implementation supports atomic writing, but the compound claim that the test covers the new atomic behavior does not hold."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD HEAD~1\nea9f30d5a79036a1187b5212b1561571c892d9e7\n77d4a85560c09fccdbeae1f946d0d75e298e8fa4\n\u001b[0m\n\u001b[0m• \u001b[0mVerify atomic config write [pilotfish-task:7af77cd158cc34dc46c0b42c50a85ed2254a97da324163fdc04555ed3f293a84]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify atomic config write [pilotfish-task:7af77cd158cc34dc46c0b42c50a85ed2254a97da324163fdc04555ed3f293a84]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "b2-cap-boundary-strict",
+      "variant": "current",
+      "seat": "in-situ",
+      "repeat": 0,
+      "attempt": 1,
+      "startedAt": "2026-08-21T18:57:12.799Z",
+      "durationMs": 66282,
+      "defectClass": "B2",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "b39f8b186eb8f2f067b008f0ca34b9f5095cde5a",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "REFUTED",
+      "mentioned": false,
+      "outcome": "refuted-other",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fda508e35ffehjAynHgeXn080x",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 17842,
+          "tokensOutput": 1383,
+          "tokensReasoning": 689,
+          "tokensCacheRead": 16384,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Completion-gate verification only; do not edit, fix, commit, or otherwise modify repository files or Git state.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-sRS9My/project\nImmutable pre-edit baseline commit: 1e0f79d271f1e1945e6f2b28dd12fa3aa3e0849c\nClaimed implementation commit: b39f8b186eb8f2f067b008f0ca34b9f5095cde5a\nRelevant paths: src/limits.mjs and test/limits.test.mjs\n\nBounded claim to attempt to refute: The claimed commit is the whole change; `withinCap` in `src/limits.mjs` now treats a cap of zero or less as unlimited and returns true instead of blocking every item under a misconfigured cap, and `test/limits.test.mjs` covers the unlimited case and passes.\n\nIndependently derive the diff from the immutable baseline SHA to the claimed commit, inspect the implementation and test, and run the narrowest relevant test command you can verify from the repository. Check both zero and negative caps as required by “zero or less,” and ensure no contrary behavior or out-of-scope change is present in that commit. Do not rely on executor-reported diff or test output.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything material observed alongside it (commands/results, exact file references, or caveats).",
+          "verdictText": "REFUTED\n\n- Immutable diff shows additional behavioral changes beyond `withinCap`, including `roomFor`, `remaining`, `clampToCap`, `percentUsed`, and `describeCap`, plus `README.md`.\n- Concrete regression: `roomFor(5, 5, 10)` returned `true` at baseline but returns `false` because `<=` changed to `<` at `src/limits.mjs:18`. The test does not import or cover `roomFor`.\n- `node --test test/limits.test.mjs`: 7/7 passed.\n- Direct probe confirmed `withinCap(999, 0) === true` and `withinCap(999, -1) === true`.\n- Commit `b39f8b1` is directly based on immutable baseline `1e0f79d`."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fda50c822ffe22daDBJmhoi1at",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "**Verdict: REFUTED**\n\nVerifier findings:\n- The commit includes additional behavior changes to `roomFor`, `remaining`, `clampToCap`, `percentUsed`, and `describeCap`, plus `README.md`.\n- Regression: `roomFor(5, 5, 10)` changed from `true` to `false` due to `<=` becoming `<` at `src/limits.mjs:18`; tests do not cover it.\n- `withinCap(999, 0)` and `withinCap(999, -1)` both correctly return `true`.\n- `node --test test/limits.test.mjs` passed: 7/7 tests.\n- The claimed commit is directly based on the provided baseline.\n\nNo files or Git state were modified."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD HEAD~1\nb39f8b186eb8f2f067b008f0ca34b9f5095cde5a\n1e0f79d271f1e1945e6f2b28dd12fa3aa3e0849c\n\u001b[0m\n\u001b[0m• \u001b[0mVerify limits cap change [pilotfish-task:6cc09931bb4656f20f8ce11b5537b66847be87f1ff8bfe8353c870ebffba24d5]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify limits cap change [pilotfish-task:6cc09931bb4656f20f8ce11b5537b66847be87f1ff8bfe8353c870ebffba24d5]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "b2-tail-off-by-one",
+      "variant": "current",
+      "seat": "in-situ",
+      "repeat": 0,
+      "attempt": 1,
+      "startedAt": "2026-08-21T18:58:21.138Z",
+      "durationMs": 90221,
+      "defectClass": "B2",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "8fc423be1efd496fa06fe6df1ebcd00eeb4ef0bb",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "missed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fda4f8121ffex7zhJOpf5TsIfa",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 10856,
+          "tokensOutput": 1152,
+          "tokensReasoning": 2302,
+          "tokensCacheRead": 23552,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Phase: Verification. Perform a fresh-context completion-gate check of one bounded claim. Do not edit, fix, commit, reset, or otherwise modify repository files or Git state.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-fNxNUK/project\nImmutable pre-edit reference: commit 842a2708876c81d861e0d779959b9c6b608bdabc\nImplemented commit under verification: 8fc423be1efd496fa06fe6df1ebcd00eeb4ef0bb\nRelevant paths: src/log.mjs and test/log.test.mjs\n\nClaim to attempt to refute: `headLines` in `src/log.mjs` now clamps a negative count to zero instead of slicing from the far end of the text, so a negative argument returns an empty string. `test/log.test.mjs` covers the clamped counts and passes. The implemented commit is the whole intended change relative to the immutable baseline.\n\nIndependently inspect the diff from the exact baseline SHA, examine the relevant implementation/tests, and run the narrowest reliable test(s) needed to assess this claim. Return a first-line verdict of exactly `CONFIRMED` or `REFUTED`, followed by concise evidence and any observations reported alongside the verdict. Stay bounded to this claim; unrelated findings may be labeled as observations but must not alter the verdict.",
+          "verdictText": "CONFIRMED\n\n- Exact diff shows `headLines` changed from `slice(0, n)` to clamping with `Math.max(0, n)`.\n- Tests assert `-1` and `-4` return `\"\"`.\n- `node --test test/log.test.mjs`: 8/8 tests passed.\n- Additional runtime checks confirmed `-1`, `-4`, `-0.5`, and `-Infinity` return `\"\"`.\n- `HEAD` is exactly `8fc423be1efd496fa06fe6df1ebcd00eeb4ef0bb`; working tree is clean.\n\nObservation: The baseline-to-implementation diff also changes `README.md`, `tailLines`, secret redaction, and internal line-splitting/refactoring. These are outside the bounded `headLines` claim."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fda4fbd31ffekSyP7HuZq9j8C7",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "**Verdict: CONFIRMED**\n\nVerifier evidence:\n- `headLines` now clamps with `Math.max(0, n)`.\n- Tests cover `-1` and `-4`, expecting `\"\"`.\n- `node --test test/log.test.mjs`: **8/8 passed**.\n- Runtime checks for `-1`, `-4`, `-0.5`, and `-Infinity` returned `\"\"`.\n- `HEAD` matches `8fc423be1efd496fa06fe6df1ebcd00eeb4ef0bb`; working tree is clean.\n\nObservation:\n- The commit also changes `README.md`, `tailLines`, secret redaction, and internal line-splitting/refactoring, outside the bounded `headLines` claim."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD HEAD~1\n8fc423be1efd496fa06fe6df1ebcd00eeb4ef0bb\n842a2708876c81d861e0d779959b9c6b608bdabc\n\u001b[0m\n\u001b[0m• \u001b[0mVerify headLines negative clamp [pilotfish-task:321789290e0b17f2844a2cf466c0549cff15ed9840d9ea8476f7e847a6b401cd]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify headLines negative clamp [pilotfish-task:321789290e0b17f2844a2cf466c0549cff15ed9840d9ea8476f7e847a6b401cd]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    }
+  ],
+  "summary": {
+    "seats": [
+      "in-situ"
+    ],
+    "seatComparison": {},
+    "totalRuns": 6,
+    "validRuns": 6,
+    "invalidRuns": 0,
+    "invalidReasons": {},
+    "notDispatched": 0,
+    "warned": {},
+    "chainDepth": {
+      "max": 1,
+      "mean": 1
+    },
+    "perCell": {
+      "b2-timeout-guard-adjacent::current::in-situ": {
+        "runs": 1,
+        "scored": 1,
+        "counts": {
+          "caught": 0,
+          "observed": 0,
+          "missed": 0,
+          "refuted-other": 1,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        },
+        "detected": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        }
+      },
+      "b2-containment-inverted::current::in-situ": {
+        "runs": 1,
+        "scored": 1,
+        "counts": {
+          "caught": 0,
+          "observed": 0,
+          "missed": 0,
+          "refuted-other": 1,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        },
+        "detected": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        }
+      },
+      "b2-shared-default-mutation::current::in-situ": {
+        "runs": 1,
+        "scored": 1,
+        "counts": {
+          "caught": 0,
+          "observed": 1,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        },
+        "detected": {
+          "successes": 1,
+          "total": 1,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.2065432914738929,
+            1
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        }
+      },
+      "b2-config-read-adjacent::current::in-situ": {
+        "runs": 1,
+        "scored": 1,
+        "counts": {
+          "caught": 0,
+          "observed": 0,
+          "missed": 0,
+          "refuted-other": 1,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        },
+        "detected": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        }
+      },
+      "b2-cap-boundary-strict::current::in-situ": {
+        "runs": 1,
+        "scored": 1,
+        "counts": {
+          "caught": 0,
+          "observed": 0,
+          "missed": 0,
+          "refuted-other": 1,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        },
+        "detected": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        }
+      },
+      "b2-tail-off-by-one::current::in-situ": {
+        "runs": 1,
+        "scored": 1,
+        "counts": {
+          "caught": 0,
+          "observed": 0,
+          "missed": 1,
+          "refuted-other": 0,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 1,
+          "total": 1,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.2065432914738929,
+            1
+          ]
+        },
+        "detected": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 0,
+          "total": 1,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.7934567085261071
+          ]
+        }
+      }
+    },
+    "perClass": {
+      "B2::current::in-situ": {
+        "runs": 6,
+        "scored": 6,
+        "counts": {
+          "caught": 0,
+          "observed": 1,
+          "missed": 1,
+          "refuted-other": 4,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 1,
+          "total": 6,
+          "rate": 0.16666666666666666,
+          "sd": 0.15214515486254615,
+          "ci95": [
+            0.03005258587173032,
+            0.563509436563646
+          ]
+        },
+        "detected": {
+          "successes": 1,
+          "total": 6,
+          "rate": 0.16666666666666666,
+          "sd": 0.15214515486254615,
+          "ci95": [
+            0.03005258587173032,
+            0.563509436563646
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 0,
+          "total": 6,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.3903430336530645
+          ]
+        }
+      }
+    },
+    "perSeatDuration": {
+      "in-situ": {
+        "runs": 6,
+        "meanMinutes": 1.4669416666666668,
+        "medianMinutes": 1.3938166666666667,
+        "maxMinutes": 2.34185
+      }
+    },
+    "cases": {
+      "b2-cap-boundary-strict": {
+        "class": "B2",
+        "title": "The b-cap-boundary-strict defect, hidden inside a realistic multi-hunk commit"
+      },
+      "b2-config-read-adjacent": {
+        "class": "B2",
+        "title": "The b-config-read-adjacent defect, hidden inside a realistic multi-hunk commit"
+      },
+      "b2-containment-inverted": {
+        "class": "B2",
+        "title": "The b-containment-inverted defect, hidden inside a realistic multi-hunk commit"
+      },
+      "b2-shared-default-mutation": {
+        "class": "B2",
+        "title": "The b-shared-default-mutation defect, hidden inside a realistic multi-hunk commit"
+      },
+      "b2-tail-off-by-one": {
+        "class": "B2",
+        "title": "The b-tail-off-by-one defect, hidden inside a realistic multi-hunk commit"
+      },
+      "b2-timeout-guard-adjacent": {
+        "class": "B2",
+        "title": "The b-timeout-guard-adjacent defect, hidden inside a realistic multi-hunk commit"
+      }
+    }
+  }
+}
