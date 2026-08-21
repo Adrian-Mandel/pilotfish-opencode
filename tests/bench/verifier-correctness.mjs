@@ -150,7 +150,25 @@ function estimateFor(options) {
   };
 }
 
-function parseArgs(argv) {
+// A session that produced no assistant text of its own leaves the input as the
+// last text part in the transcript, so the telemetry query reads the brief back
+// out as the verdict. One timed-out run in `replay-gpt56-sol-classB-r20` stored
+// its brief verbatim this way, quoted, and it parses: the brief tells the
+// verifier to return `CONFIRMED` or `REFUTED`, and the fallback
+// first-occurrence rule finds CONFIRMED in that sentence. That run was invalid
+// on the timeout anyway, but a verdict recovered from the harness's own
+// instructions is the worst shape an artifact can take, so an echoed brief is
+// dropped rather than graded.
+//
+// Exact match only, after unwrapping one layer of quotes. A verdict that merely
+// quotes the brief while answering it must still be scored, so nothing weaker
+// than equality is safe here.
+export function echoesBrief(text, brief) {
+  if (typeof text !== "string" || typeof brief !== "string" || brief.trim() === "") return false;
+  return text.trim().replace(/^"/, "").replace(/"$/, "").trim() === brief.trim();
+}
+
+export function parseArgs(argv) {
   const options = {
     repeats: 5,
     variants: DEFAULT_VARIANTS,
@@ -178,7 +196,22 @@ function parseArgs(argv) {
   const positional = [];
   for (let i = 0; i < argv.length; i += 1) {
     const argument = argv[i];
-    const next = () => argv[(i += 1)];
+    // A value-taking option whose value is missing used to swallow whatever
+    // followed, including the next option. That is how the class-B suite died
+    // at run 88 of 240: `--resume` was given without a path, took `--timeout`
+    // as its value, and the run crashed on `readFileSync("--timeout")`. The
+    // retyped command then resumed with a 4-minute per-run cap where the
+    // original had 20, which is why every invalid run in that file is a
+    // timeout. Silent for an hours-long queue, so it fails loudly instead. No
+    // option this harness takes has a value beginning with `--`.
+    const next = () => {
+      const value = argv[(i += 1)];
+      if (value === undefined) throw new Error(`${argument} needs a value`);
+      if (value.startsWith("--")) {
+        throw new Error(`${argument} needs a value, but the next argument is ${value}`);
+      }
+      return value;
+    };
     switch (argument) {
       case "--repeats": options.repeats = Number(next()); break;
       case "--variants": options.variants = next().split(","); break;
@@ -391,10 +424,15 @@ async function executeRun(entry, caseDef, resolvedVariant, options, attempt) {
       exitCode: result.code ?? 0,
     });
 
+    const verifierRuns = telemetry.verifierRuns.map((run) =>
+      echoesBrief(run.verdictText, brief) ? { ...run, verdictText: null, echoedBrief: true } : run,
+    );
+    if (verifierRuns.some((run) => run.echoedBrief)) health.warnings.push("echoed-brief");
+
     // The gate's first firing on the claim is the measurement. Later verifier
     // sessions are re-verification rounds after a REFUTED; they are recorded
     // in full (chain depth is #16's live metric) but do not vote.
-    const first = telemetry.verifierRuns[0] ?? null;
+    const first = verifierRuns[0] ?? null;
     const scored = first
       ? scoreVerdict(caseDef, first.verdictText)
       : { verdict: null, mentioned: false, outcome: OUTCOMES.NOT_DISPATCHED };
@@ -424,8 +462,8 @@ async function executeRun(entry, caseDef, resolvedVariant, options, attempt) {
         : null,
       ...scored,
       verdictSource: verdictSource(first?.verdictText ?? ""),
-      verifierChainDepth: telemetry.verifierRuns.length,
-      verifierRuns: telemetry.verifierRuns.map((run) => ({
+      verifierChainDepth: verifierRuns.length,
+      verifierRuns: verifierRuns.map((run) => ({
         sessionId: run.sessionId,
         agent: run.agent,
         cost: run.cost,
@@ -437,6 +475,10 @@ async function executeRun(entry, caseDef, resolvedVariant, options, attempt) {
         // one outcome substring matching can plausibly mis-grade, and it cannot
         // be re-read later if only the label was kept.
         verdictText: run.verdictText,
+        // Set when the session's last text part was the brief read back rather
+        // than a verdict; `verdictText` is null in that case, so `rescore`
+        // cannot resurrect it either.
+        ...(run.echoedBrief ? { echoedBrief: true } : {}),
       })),
       errors: telemetry.errors,
       stderrTail: result.stderr.slice(-2000),

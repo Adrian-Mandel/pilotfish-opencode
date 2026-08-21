@@ -23,7 +23,7 @@ import {
   captureBriefs,
   normalizeFixturePaths,
 } from "./lib/briefs.mjs";
-import { assertResumable, cellKey } from "./verifier-correctness.mjs";
+import { assertResumable, cellKey, echoesBrief, parseArgs } from "./verifier-correctness.mjs";
 import {
   OUTCOMES,
   compareProportions,
@@ -75,6 +75,73 @@ describe("verdict parsing", () => {
     assert.equal(parseVerdict(""), null);
     assert.equal(parseVerdict(null), null);
     assert.equal(parseVerdict("I could not run the tests in this environment."), null);
+  });
+});
+
+// The class-B suite died at run 88 of 240 because `--resume` was given without
+// a path, took `--timeout` as its value, and crashed on
+// `readFileSync("--timeout")`. The retyped command resumed with a 4-minute cap
+// where the original had 20, which is why every invalid run in that file is a
+// timeout. An hours-long queue must not be able to lose an option silently.
+describe("option parsing", () => {
+  test("an option whose value is missing fails instead of eating the next option", () => {
+    assert.throws(
+      () => parseArgs(["run", "--resume", "--timeout", "4"]),
+      /--resume needs a value, but the next argument is --timeout/,
+    );
+  });
+
+  test("an option at the end of the line with no value fails", () => {
+    assert.throws(() => parseArgs(["run", "--out"]), /--out needs a value/);
+  });
+
+  test("ordinary values, including negative-looking ones, still parse", () => {
+    const { command, options } = parseArgs([
+      "run",
+      "--resume",
+      "results/prior.json",
+      "--timeout",
+      "4",
+      "--confirm",
+    ]);
+    assert.equal(command, "run");
+    assert.equal(options.resume, "results/prior.json");
+    assert.equal(options.timeoutMinutes, 4);
+    assert.equal(options.confirm, true);
+  });
+
+  test("an unknown option is still rejected", () => {
+    assert.throws(() => parseArgs(["run", "--nope", "x"]), /unknown option: --nope/);
+  });
+});
+
+// A timed-out session leaves the input as the last text part, so the telemetry
+// query reads the brief back out as the verdict -- and it parses, because the
+// brief itself says to return CONFIRMED or REFUTED.
+describe("echoed-brief guard", () => {
+  const brief = "Verify the claim about HEAD. Return exactly CONFIRMED or REFUTED with evidence.";
+
+  test("a brief read back as the verdict is recognised", () => {
+    assert.equal(echoesBrief(brief, brief), true);
+  });
+
+  test("the quoted form the harness actually stored is recognised", () => {
+    assert.equal(echoesBrief(`"${brief}"`, brief), true);
+    assert.equal(echoesBrief(`\n  "${brief}"  \n`, brief), true);
+  });
+
+  test("that text would otherwise have parsed as a verdict", () => {
+    assert.equal(parseVerdict(brief), "CONFIRMED");
+  });
+
+  test("a real verdict that quotes the brief back is not discarded", () => {
+    assert.equal(echoesBrief(`CONFIRMED\n\nThe brief asked: "${brief}"\n\nTests pass.`, brief), false);
+  });
+
+  test("an empty or absent brief never discards anything", () => {
+    assert.equal(echoesBrief("CONFIRMED", ""), false);
+    assert.equal(echoesBrief("CONFIRMED", null), false);
+    assert.equal(echoesBrief(null, brief), false);
   });
 });
 

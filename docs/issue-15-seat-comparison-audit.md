@@ -4,7 +4,15 @@ Audits `tests/bench/results/seat-comparison-final.json` — the controlled re-ru
 that puts both verifier seats in one suite, at one commit, with order randomized.
 It is the run that [issue #15 comment 5361389362](https://github.com/Adrian-Mandel/pilotfish-opencode/issues/15#issuecomment-5361389362)
 called for: *"A clean seat comparison needs one suite, one commit, both seats,
-order randomized."*
+order randomized."* It satisfies three of those four. The seats were **not**
+temporally interleaved: the suite ran as two concurrent halves split by seat
+(`seat-gpt.json` and `seat-bambi.json`, merged at 2026-08-21T00:26:11Z), each
+executing its own cells on its own endpoint. Case and repeat order is randomized
+within each half from the shared seed, and both halves span the same wall-clock
+window, so drift over time lands on both rather than on whichever ran second.
+That is a materially weaker guarantee than one interleaved queue, and it is the
+right trade only because the endpoints are genuinely independent — a LAN model
+server and a hosted subscription do not divide each other's throughput.
 
 Method and terminology follow [`issue-15-gpt56-miss-audit.md`](issue-15-gpt56-miss-audit.md).
 The same mechanical test was applied to both seats before any verdict was read,
