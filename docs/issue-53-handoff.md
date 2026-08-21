@@ -110,3 +110,50 @@ postdate the scope change, neither carries an observation). `primaryAftermath`
 is now captured on in-situ runs, but the B2 captures came back `REFUTED`, so
 they did not produce the situation. It needs runs that end in
 `CONFIRMED`-with-observation, which class B in situ produces ~90% of the time.
+
+---
+
+## Update 2026-08-21: class B is complete, B2 is not ready
+
+**Class B finished at 60/60 per seat** (`results/seat-comparison-60.json`).
+Completing bambi's arm moved it off zero:
+
+| seat | n | false `CONFIRMED` | detected | refuted on defect |
+|---|---:|---:|---:|---:|
+| `bambi/qwen3.8-27b-mtp-pure` | 60 | 1/60 = 2% | 59/60 = 98% | 5/60 = 8% |
+| `openai/gpt-5.6-sol` | 60 | 5/60 = 8% | 48/60 = 80% | 16/60 = 27% |
+
+Fisher: primary metric **p = 0.21** (was 0.07 at n=44). Detected p = 0.0020,
+refuted-on-defect p = 0.0148.
+
+The safety metric does not separate the seats. The behavioural split does, in
+both directions: the local seat detects more and refutes less. Good reporter,
+weak gate. That is the stable finding across four revisions of this number.
+
+bambi's one miss has **not** been hand-read. It moves against the flattering
+direction, so it warrants less suspicion than a favourable flip — but the
+discipline is to check both directions.
+
+**Do not run the B2 suite yet.** The six in-situ capture runs functioned as a
+fixture audit and found four problems:
+
+1. `b2-timeout-guard-adjacent` — real unseeded bug, `parsePort` accepted
+   `"65535.000000000001"`. **Fixed** in both tiers (`2952cee`).
+2. `b2-containment-inverted` — real unseeded bug, `joinUnderRoot(".", "a.txt")`
+   throws when it should normalise. **Open. Present in class B too.**
+3. `b2-config-read-adjacent` — not a code bug. The verifier refuted because the
+   claim says the test covers atomicity and it does not: the assertions pass
+   against a plain non-atomic `writeFileSync`. **The claim overstates the test.**
+   Class B's claim has the same wording.
+4. `b2-cap-boundary-strict` — **mis-scored**. It found the seeded defect
+   (*"`roomFor(5,5,10)` returned `true` at baseline but returns `false` because
+   `<=` changed to `<`"*) and was graded `refuted-other`, because the marker is
+   `"<= to <"` and the verdict says `"<= changed to <"`.
+
+Item 4 is the vocabulary failure the README already warns about. The B2 marker
+lists were copied from class B without re-validating them against how these
+verdicts actually read. **Re-validate every B2 marker list against the six
+stored verdicts in `b2-insitu-briefs.json` before running anything.**
+
+Sequence: fix (2), tighten the claim in (3) for both tiers, re-validate markers
+for (4), recapture (~10 min of quota), then the suite.
