@@ -793,7 +793,26 @@ function renderReport(record) {
   return lines.join("\n");
 }
 
-function routingText(options) {
+// Replay needs a captured brief per case, and `briefFor` throws when one is
+// missing -- on the first run of the suite, after `plan` has already quoted a
+// cost and the user has already typed `--confirm`. The B2 tier landed with no
+// briefs at all and planned 60 runs without a murmur, because the brief line
+// printed the whole store rather than the selected cases, so six zeroes looked
+// like nine positive numbers. Checked up front instead, for the same reason
+// `plan` exists: nobody should discover a missing prerequisite one run into a
+// queue they were told would take five hours.
+export function assertBriefsFor(cases, store) {
+  const missing = cases.filter((item) => !store?.cases?.[item.id]?.length).map((item) => item.id);
+  if (missing.length === 0) return;
+  throw new Error(
+    `replay needs a captured brief per case and ${missing.length} have none: ${missing.join(", ")}.\n` +
+      "Capture them from in-situ runs of those cases first:\n" +
+      `  node tests/bench/verifier-correctness.mjs run --confirm --cases ${missing.join(",")} --repeats 1\n` +
+      "  node tests/bench/verifier-correctness.mjs capture-briefs tests/bench/results/<that-file>.json",
+  );
+}
+
+function routingText(options, cases = null) {
   const primary = options.resolvedPrimary;
   if (options.replay) {
     const seats = options.seats;
@@ -804,7 +823,15 @@ function routingText(options) {
           `  ${index === 0 ? "verifier" : "        "}  ${seat.model}${seat.variant ? ` (${seat.variant})` : ""}` +
           `${index === 0 ? "   <- the seat(s) under test" : ""}`,
       ),
-      `  briefs    ${JSON.stringify(briefCounts(options.replayBriefs))}`,
+      // Scoped to the cases this suite actually selects. Printing the whole
+      // store hides a zero among unrelated positive numbers.
+      `  briefs    ${JSON.stringify(
+        cases
+          ? Object.fromEntries(
+              cases.map((item) => [item.id, options.replayBriefs?.cases?.[item.id]?.length ?? 0]),
+            )
+          : briefCounts(options.replayBriefs),
+      )}`,
       "",
       "  Each run replays a brief a real primary wrote, so this measures the",
       "  verifier's response to a fixed instruction -- not the primary's choice of",
@@ -872,7 +899,7 @@ function planText(cases, variants, options) {
     "",
     "Routing",
     "",
-    ...routingText(options),
+    ...routingText(options, cases),
     "",
     "Cost and runtime",
     "",
@@ -950,6 +977,11 @@ async function main() {
 
   const cases = loadCases({ ids: options.cases, classes: options.classes });
   if (cases.length === 0) throw new Error("no cases selected");
+  // Before `plan` quotes a cost or `run` starts a queue. `rescore`, `report` and
+  // `merge` read stored runs and need no briefs.
+  if (options.replay && !["rescore", "report", "merge", "capture-briefs"].includes(command)) {
+    assertBriefsFor(cases, options.replayBriefs);
+  }
 
   // Every verdict is retained in full, which means a scorer fix can be applied
   // to runs that already happened instead of re-running them. That is the only

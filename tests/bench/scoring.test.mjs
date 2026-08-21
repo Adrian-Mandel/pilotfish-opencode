@@ -23,7 +23,13 @@ import {
   captureBriefs,
   normalizeFixturePaths,
 } from "./lib/briefs.mjs";
-import { assertResumable, cellKey, echoesBrief, parseArgs } from "./verifier-correctness.mjs";
+import {
+  assertBriefsFor,
+  assertResumable,
+  cellKey,
+  echoesBrief,
+  parseArgs,
+} from "./verifier-correctness.mjs";
 import {
   OUTCOMES,
   compareProportions,
@@ -118,6 +124,41 @@ describe("option parsing", () => {
 // A timed-out session leaves the input as the last text part, so the telemetry
 // query reads the brief back out as the verdict -- and it parses, because the
 // brief itself says to return CONFIRMED or REFUTED.
+// The B2 tier landed with no captured briefs and `plan` quoted 60 runs without
+// complaint, because the brief line printed the whole store rather than the
+// selected cases. The first run of the suite would have thrown.
+describe("replay brief coverage", () => {
+  const store = { cases: { "b-tail-off-by-one": [{ brief: "x" }], "b-empty": [] } };
+
+  test("a case with no captured brief is refused before the suite starts", () => {
+    assert.throws(
+      () => assertBriefsFor([{ id: "b-tail-off-by-one" }, { id: "b2-tail-off-by-one" }], store),
+      /1 have none: b2-tail-off-by-one/,
+    );
+  });
+
+  test("an empty brief list counts as none", () => {
+    assert.throws(() => assertBriefsFor([{ id: "b-empty" }], store), /b-empty/);
+  });
+
+  test("the error names every missing case, not just the first", () => {
+    assert.throws(
+      () => assertBriefsFor([{ id: "b2-a" }, { id: "b2-b" }, { id: "b2-c" }], store),
+      /3 have none: b2-a, b2-b, b2-c/,
+    );
+  });
+
+  test("full coverage passes", () => {
+    assert.doesNotThrow(() => assertBriefsFor([{ id: "b-tail-off-by-one" }], store));
+  });
+
+  test("every class B case in the shipped store is covered", () => {
+    const shipped = JSON.parse(readFileSync(new URL("./briefs.json", import.meta.url), "utf8"));
+    const classB = CASES.filter((item) => item.defectClass === "B");
+    assert.doesNotThrow(() => assertBriefsFor(classB, shipped));
+  });
+});
+
 describe("echoed-brief guard", () => {
   const brief = "Verify the claim about HEAD. Return exactly CONFIRMED or REFUTED with evidence.";
 
