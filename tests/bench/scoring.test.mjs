@@ -92,8 +92,19 @@ describe("defect detection", () => {
   });
 
   test("a discriminator far from the anchor is not a finding", () => {
-    const text = `parseTimeout is mentioned here.${" filler.".repeat(60)} a negative value elsewhere.`;
+    const text = `parseTimeout is mentioned here.${" filler.".repeat(120)} a negative value elsewhere.`;
     assert.equal(mentionsDefect(text, markers), false);
+  });
+
+  // The window was 200, calibrated on gpt-5.6's 300-700 character verdicts. A
+  // verbose seat separates the anchor from the diagnosis by more than that:
+  // both of bambi/qwen3.8's misses in the controlled two-seat suite had the
+  // discriminator at 224-250 characters and were scored as non-detections.
+  test("a discriminator a verbose seat's paragraph away is still a finding", () => {
+    const text = `parseTimeout is discussed here.${" filler.".repeat(28)} a negative value.`;
+    const gap = text.indexOf("a negative value") - "parseTimeout".length;
+    assert.ok(gap > 200 && gap < 400, `gap ${gap} should sit between the old and new window`);
+    assert.equal(mentionsDefect(text, markers), true);
   });
 
   // The real b-timeout markers, and the shape that credited five real runs with
@@ -123,6 +134,22 @@ describe("defect detection", () => {
     const text =
       "**Observation:** `parseTimeout` has a logic bug: `!Number.isInteger(ms) && ms < 0` uses `&&` instead of `||`.";
     assert.equal(mentionsDefect(text, real), true);
+  });
+
+  // b-cap-boundary-strict's `<= to <` marker was written for precisely the
+  // sentence one gpt-5.6 run produced, and missed it on the backticks alone.
+  test("markdown formatting does not hide a discriminator", () => {
+    const cap = { all: ["roomFor"], any: ["<= to <", "boundary"] };
+    const text =
+      "Noteworthy: the commit also changes `roomFor` from `<=` to `<`, removing exact-cap acceptance and its test.";
+    assert.equal(mentionsDefect(text, cap), true);
+    assert.equal(mentionsDefect(text.replaceAll("`", ""), cap), true);
+  });
+
+  test("stripping backticks does not credit an unrelated verdict", () => {
+    const cap = { all: ["roomFor"], any: ["<= to <", "boundary"] };
+    const text = "CONFIRMED\n\n- `roomFor` is unchanged by this commit and was not examined.";
+    assert.equal(mentionsDefect(text, cap), false);
   });
 
   test("the finding still counts when it is the second mention", () => {

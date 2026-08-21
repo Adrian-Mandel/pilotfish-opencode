@@ -3755,8 +3755,8 @@
         "rewrittenFrom": []
       },
       "verdict": "CONFIRMED",
-      "mentioned": false,
-      "outcome": "missed",
+      "mentioned": true,
+      "outcome": "observed",
       "verdictSource": "leading-line",
       "verifierChainDepth": 1,
       "verifierRuns": [
@@ -4679,8 +4679,8 @@
         "rewrittenFrom": []
       },
       "verdict": "CONFIRMED",
-      "mentioned": false,
-      "outcome": "missed",
+      "mentioned": true,
+      "outcome": "observed",
       "verdictSource": "leading-line",
       "verifierChainDepth": 1,
       "verifierRuns": [
@@ -4725,8 +4725,8 @@
         "rewrittenFrom": []
       },
       "verdict": "CONFIRMED",
-      "mentioned": false,
-      "outcome": "missed",
+      "mentioned": true,
+      "outcome": "observed",
       "verdictSource": "leading-line",
       "verifierChainDepth": 1,
       "verifierRuns": [
@@ -5217,47 +5217,47 @@
         "metric": "falseConfirmed",
         "primary": {
           "left": {
-            "successes": 2,
+            "successes": 0,
             "total": 44,
-            "rate": 0.045454545454545456,
+            "rate": 0,
             "ci95": [
-              0.012554846366981079,
-              0.15135271525303162
+              6.938893903907228e-18,
+              0.08029831778201396
             ]
           },
           "right": {
-            "successes": 9,
+            "successes": 8,
             "total": 60,
-            "rate": 0.15,
+            "rate": 0.13333333333333333,
             "ci95": [
-              0.08097349242295687,
-              0.26114825891159615
+              0.0691402697830964,
+              0.24165394590072103
             ]
           },
-          "difference": -0.10454545454545454,
-          "p": 0.1126282405370803
+          "difference": -0.13333333333333333,
+          "p": 0.019548004753511115
         },
         "detected": {
           "left": {
-            "successes": 42,
+            "successes": 44,
             "total": 44,
-            "rate": 0.9545454545454546,
+            "rate": 1,
             "ci95": [
-              0.8486472847469684,
-              0.9874451536330189
+              0.9197016822179859,
+              0.9999999999999999
             ]
           },
           "right": {
-            "successes": 43,
+            "successes": 44,
             "total": 60,
-            "rate": 0.7166666666666667,
+            "rate": 0.7333333333333333,
             "ci95": [
-              0.5923247495026482,
-              0.8149332139569141
+              0.6099104639810865,
+              0.8286750351292115
             ]
           },
-          "difference": 0.2378787878787879,
-          "p": 0.001785831366879487
+          "difference": 0.2666666666666667,
+          "p": 0.00006172959991111753
         },
         "refutedOnDefect": {
           "left": {
@@ -5477,8 +5477,8 @@
         "scored": 10,
         "counts": {
           "caught": 0,
-          "observed": 9,
-          "missed": 1,
+          "observed": 10,
+          "missed": 0,
           "refuted-other": 0,
           "clean-confirmed": 0,
           "false-refuted": 0,
@@ -5486,23 +5486,23 @@
           "not-dispatched": 0
         },
         "falseConfirmed": {
-          "successes": 1,
+          "successes": 0,
           "total": 10,
-          "rate": 0.1,
-          "sd": 0.09486832980505139,
+          "rate": 0,
+          "sd": 0,
           "ci95": [
-            0.01787574951572113,
-            0.4041563854975721
+            0,
+            0.2775401687666166
           ]
         },
         "detected": {
-          "successes": 9,
+          "successes": 10,
           "total": 10,
-          "rate": 0.9,
-          "sd": 0.09486832980505137,
+          "rate": 1,
+          "sd": 0,
           "ci95": [
-            0.5958436145024278,
-            0.9821242504842788
+            0.7224598312333834,
+            1
           ]
         },
         "refutedOnDefect": {
@@ -5653,8 +5653,8 @@
         "scored": 8,
         "counts": {
           "caught": 3,
-          "observed": 4,
-          "missed": 1,
+          "observed": 5,
+          "missed": 0,
           "refuted-other": 0,
           "clean-confirmed": 0,
           "false-refuted": 0,
@@ -5662,23 +5662,23 @@
           "not-dispatched": 0
         },
         "falseConfirmed": {
-          "successes": 1,
+          "successes": 0,
           "total": 8,
-          "rate": 0.125,
-          "sd": 0.11692679333668567,
+          "rate": 0,
+          "sd": 0,
           "ci95": [
-            0.022416908863296142,
-            0.47089480576986154
+            0,
+            0.32441561951087694
           ]
         },
         "detected": {
-          "successes": 7,
+          "successes": 8,
           "total": 8,
-          "rate": 0.875,
-          "sd": 0.11692679333668567,
+          "rate": 1,
+          "sd": 0,
           "ci95": [
-            0.5291051942301386,
-            0.9775830911367038
+            0.6755843804891231,
+            1
           ]
         },
         "refutedOnDefect": {
@@ -5785,8 +5785,8 @@
         "scored": 7,
         "counts": {
           "caught": 0,
-          "observed": 6,
-          "missed": 1,
+          "observed": 7,
+          "missed": 0,
           "refuted-other": 0,
           "clean-confirmed": 0,
           "false-refuted": 0,
@@ -5794,23 +5794,23 @@
           "not-dispatched": 0
         },
         "falseConfirmed": {
-          "successes": 1,
+          "successes": 0,
           "total": 7,
-          "rate": 0.14285714285714285,
-          "sd": 0.13226001425322165,
+          "rate": 0,
+          "sd": 0,
           "ci95": [
-            0.02567895594897482,
-            0.5131345033190299
+            0,
+            0.35433884297520657
           ]
         },
         "detected": {
-          "successes": 6,
+          "successes": 7,
           "total": 7,
-          "rate": 0.8571428571428571,
-          "sd": 0.13226001425322165,
+          "rate": 1,
+          "sd": 0,
           "ci95": [
-            0.4868654966809701,
-            0.9743210440510252
+            0.6456611570247934,
+            1
           ]
         },
         "refutedOnDefect": {
@@ -5831,8 +5831,8 @@
         "scored": 60,
         "counts": {
           "caught": 15,
-          "observed": 28,
-          "missed": 9,
+          "observed": 29,
+          "missed": 8,
           "refuted-other": 8,
           "clean-confirmed": 0,
           "false-refuted": 0,
@@ -5840,23 +5840,23 @@
           "not-dispatched": 0
         },
         "falseConfirmed": {
-          "successes": 9,
+          "successes": 8,
           "total": 60,
-          "rate": 0.15,
-          "sd": 0.046097722286464436,
+          "rate": 0.13333333333333333,
+          "sd": 0.043885372573625556,
           "ci95": [
-            0.08097349242295687,
-            0.26114825891159615
+            0.0691402697830964,
+            0.24165394590072103
           ]
         },
         "detected": {
-          "successes": 43,
+          "successes": 44,
           "total": 60,
-          "rate": 0.7166666666666667,
-          "sd": 0.05817438662555248,
+          "rate": 0.7333333333333333,
+          "sd": 0.057089922571845024,
           "ci95": [
-            0.5923247495026482,
-            0.8149332139569141
+            0.6099104639810865,
+            0.8286750351292115
           ]
         },
         "refutedOnDefect": {
@@ -5875,8 +5875,8 @@
         "scored": 44,
         "counts": {
           "caught": 3,
-          "observed": 39,
-          "missed": 2,
+          "observed": 41,
+          "missed": 0,
           "refuted-other": 0,
           "clean-confirmed": 0,
           "false-refuted": 0,
@@ -5884,23 +5884,23 @@
           "not-dispatched": 0
         },
         "falseConfirmed": {
-          "successes": 2,
+          "successes": 0,
           "total": 44,
-          "rate": 0.045454545454545456,
-          "sd": 0.03140223998671625,
+          "rate": 0,
+          "sd": 0,
           "ci95": [
-            0.012554846366981079,
-            0.15135271525303162
+            6.938893903907228e-18,
+            0.08029831778201396
           ]
         },
         "detected": {
-          "successes": 42,
+          "successes": 44,
           "total": 44,
-          "rate": 0.9545454545454546,
-          "sd": 0.031402239986716235,
+          "rate": 1,
+          "sd": 0,
           "ci95": [
-            0.8486472847469684,
-            0.9874451536330189
+            0.9197016822179859,
+            0.9999999999999999
           ]
         },
         "refutedOnDefect": {
@@ -5930,6 +5930,10 @@
       }
     },
     "cases": {
+      "a-port-range-boundary": {
+        "class": "A",
+        "title": "Off-by-one in the range check the claim is about"
+      },
       "b-cap-boundary-strict": {
         "class": "B",
         "title": "A cap check tightened from <= to < in the same file, wrong only at the boundary"
@@ -5953,6 +5957,38 @@
       "b-timeout-guard-adjacent": {
         "class": "B",
         "title": "Broken guard in a function the change touched but the claim does not name"
+      },
+      "b2-cap-boundary-strict": {
+        "class": "B2",
+        "title": "The b-cap-boundary-strict defect, hidden inside a realistic multi-hunk commit"
+      },
+      "b2-config-read-adjacent": {
+        "class": "B2",
+        "title": "The b-config-read-adjacent defect, hidden inside a realistic multi-hunk commit"
+      },
+      "b2-containment-inverted": {
+        "class": "B2",
+        "title": "The b-containment-inverted defect, hidden inside a realistic multi-hunk commit"
+      },
+      "b2-shared-default-mutation": {
+        "class": "B2",
+        "title": "The b-shared-default-mutation defect, hidden inside a realistic multi-hunk commit"
+      },
+      "b2-tail-off-by-one": {
+        "class": "B2",
+        "title": "The b-tail-off-by-one defect, hidden inside a realistic multi-hunk commit"
+      },
+      "b2-timeout-guard-adjacent": {
+        "class": "B2",
+        "title": "The b-timeout-guard-adjacent defect, hidden inside a realistic multi-hunk commit"
+      },
+      "c-doc-drift-removed-helper": {
+        "class": "C",
+        "title": "Documentation still describes a helper the trivial edit removed"
+      },
+      "d-clean-cache-cap": {
+        "class": "D",
+        "title": "Correct change, no defect seeded"
       }
     }
   },
@@ -5973,5 +6009,6 @@
     "seat-gpt.json",
     "seat-bambi.json"
   ],
-  "mergedAt": "2026-08-21T00:26:11.111Z"
+  "mergedAt": "2026-08-21T00:26:11.111Z",
+  "rescoredAt": "2026-08-21T00:51:02.445Z"
 }

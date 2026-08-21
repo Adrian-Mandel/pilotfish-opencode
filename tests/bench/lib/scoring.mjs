@@ -79,23 +79,48 @@ export function verdictSource(text) {
 // Proximity is the second half, and it is deliberately generous. Scoping to the
 // line grades the adjacent-defect cases perfectly and then breaks the class A
 // control -- 30 of 40, because a verdict discussing one function across several
-// sentences naturally separates the name from the detail. All 120 runs grade
-// correctly at a 200-character window and identically at 400, so this rests on
-// a plateau rather than on a fitted constant.
-const DEFAULT_WINDOW = 200;
+// sentences naturally separates the name from the detail.
+//
+// This was 200, justified as a plateau because all 120 runs of the gpt-5.6
+// class-A/B suite graded identically at 200 and 400. That plateau was measured
+// on one seat, and it turned out to be a property of that seat's prose rather
+// than of the task: gpt-5.6 writes 300-700 character verdicts, while
+// `bambi/qwen3.8-27b-mtp-pure` writes 2,700-3,200 character verdicts whose
+// structured observation paragraphs separate the function name from the
+// diagnosis. Both of that seat's misses in the controlled two-seat suite had
+// the discriminator present at 224, 239 and 250 characters -- one of them
+// reading "An off-by-one regression with its coverage deleted" -- and were
+// scored as never having noticed the defect.
+//
+// 400 is where the sweep settles: it moves exactly those two runs and changes
+// no other run in any stored suite, including leaving all 120 of the original
+// gpt-5.6 runs untouched. It is a floor rather than a settled plateau --
+// `replay-qwen3.6-27b-classAB-r20` moves three further runs at 800 and a fourth
+// at 2000, which need hand-reading before the window goes higher, because a
+// wider window is precisely the over-crediting this proximity rule exists to
+// prevent.
+const DEFAULT_WINDOW = 400;
+
+// Markdown formatting is not vocabulary. Models write `<=` and <= for the same
+// operator, and b-cap-boundary-strict's `<= to <` discriminator -- written for
+// exactly the sentence one run produced -- was defeated by the backticks in
+// "the commit also changes `roomFor` from `<=` to `<`". Backticks are stripped
+// from both sides before matching. This widens nothing: a marker gains a match
+// only where it would already have matched the same words unformatted.
+const normalize = (value) => value.toLowerCase().replaceAll("`", "");
 
 export function mentionsDefect(text, markers) {
   if (typeof text !== "string" || !markers) return false;
-  const haystack = text.toLowerCase();
-  const has = (marker) => haystack.includes(marker.toLowerCase());
+  const haystack = normalize(text);
+  const has = (marker) => haystack.includes(normalize(marker));
   if (!markers.all.every(has)) return false;
 
   const window = markers.window ?? DEFAULT_WINDOW;
-  const anyMarkers = markers.any.map((marker) => marker.toLowerCase());
+  const anyMarkers = markers.any.map(normalize);
   // Anchor on every occurrence of every all-marker: the mention that carries the
   // finding is not always the first one, and a verdict may name the function in
   // a test list before discussing it properly further down.
-  for (const anchor of markers.all.map((marker) => marker.toLowerCase())) {
+  for (const anchor of markers.all.map(normalize)) {
     let at = haystack.indexOf(anchor);
     while (at !== -1) {
       const segment = haystack.slice(Math.max(0, at - window), at + anchor.length + window);

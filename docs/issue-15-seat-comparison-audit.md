@@ -212,10 +212,12 @@ Neither reaches significance. Both are far below the 21.6% on the record.
 breaks none, and re-derives the plateau claim on a corpus that includes a verbose
 seat rather than one terse one. Cheap and retroactive via `rescore`.
 
-**2. Strip backticks and collapse hyphens before matching.** ``from `<=` to `<` ``
-should match the marker `<= to <` that was written for it. This is a scorer fix,
-not a marker fix; it is seat-neutral and it does not widen what counts as a
-detection — it only stops markdown formatting from hiding it.
+**2. Strip backticks before matching.** ``from `<=` to `<` `` should match the
+marker `<= to <` that was written for it. This is a scorer fix, not a marker fix;
+it is seat-neutral and it does not widen what counts as a detection — it only
+stops markdown formatting from hiding it. (Collapsing hyphens was also
+considered and rejected: `exact-cap` still would not reach `exactly` or
+`exact-fill`, so it fixes nothing and widens matching for no gain.)
 
 **3. `b-tail-off-by-one` vocabulary — unchanged from the predecessor audit.**
 Broaden only after validating against verdicts that mention `tailLines` without
@@ -229,6 +231,58 @@ mechanical.
 **5. Re-score, do not re-run.** Every correction above is a scorer or marker
 change, so `rescore` applies all of it to the stored transcripts. Only the
 `b-tail-off-by-one` fixture change would require fresh runs.
+
+---
+
+---
+
+## Post-rescore state — and a trap in it
+
+Recommendations 1 and 2 landed, and all four stored suites were rescored. The
+scorer changes moved **exactly three runs, all in this suite**:
+
+| Run | Change | Fixed by |
+|---|---|---|
+| `gpt-5.6-sol` `b-cap-boundary-strict` r4 | `missed` → `observed` | backtick stripping |
+| `bambi` `b-tail-off-by-one` r5 | `missed` → `observed` | window 200 → 400 |
+| `bambi` `b-containment-inverted` r6 | `missed` → `observed` | window 200 → 400 |
+
+`replay-gpt56-sol-classAB-r20`, `replay-qwen3.6-27b-classAB-r20` and
+`replay-gpt56-sol-classB-r20` each moved **zero runs**, which is the sweep's
+prediction confirmed on the real scorer and an independent reconfirmation of both
+earlier audits.
+
+### Do not quote the rescored summary
+
+The file now reports **gpt 8/60 = 13.3%, bambi 0/44 = 0.0%, Fisher p = 0.0195** —
+apparently significant, and in the local seat's favour. **That number is an
+artifact of an incomplete correction, not a result.**
+
+The two landed fixes are *asymmetric by seat*. Both of bambi's artifacts were
+window-shaped and are now fixed. Only one of gpt's five was backtick-shaped; the
+remaining four are vocabulary-shaped and were deliberately left unencoded,
+because the `b-tail-off-by-one` broadening still needs negatives to validate
+against:
+
+| Still scored `missed`, hand-ruled artifact | Mechanism |
+|---|---|
+| `b-tail-off-by-one` r0, r1, r4 | demonstrative phrasing |
+| `b-timeout-guard-adjacent` r1 | names the defect without operator or failing input |
+
+So the partial fix corrected one seat completely and the other by a fifth, and
+the p-value moved from 0.14 to 0.0195 on that asymmetry alone. **The hand-audited
+figures at the top of this document — gpt 4/60 = 6.7%, bambi 0/44 = 0.0%,
+p = 0.14, not significant — remain the correct reading.**
+
+This is the README's own warning arriving in its sharpest possible form: a
+correction that flips a result to significance in the flattering direction. It
+was produced by fixing what was cheap to fix rather than what was found, and it
+would have been quoted as a seat difference.
+
+**Until the `b-tail-off-by-one` vocabulary question is closed, no rate from this
+file should be published.** Closing it means either validating a broadened marker
+set against verdicts that mention `tailLines` without diagnosing it, or making
+the fixture change and re-running — and the second is preferable.
 
 ---
 
