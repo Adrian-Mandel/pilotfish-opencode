@@ -15,7 +15,7 @@
 // it stands in for.
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const BENCH_DIR = fileURLToPath(new URL("../", import.meta.url));
@@ -37,7 +37,11 @@ export function captureBriefs(resultPaths) {
         if (!entries.some((entry) => entry.brief === text)) {
           entries.push({
             brief: text,
-            source: path.split("/").pop(),
+            // `basename`, not a split on "/". The hand-rolled version returned
+            // the whole path on win32, where the separator is a backslash --
+            // which would write an absolute machine path, home directory
+            // included, into a committed `briefs.json`.
+            source: basename(path),
             variant: run.variant,
             pilotfishPrompt: run.promptDigests?.["pilotfish.md"] ?? null,
           });
@@ -48,7 +52,7 @@ export function captureBriefs(resultPaths) {
   }
   return {
     schema: BRIEFS_SCHEMA,
-    capturedFrom: resultPaths.map((path) => path.split("/").pop()),
+    capturedFrom: resultPaths.map((path) => basename(path)),
     cases: Object.fromEntries([...byCase].map(([id, entries]) => [id, entries])),
   };
 }

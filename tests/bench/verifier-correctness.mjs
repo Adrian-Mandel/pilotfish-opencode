@@ -20,7 +20,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createFixture, destroyFixture, parsePrimary, runOpencode } from "../integration/fixture.mjs";
@@ -1046,7 +1046,7 @@ async function main() {
     }
     const merged = {
       ...records[0],
-      mergedFrom: inputs.map((path) => path.split("/").pop()),
+      mergedFrom: inputs.map((path) => basename(path)),
       mergedAt: new Date().toISOString(),
       options: { ...records[0].options, onlySeat: null, out: outPath },
       runs: [...byCell.values()],
@@ -1054,7 +1054,7 @@ async function main() {
     merged.summary = summarize(merged.runs, cases, options.seats[0].key);
     writeFileSync(outPath, `${JSON.stringify(merged, null, 2)}\n`);
     process.stdout.write(
-      `merged ${records.map((entry, index) => `${inputs[index].split("/").pop()}=${entry.runs.length}`).join(" + ")} ` +
+      `merged ${records.map((entry, index) => `${basename(inputs[index])}=${entry.runs.length}`).join(" + ")} ` +
         `-> ${merged.runs.length} distinct cells\n\n`,
     );
     process.stdout.write(`${renderReport(merged)}\n`);
