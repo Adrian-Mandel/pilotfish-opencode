@@ -197,11 +197,22 @@ class-AB suite completely untouched — independently confirming that the 18 rea
 misses in the predecessor audit are real at any window, and that its 12.5% needs
 no revision.
 
-**400 is a floor, not a settled plateau.** The `qwen3.6-27b` suite moves three
-more runs at 800 and a fourth at 2000, so that suite's 40% class-B miss rate is
-probably also somewhat inflated. Those 3–4 runs need a hand-read before the
-window goes above 400 — a wider window increases the risk of crediting an
-incidental mention, which is the failure `054a27e` was written to prevent.
+**400 is also an upper bound — settled by hand-reading, not left open.** The
+`qwen3.6-27b` suite moves four more runs at 800, and the first draft of this
+document guessed that meant its 40% class-B rate was inflated too. It is not.
+All four were read: every one is a genuine miss that names `parseTimeout` only
+in a passing-test list (*"`parseTimeout reads a numeric string` ✓"*) or notes
+*"the commit also changes `parseTimeout`, but that was not part of the claim."*
+
+What the wider window credits them with is the `||` in
+`!Number.isInteger(port) || port < 1 || port > 65535` — **`parsePort`'s own
+guard**, the claimed function's code, sitting 709–770 characters from that
+incidental mention. That is the shared-vocabulary false credit `054a27e`
+removed, reappearing through proximity instead of through the marker list.
+
+So `replay-qwen3.6-27b-classAB-r20`'s figures stand unchanged, and the window
+should not go above 400. Note the direction: this closes the question *against*
+the more flattering reading of the weakest seat.
 
 ---
 

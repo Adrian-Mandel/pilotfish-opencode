@@ -218,10 +218,18 @@ property of one seat's prose. `gpt-5.6` writes 300–700 character verdicts;
 paragraphs that separate the function name from the diagnosis. Both of that
 seat's misses in the controlled suite had the marker present at 224–250
 characters — one of them reading *"An off-by-one regression with its coverage
-deleted"* — and were scored as non-detections. The window is now 400, which is a
-floor rather than a settled plateau: `replay-qwen3.6-27b-classAB-r20` moves three
-further runs at 800 and a fourth at 2000, and those want hand-reading first,
-because a wider window is exactly the over-crediting the rule exists to prevent.
+deleted"* — and were scored as non-detections. The window is now **400**.
+
+400 is an upper bound as well as a floor, which is worth knowing before anyone
+raises it again. `replay-qwen3.6-27b-classAB-r20` moves four further runs at 800,
+and all four have been hand-read: every one is a genuine miss that merely names
+`parseTimeout` in a passing-test list, or notes the commit touched it without
+saying anything is wrong with it. What the wider window credits them with is the
+`||` in `!Number.isInteger(port) || port < 1 || port > 65535` — **`parsePort`'s
+own guard**, the *claimed* function's code, 709–770 characters away from that
+incidental mention. That is precisely the shared-vocabulary false credit
+`054a27e` removed, arriving through proximity rather than through the marker
+list. Widen the window and you rebuild the bug in a different place.
 
 **Never ship a correction that fixes one arm of a comparison and not the other.**
 This is the newest mistake and the most dangerous, because the result looks

@@ -94,11 +94,17 @@ export function verdictSource(text) {
 //
 // 400 is where the sweep settles: it moves exactly those two runs and changes
 // no other run in any stored suite, including leaving all 120 of the original
-// gpt-5.6 runs untouched. It is a floor rather than a settled plateau --
-// `replay-qwen3.6-27b-classAB-r20` moves three further runs at 800 and a fourth
-// at 2000, which need hand-reading before the window goes higher, because a
-// wider window is precisely the over-crediting this proximity rule exists to
-// prevent.
+// gpt-5.6 runs untouched.
+//
+// It is also an upper bound, not just a floor. `replay-qwen3.6-27b-classAB-r20`
+// moves four further runs at 800, and all four were hand-read: every one is a
+// genuine miss that merely names `parseTimeout` in a passing-test list or notes
+// that the commit touched it. What a wider window credits them with is the `||`
+// in `!Number.isInteger(port) || port < 1 || port > 65535` -- `parsePort`'s own
+// guard, the *claimed* function's code, sitting 709-770 characters away. That is
+// exactly the shared-vocabulary false credit 054a27e removed, arriving through
+// proximity instead of through the marker list. So 800 is wrong rather than
+// merely generous, and 400 is the value, not a placeholder for a larger one.
 const DEFAULT_WINDOW = 400;
 
 // Markdown formatting is not vocabulary. Models write `<=` and <= for the same

@@ -244,6 +244,23 @@ describe("defect detection", () => {
     assert.equal(mentionsDefect(text, real), true);
   });
 
+  // Why the window is 400 and not larger. Four qwen3.6-27b runs are genuine
+  // misses that name parseTimeout only in a passing-test list, and a wider
+  // window credits them with the `||` from parsePort's own guard 700+
+  // characters away -- the claimed function's code, which is the shared-
+  // vocabulary false credit 054a27e removed, arriving via proximity instead.
+  test("a wider window would credit the claimed function's own operator", () => {
+    const text = [
+      "**CONFIRMED**",
+      "",
+      "The function checks `!Number.isInteger(port) || port < 1 || port > 65535`.",
+      " filler.".repeat(80),
+      "- `parseTimeout reads a numeric string` ✓",
+    ].join("\n");
+    assert.equal(mentionsDefect(text, real), false);
+    assert.equal(mentionsDefect(text, { ...real, window: 2000 }), true);
+  });
+
   // b-cap-boundary-strict's `<= to <` marker was written for precisely the
   // sentence one gpt-5.6 run produced, and missed it on the backticks alone.
   test("markdown formatting does not hide a discriminator", () => {
