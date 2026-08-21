@@ -77,6 +77,10 @@ export function readRunTelemetry(fixture, { outside = null } = {}) {
     `SELECT s.id AS sessionId, s.agent, s.title, s.time_created AS created,
             s.cost, s.tokens_input AS tokensInput, s.tokens_output AS tokensOutput,
             s.tokens_reasoning AS tokensReasoning,
+            s.tokens_cache_read AS tokensCacheRead,
+            s.tokens_cache_write AS tokensCacheWrite,
+            s.parent_id AS parentId,
+            (SELECT max(p.time_created) FROM part p WHERE p.session_id = s.id) AS lastActivity,
             ${LAST_TEXT} AS verdictText
      FROM session s WHERE ${VERIFIER_PREDICATE} ORDER BY s.time_created;`,
   );
@@ -122,10 +126,58 @@ export function readRunTelemetry(fixture, { outside = null } = {}) {
      FROM part p;`,
   );
 
+  // What the primary did *after* the gate reported. #16's scope change tells the
+  // verifier to file an adjacent defect as an observation beneath a CONFIRMED
+  // rather than refute on it, which only remains safe if the primary then acts
+  // on the observation. Nothing in the stored history answers that -- only two
+  // verifier sessions in the real database postdate the change, and neither
+  // carries an observation -- so it has to be captured from seeded runs.
+  //
+  // Keyed to the first verifier dispatch, because that is the one scored.
+  const first = verifierRuns[0] ?? null;
+  let primaryAftermath = null;
+  if (first?.parentId && first.lastActivity != null) {
+    const parent = sqlQuote(first.parentId);
+    const after = Number(first.lastActivity);
+    const [counts] = query(
+      dbPath,
+      `SELECT
+         sum(json_extract(p.data,'$.type') = 'text') AS textParts,
+         sum(json_extract(p.data,'$.type') = 'tool') AS toolCalls,
+         sum(json_extract(p.data,'$.tool') = 'task') AS taskDispatches
+       FROM part p
+       WHERE p.session_id = ${parent} AND p.time_created > ${after};`,
+    );
+    const tools = query(
+      dbPath,
+      `SELECT DISTINCT json_extract(p.data,'$.tool') AS tool
+       FROM part p
+       WHERE p.session_id = ${parent} AND p.time_created > ${after}
+         AND json_extract(p.data,'$.type') = 'tool';`,
+    );
+    // The primary's closing report. Whether it repeats the observation is the
+    // clearest single signal that the finding survived the gate.
+    const [final] = query(
+      dbPath,
+      `SELECT json_extract(p.data,'$.text') AS text FROM part p
+       WHERE p.session_id = ${parent} AND json_extract(p.data,'$.type') = 'text'
+       ORDER BY p.time_created DESC, p.id DESC LIMIT 1;`,
+    );
+    primaryAftermath = {
+      primarySessionId: first.parentId,
+      textPartsAfter: counts?.textParts ?? 0,
+      toolCallsAfter: counts?.toolCalls ?? 0,
+      taskDispatchesAfter: counts?.taskDispatches ?? 0,
+      toolsAfter: tools.map((row) => row.tool).filter(Boolean),
+      finalText: final?.text ?? null,
+    };
+  }
+
   return {
     present: true,
     sessions,
     errors,
+    primaryAftermath,
     cwdResets: drift?.cwdResets ?? 0,
     foreignPathMentions: drift?.foreignPathMentions ?? 0,
     verifierRuns: verifierRuns.map((run, index) => ({

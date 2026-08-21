@@ -470,6 +470,8 @@ async function executeRun(entry, caseDef, resolvedVariant, options, attempt) {
         tokensInput: run.tokensInput,
         tokensOutput: run.tokensOutput,
         tokensReasoning: run.tokensReasoning,
+        tokensCacheRead: run.tokensCacheRead,
+        tokensCacheWrite: run.tokensCacheWrite,
         dispatchPrompt: run.dispatch?.prompt ?? null,
         // Retained in full and deliberately: CONFIRMED-with-observation is the
         // one outcome substring matching can plausibly mis-grade, and it cannot
@@ -481,6 +483,9 @@ async function executeRun(entry, caseDef, resolvedVariant, options, attempt) {
         ...(run.echoedBrief ? { echoedBrief: true } : {}),
       })),
       errors: telemetry.errors,
+      // #53 Phase 0: what the primary did after the gate reported. Only
+      // meaningful in situ -- a replay run has no primary at all.
+      primaryAftermath: replay ? null : telemetry.primaryAftermath,
       stderrTail: result.stderr.slice(-2000),
     };
   } finally {
