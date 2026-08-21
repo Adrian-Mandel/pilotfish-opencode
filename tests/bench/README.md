@@ -153,10 +153,25 @@ the primary's choice of brief, and the Completion Gate wording is part of what
 model, not about the gate end to end. Keep a handful of in-situ runs alongside
 any replay conclusion to confirm the replay is not distorting.
 
-It also only covers cases that have a captured brief. Classes C and D have none
-yet, so the documentation-drift case and the false-REFUTED noise floor cannot be
-replayed until one in-situ run of each is recorded — two runs, then unlimited
-cheap repeats.
+It also only covers cases that have a captured brief. Coverage as of
+2026-08-21 — `plan` prints this for the cases a given suite selects, and refuses
+to start when any of them is zero:
+
+| class | case | briefs |
+|---|---|---:|
+| A | `a-port-range-boundary` | 13 |
+| B | six cases | 2–12 each |
+| C | `c-doc-drift-removed-helper` | 1 |
+| D | `d-clean-cache-cap` | 3 |
+| **B2** | **six cases** | **0 — cannot be replayed** |
+
+Classes C and D were captured in `98e96e8` and are replayable now, though C's
+single brief means every repeat of that cell replays identical input — it
+measures one phrasing, not the primary's variance. **B2 is the tier with no
+briefs**, and B's cannot substitute for it: the B2 claim also describes the
+commit's legitimate changes, so a B brief would describe a commit that is not on
+disk and the verifier would refute on the mismatch. See
+[`docs/issue-15-b2-runbook.md`](../../docs/issue-15-b2-runbook.md).
 
 ## Before you trust a number from a new model
 
