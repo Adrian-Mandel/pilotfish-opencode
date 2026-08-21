@@ -1181,7 +1181,7 @@ async function main() {
   process.stdout.write(`${planText(cases, options.variants, options)}\n\n`);
   if (prior) {
     process.stdout.write(
-      `Resuming ${options.resume}: ${alreadyDone} of ${fullQueue.length} cells already measured, ` +
+      `Resuming ${options.resume}: ${alreadyDone} of ${mine.length} cells already measured, ` +
         `${queue.length} to run. Seed ${seed} carried over, so the remaining order is the ` +
         "one the original suite would have used.\n",
     );
