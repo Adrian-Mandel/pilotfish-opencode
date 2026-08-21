@@ -49,6 +49,27 @@ Useful flags: `--repeats N`, `--variants current,pre-scope`, `--cases <id,...>`,
 `--classes A,B`, `--timeout <minutes>`, `--seed N` (replays a run order),
 `--keep-fixtures`, `--out <path>`.
 
+### Prompt variants
+
+| variant | what it is |
+|---|---|
+| `current` | the working-tree prompts — #16 as it stands. Default arm. |
+| `pre-scope` | `verifier.md` at `9332e48~1`, before the scope change. Default arm. |
+| `pre-scope-gate` | also reverts `pilotfish.md`. Confounded — use it to confirm a finding, never to produce one. |
+| `severity-triggered` | #53 Phase 1's third arm: `current` with the scope paragraph replaced. Opt-in, not in the default suite. |
+
+The first three pin each prompt at a git ref. `severity-triggered` is instead a
+patch against the working-tree `verifier.md`, because its text was written for
+the experiment and so has no ref to be recovered from. The patch is anchored on
+the passage it replaces, not on a line number, and resolution **fails closed**
+if that passage moves, is reworded, or appears twice — so a drive-by edit to the
+prompt aborts the run rather than silently measuring the wrong text. Resolution
+happens for every named variant before the queue is built, so that abort costs
+nothing.
+
+How its trigger list was derived, and why the bar it draws is reachability
+rather than severity: `docs/issue-53-phase1-trigger-derivation.md`.
+
 ## Replay mode: the same measurement for about a fiftieth of the cost
 
 An in-situ run pays for a whole orchestrated session — planning, tool calls,
@@ -483,7 +504,17 @@ Wilson 95% interval for this reason.
 ## The database rule
 
 Fixture runs write to their own isolated `opencode.db` inside the fixture root.
-**Never pool that with `~/.local/share/opencode/opencode.db`.** That database is
-#16's measurement sample, which starts 2026-08-10; benchmark runs are not part
-of it and would corrupt it. The harness has no code path that can open it, and
-`scoring.test.mjs` asserts as much.
+**Never pool that with `~/.local/share/opencode/opencode.db`.** The harness has
+no code path that can open it, and `scoring.test.mjs` asserts as much.
+
+The original reason was that the shared database held #16's measurement sample.
+It no longer does. The data directory was recreated 2026-08-14 and the database
+now holds a schema, 38 `migration` rows and one `project` row — no sessions at
+all — so everything measured from it before that date is unreproducible: the
+328-session telemetry in `docs/issue-16-evidence.md`, and the 44 historical
+`REFUTED` verdicts that #16's P1 and #53's Phase 1 both rest on. See
+`docs/issue-53-phase1-trigger-derivation.md` §0 for what was searched.
+
+The rule stands on the other reason, which the first one was masking: a live
+session store is not a bench artifact and nothing preserves it. Anything a run
+needs must be exported while its fixture still exists.
