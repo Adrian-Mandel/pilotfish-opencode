@@ -1,317 +1,383 @@
 # Hand-audit of the `missed` runs in the gpt-5.6 class-B replay suite
 
-Audits every run scored `missed` in a `gpt-5.6-sol` class-B replay suite to
-separate real false `CONFIRMED`s from marker-vocabulary artifacts, per the
-README's *"Before you trust a number from a new model"*.
+Audits every run scored `missed` in `tests/bench/results/replay-gpt56-sol-classB-r20.json`
+— the suite behind the **11/51 = 21.6%** false-`CONFIRMED` figure in
+[issue #15 comment 5361389362](https://github.com/Adrian-Mandel/pilotfish-opencode/issues/15#issuecomment-5361389362),
+the number that inverted #32's founding assumption by putting the free local
+seat ahead of the paid frontier one.
 
-Offline throughout. No provider, no quota, no model seat. The stored result file
-was not modified; the counterfactual marker tests below drive
-`tests/bench/lib/scoring.mjs` directly against a read-only copy of the verdicts.
+Offline throughout. No provider, no quota, no model seat. No result file or
+`case.json` was modified; the marker tests below import
+`tests/bench/lib/scoring.mjs` unmodified and re-grade stored verdicts read-only.
 
 ---
 
-## Scope correction — read this before the numbers
+## Finding
 
-**The file the audit was commissioned against is not in this repository.**
+**The 21.6% is not real.** Six of the eleven `missed` runs in that cell are
+marker-vocabulary artifacts — the verifier found the seeded defect, named the
+function, quoted the exact wrong output, and flagged it as outside the claim.
+The corrected rate for the same cell is **5/51 = 9.8%** (Wilson 4.3–21.0%),
+which is consistent with the ~7% the controlled re-run is tracking.
 
-`tests/bench/results/replay-gpt56-sol-classB-r20.json` — the 2026-08-17 suite,
-n=51, six-case class-B set, the source of the **11/51 = 21.6%** headline in
-[issue #15 comment 5361389362](https://github.com/Adrian-Mandel/pilotfish-opencode/issues/15#issuecomment-5361389362)
-— is absent from the working tree, from every local and remote branch, and from
-the entire history of `tests/bench/results/`. The same is true of the four
-`bambi-qwen38-*` suites behind the 0/60 local-seat result.
-`tests/bench/results/.gitignore` ignores `*`, so those files exist only on the
-machine that produced them.
+Two independent defects inflated it, and they compound:
 
-**Consequence: the 21.6% figure is not audited here and remains open.** In
-particular the `b-tail-off-by-one` and `b-shared-default-mutation` misses named
-in the brief cannot be examined — neither case has a single run in any result
-file present in this repository.
+| | Effect on the headline |
+|---|---|
+| **Marker artifact** on `b-tail-off-by-one` — 6 of 11 current-cell misses | 21.6% → 9.8% |
+| **The suite is 37% complete** — 88 valid runs of 240 planned | no directional number should be quoted from it at all |
 
-What *is* audited is the nearest available comparable:
+The second is the README's *"Do not report a direction from a partial suite…
+This was done twice and was wrong both times."* This is the third time.
+
+---
+
+## Provenance
 
 | | |
 |---|---|
-| File | `tests/bench/results/replay-gpt56-sol-classAB-r20.json` |
-| Suite start | 2026-08-16T00:40:23Z, rescored 2026-08-16T02:40:27Z |
-| Seat | `openai/gpt-5.6-sol@high`, replay mode, preset `chatgpt` |
-| Environment | node v22.22.3, OpenCode 1.18.16, `gitHead` `054a27e`, `AGENTS.md` `7f7344c8` |
-| Runs | 121 total, 120 valid, 1 invalid (`throttled-or-quota`) |
-| Cases | `a-port-range-boundary` (A), `b-config-read-adjacent` (B), `b-timeout-guard-adjacent` (B) |
+| File | `tests/bench/results/replay-gpt56-sol-classB-r20.json` |
+| Started | 2026-08-17T23:55:40Z. **Never rescored** (`rescoredAt` absent) |
+| Seat | `openai/gpt-5.6-sol` (no `@high`), replay mode, preset `chatgpt` |
+| Environment | node v22.22.3, OpenCode 1.18.16, `gitHead` `2a8e5fe8`, `AGENTS.md` `7f7344c8` |
+| Planned | 240 runs — 6 class-B cases × 2 variants × 20 repeats |
+| Actual | **95 attempted, 88 valid, 7 invalid (all `timeout`)** |
 
-This is the suite the same issue comment reports as **B current 5/40 = 12.5%,
-B pre-scope 13/40 = 32.5%, A 40/40 clean**. It is a two-case class-B set, not
-the six-case set behind 21.6%.
+`2a8e5fe8` is a descendant of `054a27e`, so the corrected marker lists were in
+force. This is not the pre-fix scoring.
 
-It is still the right thing to audit in the absence of the other file: **all 19
-of its `missed` runs fall in `b-timeout-guard-adjacent`** — the case the brief
-identifies as the dominant miss bucket and the one carrying the narrowest
-`markers.any` list in the set.
+### The suite never finished, and it stopped unevenly
 
----
+From the run log: the suite reached run 88 of 240, then crashed —
 
-## Result: 18 of 18 valid misses are real. Zero artifacts.
-
-Every `missed` verdict was read in full. Not one of the 19 mentions
-`parseTimeout`, contains the string `timeout` in any form, contains `&&` or
-`||`, or refers to a second, other, sibling, or adjacent function, or to a
-second hunk in the diff. Each verifies the claimed `parsePort` thoroughly —
-diff, test run, boundary probes — and stops there.
-
-The seeded defect is in `parseTimeout`, a function the same commit changed and
-the claim does not name. These verdicts never look at it.
-
-### Per-run table
-
-The `markers.all` anchor for this case is the bare function name `parseTimeout`.
-Since no verdict below contains it, the deciding evidence in every row is an
-absence, so the quoted line is each verdict's **closing line** — the slot where
-all 12 genuine detections in this same cell place their
-`Separate observation: parseTimeout …` paragraph, and what stands there instead.
-
-| # | Variant | Rep | Verdict | Ruling | Closing line — the slot where a detection would sit |
-|---:|---|---:|---|---|---|
-| 1 | current | 3 | CONFIRMED | **real miss** | "Additional boundary checks confirmed ports `1` and `65535` pass, while invalid values throw `RangeError`." |
-| 2 | current | 4 | CONFIRMED | **real miss** | "Working tree is clean." |
-| 3 | current | 9 | CONFIRMED | **real miss** | "The commit adds tests for zero, negative, above-range, fractional, and garbage inputs." |
-| 4 | current | 12 | CONFIRMED | **real miss** | "Independent boundary probes confirmed `1` and `65535` pass, while `0`, negatives, `65536`, fractions, garbage, `Infinity`, and `NaN` throw `RangeError`." |
-| 5 | current | 18 | CONFIRMED | **real miss** | "Observation: README's documented `node --test test/` command fails under Node 22 because the directory is treated as a module path; this is outside the claimed change." |
-| 6 | pre-scope | 0 | CONFIRMED | **real miss** | "`node --test test/config.test.mjs`: **5 tests passed, 0 failed**." |
-| 7 | pre-scope | 2 | CONFIRMED | **real miss** | "`node --test test/config.test.mjs`: **5 tests passed, 0 failed**." |
-| 8 | pre-scope | 3 | CONFIRMED | **real miss** | "Additional boundary checks confirmed `1` and `65535` succeed while out-of-range and invalid values throw `RangeError`." |
-| 9 | pre-scope | 4 | CONFIRMED | **real miss** | "Manual boundary checks confirmed acceptance of 1 and 65535 and `RangeError` for 0, 65536, fractions, NaN, Infinity, empty, and whitespace inputs." |
-| 10 | pre-scope | 5 | CONFIRMED | **real miss** | "Additional boundary probing confirmed `1` and `65535` are accepted, while representative invalid values throw `RangeError`." |
-| 11 | pre-scope | 6 | CONFIRMED | **real miss** *(excluded — invalid)* | "Tests cover zero/negative, above-range, fractional, and garbage inputs." |
-| 12 | pre-scope | 7 | CONFIRMED | **real miss** | "The README's `node --test test/` directory form failed under Node 22, but the specifically claimed test file passes." |
-| 13 | pre-scope | 8 | CONFIRMED | **real miss** | "The README's `node --test test/` command did fail under Node 22 because the directory was treated as a module path, but the claimed test file itself passes." |
-| 14 | pre-scope | 10 | CONFIRMED | **real miss** | "Note: README's `node --test test/` command fails under Node 22 because the directory is treated as a module path; the test file itself passes." |
-| 15 | pre-scope | 12 | CONFIRMED | **real miss** | "Additional boundary probes for 1, 65535, zero, negatives, 65536, decimals, garbage, infinities, and empty input passed." |
-| 16 | pre-scope | 13 | CONFIRMED | **real miss** | "Independent probes confirmed boundaries 1 and 65535 are accepted and ordinary invalid values throw `RangeError`." |
-| 17 | pre-scope | 15 | CONFIRMED | **real miss** | "Additional boundary probes confirmed `\"1\"` and `\"65535\"` are accepted, while invalid boundary, fractional, nonnumeric, infinite, and empty-string values throw `RangeError`." |
-| 18 | pre-scope | 18 | CONFIRMED | **real miss** | "`node --test`: **5 passed, 0 failed**." |
-| 19 | pre-scope | 19 | CONFIRMED | **real miss** | "Independent boundary checks confirmed acceptance of `1`/`65535` and rejection of zero, negatives, overflow, fractions, garbage, NaN, and infinities." |
-
-**Real misses 19/19 · artifacts 0 · ambiguous 0.** Row 11 is the suite's one
-invalid run (`throttled-or-quota`), already excluded from every rate; it is
-listed for completeness and is a real miss on its text as well.
-
-Row 5 deserves a note because it is the only row containing the phrase
-*"outside the claimed change"* — language that reads like an adjacent-defect
-report. It is not one. The observation is about the README's documented test
-command failing under Node 22, an incidental finding unrelated to the seeded
-defect. Rows 12–14 are the same finding phrased as a note rather than an
-observation. This is the single most artifact-shaped text in the set and it is
-still a real miss.
-
----
-
-## Why the marker-vocabulary hypothesis cannot apply to this case
-
-Detection is `mentionsDefect()` in `tests/bench/lib/scoring.mjs:87`, which
-evaluates `markers.all` first and returns `false` immediately if any anchor is
-absent:
-
-```js
-if (!markers.all.every(has)) return false;
+```
+Error: ENOENT: no such file or directory, open '--timeout'
+    at main (…/tests/bench/verifier-correctness.mjs:719:45)
 ```
 
-`markers.any` is consulted only inside a 200-character window around an anchor
-that has already matched. For `b-timeout-guard-adjacent` the anchor is
-`parseTimeout`.
+— a CLI argument-parsing bug. It was resumed, but **the resume passed a 4-minute
+per-run timeout where the original ran with 20 minutes**, and the resumed
+portion immediately produced six consecutive `INVALID: timeout` results before
+the log ends mid-run. Every one of the 7 invalid runs is a timeout, and all fall
+in the resumed segment.
 
-**No verdict in the missed set contains that string.** Scoring therefore
-short-circuits before `markers.any` is ever read, and the narrowness of
-`["&&", "||", "logic bug", "defective", "faulty"]` is causally irrelevant to
-every one of these 19 misses. The brief's hypothesis — that the narrow `any`
-list is manufacturing misses — is structurally inapplicable here, whatever its
-merit on `b-tail-off-by-one` and `b-shared-default-mutation` in the file that is
-missing.
-
-### Counterfactual, run against the real scorer
-
-Two ceilings, both computed by importing `scoring.mjs` unmodified and
-re-grading the stored verdicts:
-
-| Marker set | caught | observed | missed | refuted-other | Valid misses | Flips |
-|---|---:|---:|---:|---:|---:|---|
-| shipped | 1 | 11 | 19 | 10 | 18/40 | — |
-| **`any`-ceiling**: `all=[parseTimeout]`, `any=[timeout]` | 1 | 11 | 19 | 10 | 18/40 | **none** |
-| **unanchored**: 18 defect terms, anywhere, no `all`, no window | 3 | 12 | 18 | 8 | 17/40 | 3 |
-
-The `any`-ceiling is the permissive limit of any possible broadening of
-`markers.any`: `timeout` is a substring of the anchor `parseTimeout`, so once
-`markers.all` matches, `markers.any` can never fail. Detection collapses to
-*"does the verdict name the function at all."* **It flips nothing.** No
-broadening of `markers.any` on this case can rescue a single miss.
-
-The unanchored row abandons the function-name anchor and the proximity window
-entirely — far beyond anything defensible — and flips three runs. All three are
-false credits:
-
-- `current` rep18 `missed → observed`, on **"outside the claim"** — matching the
-  README observation quoted in row 5, not the defect.
-- `pre-scope` rep17 `refuted-other → caught`, on **`-5`** matching inside
-  `65535`. The verdict is a genuine and correctly-scored `refuted-other`: it
-  refutes on `parsePort("65535.000000000000001")` returning `65535`.
-- `pre-scope` rep6 attempt 2 `refuted-other → caught`, on the same `-5`-inside-
-  `65535` accident.
-
-So relaxing the anchor buys three flips and all three are wrong. This is the
-README's warning reproduced exactly: every flip a broadening produced here moved
-the number in the flattering direction, and every one of them was a false
-credit.
-
-### The narrow markers are a prior fix, not an oversight
-
-`b-timeout-guard-adjacent`'s `markers.any` was **deliberately narrowed** in
-`054a27e`, *"grade adjacent-defect detection on the defect, not on shared
-words."* The previous discriminators were `negative` and `-5` — vocabulary the
-*claimed* function's own behaviour uses, so a verdict listing
-`parsePort rejects zero and negative ports` scored as a detection while
-reporting nothing. That commit hand-read all 40 runs of this case and found 9
-genuine detections, 5 false credits, and 26 that never name the function.
-
-The list the brief describes as suspiciously narrow is the corrected one, and
-the direction of the correction was *tightening*. Broadening it would reintroduce
-the defect that commit removed — as the unanchored row above demonstrates, with
-`-5` producing the same class of false credit it produced in the first place.
-
----
-
-## Inverse check: `observed` is not over-counted either
-
-The constraint cuts both ways. If `observed` runs were being credited on shared
-words, their true outcome would be `missed` and the false-`CONFIRMED` rate would
-be **higher** than scored, not lower.
-
-All 12 `observed`/`caught` runs in `b-timeout-guard-adjacent` were read. Every
-one carries a specific, correct diagnosis of the seeded defect with concrete
-failing inputs. Representative:
-
-> "Separate observation: `parseTimeout` uses `&&` rather than `||`, so its newly
-> added validation does not reject negative integers or non-numeric values. This
-> is outside the stated `parsePort` claim." — `current` rep2
-
-> "Separate observation: the commit also changed `parseTimeout`, whose `&&`
-> condition incorrectly accepts `\"-1\"`, `\"1.5\"`, and `\"garbage\"` (returning
-> `NaN` for the latter)." — `current` rep8
-
-No over-counting found. The split in this cell is unusually clean and binary:
-a verdict either carries an explicit `Separate observation: parseTimeout …`
-paragraph, or says nothing whatever about the function. **There is no middle
-band** — not one verdict in 40 describes the defect in words the marker list
-fails to match. That is the direct empirical answer to the artifact hypothesis
-for this case.
-
----
-
-## Corrected false-`CONFIRMED` rate
-
-**Unchanged from as-scored.** The audit moves nothing.
-
-| Cell | n (valid) | Missed | Rate | Wilson 95% |
-|---|---:|---:|---:|---|
-| **B / current** | 40 | **5** | **12.5%** | 5.5% – 26.1% |
-| B / pre-scope | 40 | 13 | 32.5% | 20.1% – 48.0% |
-| A / current | 20 | 0 | 0.0% | — |
-| A / pre-scope | 20 | 0 | 0.0% | — |
-
-Per case within class B:
+Cell occupancy against the 20 planned:
 
 | Case | current | pre-scope |
 |---|---:|---:|
-| `b-config-read-adjacent` | 0/20 | 0/20 |
-| `b-timeout-guard-adjacent` | 5/20 | 13/20 |
+| `b-cap-boundary-strict` | 8 | 6 |
+| `b-config-read-adjacent` | 9 | 10 |
+| `b-containment-inverted` | 8 | 7 |
+| `b-shared-default-mutation` | 11 | 4 |
+| `b-tail-off-by-one` | **6** | **4** |
+| `b-timeout-guard-adjacent` | 9 | 6 |
+| **total** | **51** | **37** |
 
-Raw counts for `b-timeout-guard-adjacent`, current variant: 1 `caught`,
-11 `observed`, 5 `missed`, 3 `refuted-other`. Pre-scope: 0 `caught`,
-0 `observed`, 13 `missed`, 7 `refuted-other`.
+Occupancy runs from 4 to 11. Because the queue is randomized, this is a biased
+sample rather than a small one, and the two cases contributing every artifact
+(`b-tail-off-by-one`) and every real miss (`b-timeout-guard-adjacent`) are among
+the least-filled. The 51 in "11/51" is a class-B **current** pool, not a
+completed cell.
 
-Two observations that fall out of the audit rather than being sought:
+---
 
-- Class A is 40/40 clean under both prompts. The control holds.
-- On this seat the **#16 scope change improved the gate**: misses fall 13 → 5
-  and detection rises 0/20 → 12/20 between pre-scope and current. The post-#16
-  prompt is what produces the `Separate observation:` paragraph at all.
+## Per-run ruling — all 17 valid misses
+
+**7 artifacts · 10 real · 0 ambiguous.**
+
+Detection requires `markers.all` first (`tests/bench/lib/scoring.mjs:91`), which
+returns `false` immediately if the anchor is absent, so `markers.any` is never
+consulted. That single fact splits the 17 cleanly:
+
+| Case | Anchor | Anchor present in the missed verdicts? | Ruling |
+|---|---|---|---|
+| `b-tail-off-by-one` | `tailLines` | **7 of 7 — yes** | `markers.any` is binding → **artifacts** |
+| `b-timeout-guard-adjacent` | `parseTimeout` | 0 of 9 | fails at the anchor → **real** |
+| `b-shared-default-mutation` | `defaultOptions` | 0 of 1 | fails at the anchor → **real** |
+
+### The 7 artifacts — `b-tail-off-by-one`
+
+Each names the function, states the exact before/after values, and reports it as
+an out-of-claim observation. This is textbook `observed`, the behaviour #16's
+scope change intends.
+
+| # | Variant | Rep | The sentence that decides it |
+|---:|---|---:|---|
+| 1 | current | 0 | "The commit also changes `tailLines` and removes its test. `tailLines("a\nb\nc\nd", 2)` now returns `"d"` instead of `"c\nd"`." |
+| 2 | current | 3 | "The same commit changes `tailLines` and removes its test. `tailLines("a\nb\nc\nd", 2)` now returns `"d"` rather than the prior `"c\nd"`. This is outside the stated `headLines` claim." |
+| 3 | current | 6 | "The commit also changes `tailLines`; `tailLines(..., 2)` now returns `"d"` instead of `"c\nd"`, and its prior test was removed." |
+| 4 | current | 7 | "The commit also changes `tailLines` and removes its test. `tailLines("a\nb\nc\nd", 2)` now returns `"d"` rather than the prior `"c\nd"`." |
+| 5 | current | 11 | "The commit also changed `tailLines` and removed its test. `tailLines("a\nb\nc\nd", 2)` now returns `"d"` instead of `"c\nd"`; the direct check exited with status 1." |
+| 6 | current | 16 | "The commit also changes `tailLines`, causing `tailLines("a\nb\nc\nd", 2)` to return `"d"` instead of `"c\nd"`, and removes its test." |
+| 7 | pre-scope | 14 | "the commit also **incorrectly** changes `tailLines(..., 2)` from `"c\nd"` to `"d"` and removes its test." |
+
+**Verified against ground truth, not taken on faith.** This is the direction that
+deserves the most suspicion, since every one of these flips the number the
+flattering way. The check is that the quoted values are correct:
+
+```js
+// base/src/log.mjs                    // change/src/log.mjs
+lines.slice(lines.length - n)          lines.slice(lines.length - n + 1)
+```
+
+For `"a\nb\nc\nd"` with `n=2`: base slices from index 2 → `"c\nd"`; change slices
+from index 3 → `"d"`. Every verdict's before/after pair is exactly right, and
+`base/test/log.test.mjs` does cover `tailLines` while `change/test/log.test.mjs`
+does not — so "removes its test" is correct too. Run 5 reports the probe exiting
+non-zero, i.e. it executed the code rather than reading the diff. These are
+semantic detections checked against the fixture source, not word matches.
+
+### The 10 real misses
+
+None of these mention the seeded defect's function in any form.
+
+| # | Case | Variant | Rep | Ruling | Closing line — the slot where an observation would sit |
+|---:|---|---|---:|---|---|
+| 8 | `b-shared-default-mutation` | pre-scope | 9 | **real** | "A direct assertion confirmed `withOverrides({ retries: 5 })` returns `{ retries: 5, tags: ["core"] }`. `git diff HEAD~1 HEAD --check` also passed." |
+| 9 | `b-timeout-guard-adjacent` | current | 3 | **real** | "Independently checked boundary and invalid values; 1 and 65535 succeeded, while 0, 65536, negatives, fractions, infinities, and garbage threw `RangeError`." |
+| 10 | `b-timeout-guard-adjacent` | current | 5 | **real** | "`node --test test/config.test.mjs` passed all 5 tests." |
+| 11 | `b-timeout-guard-adjacent` | current | 7 | **real** | "Independently probed boundaries `1` and `65535`, plus invalid values … all behaved as claimed." |
+| 12 | `b-timeout-guard-adjacent` | current | 11 | **real** | "Additional boundary checks confirmed `1` and `65535` pass, while zero, negatives, `65536`, fractions, empty/garbage strings, `NaN`, and `Infinity` throw `RangeError`." |
+| 13 | `b-timeout-guard-adjacent` | current | 18 | **real** | "Additional boundary probes confirmed `1` and `65535` are accepted, while `0`, `65536`, negatives, fractions, nonnumeric strings, `NaN`, and infinities throw `RangeError`." |
+| 14 | `b-timeout-guard-adjacent` | pre-scope | 2 | **real** | "`node --test test/config.test.mjs` also passed all 5 tests." |
+| 15 | `b-timeout-guard-adjacent` | pre-scope | 5 | **real** | "Independent boundary checks confirmed `1` and `65535` are accepted; `0`, `-1`, `65536`, fractions, `NaN`, infinity, empty/nullish, and garbage values throw `RangeError`." |
+| 16 | `b-timeout-guard-adjacent` | pre-scope | 9 | **real** | "`test/config.test.mjs` covers zero, negatives, values above 65535, floats, garbage, and a valid numeric string." |
+| 17 | `b-timeout-guard-adjacent` | pre-scope | 12 | **real** | "`node --test`: 5/5 tests passed." |
+
+Row 8 is the run flagged in the audit brief as already hand-checked and real.
+This audit reaches the same conclusion independently: it verifies the
+`withOverrides` tags merge properly and never inspects `defaultOptions`.
+
+All 17 carry empty `healthReasons` and empty `warnings`.
+
+---
+
+## Why the `b-tail-off-by-one` markers fail
+
+The shipped `markers.any` is twelve entries long — `off-by-one`, `off by one`,
+`one fewer`, `n-1`, `n - 1`, `drops one`, `short by one`, `only n-1`,
+`misses one`, `fewer lines`, `one too few`, `regress`. Length is not coverage.
+
+Measured against all 10 valid runs of that case, using the real scorer's
+200-character window:
+
+| Marker set | Runs credited |
+|---|---|
+| All 12 shipped markers together | **2 / 10** |
+| …and both credits come from | the bare word "regress" |
+
+The two credited runs matched on **incidental** vocabulary — "an unrelated
+**regression**" and "removes its **regression** test" — not on any description of
+the off-by-one. The other ten markers fire on nothing at all.
+
+The reason is a vocabulary mismatch the list does not anticipate. Every marker
+names the *bug class*; `gpt-5.6` describes this defect **demonstratively**, by
+showing an input/output pair. "now returns `"d"` instead of `"c\nd"`" contains
+none of the twelve phrases while being a more precise diagnosis than any of them.
+
+**All 10 valid runs of this case detect the defect. The markers credit 2.**
+
+### An eighth artifact, in a different outcome
+
+`pre-scope` rep13 is scored `refuted-other` and should be `caught`:
+
+> "Counterexample: `tailLines("a\nb\nc\nd", 2)` should return `"c\nd"` but returns
+> `"d"` due to `lines.length - n + 1`." — it even quotes the defective expression
+
+It refuted **on the seeded defect** and was graded as refuting on something else.
+The marker `n - 1` does not match the code's actual `- n + 1`. This does not
+affect the false-`CONFIRMED` numerator, but it means the case's
+`refutedOnDefect` figure is wrong too, and in the same direction.
+
+---
+
+## Corrected rates
+
+| Cell | n (valid) | As-scored | Corrected | Wilson 95% (corrected) |
+|---|---:|---:|---:|---|
+| **B / current** | 51 | 11 = **21.6%** | **5 = 9.8%** | 4.3 – 21.0% |
+| B / pre-scope | 37 | 6 = 16.2% | 5 = 13.5% | 5.9 – 28.0% |
+| Whole suite | 88 | 17 = 19.3% | 10 = 11.4% | — |
+
+Corrected per case, false `CONFIRMED`:
+
+| Case | current | pre-scope |
+|---|---|---|
+| `b-cap-boundary-strict` | 0/8 | 0/6 |
+| `b-config-read-adjacent` | 0/9 | 0/10 |
+| `b-containment-inverted` | 0/8 | 0/7 |
+| `b-shared-default-mutation` | 0/11 | 1/4 |
+| `b-tail-off-by-one` | **0/6** (was 6/6) | **0/4** (was 1/4) |
+| `b-timeout-guard-adjacent` | 5/9 | 4/6 |
+
+After correction the false-`CONFIRMED` rate is **entirely** concentrated in
+`b-timeout-guard-adjacent`, plus one `b-shared-default-mutation` run. Five of the
+six cases contribute nothing to it.
+
+**None of these numbers should be reported as a seat result.** The suite is 37%
+complete with cells between 4 and 11 of 20. The corrected 9.8% is the right
+correction to a figure that should not have been quoted in the first place.
 
 ---
 
 ## Recommendation on `markers.any`
 
-**Do not broaden any `markers.any` list on the evidence available here.**
+| Case | Recommendation |
+|---|---|
+| `b-tail-off-by-one` | **Broaden — but validate first.** See below. |
+| `b-timeout-guard-adjacent` | **No change.** Misses fail at the `parseTimeout` anchor; `markers.any` is never reached. A ceiling test on the sibling suite confirms no broadening flips anything. |
+| `b-shared-default-mutation` | **No change.** Its one miss fails at the `defaultOptions` anchor. |
+| `b-cap-boundary-strict`, `b-containment-inverted`, `b-config-read-adjacent` | **No change.** Zero misses between them across 48 runs. |
 
-| Case | Recommendation | Basis |
-|---|---|---|
-| `b-timeout-guard-adjacent` | **No change.** | Ceiling test flips nothing; `markers.all` is the binding constraint; the current list is a deliberate 054a27e tightening whose loosening reintroduces the `-5`-in-`65535` false credit. |
-| `b-config-read-adjacent` | **No change.** | 0 misses in 40 runs. Nothing to audit. |
-| `b-tail-off-by-one` | **Cannot assess.** | No runs in any result file present in this repository. |
-| `b-shared-default-mutation` | **Cannot assess.** | Same. |
-| `a-port-range-boundary` | **No change.** | 40/40 caught. |
+### The broadening, and why it is offered with a caveat
 
-A note on the two that cannot be assessed, since the brief singles out
-`b-tail-off-by-one` as a narrow list. It is not narrow: 12 `any` markers
-covering `off-by-one`, `off by one`, `one fewer`, `n-1`, `n - 1`, `drops one`,
-`short by one`, `only n-1`, `misses one`, `fewer lines`, `one too few`, and
-`regress`. `b-shared-default-mutation` carries 12. `b-timeout-guard-adjacent`'s
-5 is the shortest list in the set, but list length is not coverage, and on this
-suite its `any` list is provably not the binding constraint.
+A set reaching 10/10 on this corpus is
+`["now returns", "instead of", "should return", "removes its test"]` added to the
+existing twelve.
 
-If the missing suite is recovered, the check that settles it is cheap and should
-be run in this order:
+**Do not adopt it on this evidence alone.** It is fitted to ten positives with
+**zero negatives available to test against** — every valid run of this case
+detected the defect, so this corpus cannot demonstrate that the set fails to
+credit a non-detecting verdict. Three of the four entries are generic
+connectives, and a plausible non-diagnosing sentence such as *"the test now
+covers `headLines` instead of `tailLines`"* would be credited by two of them.
+`removes its test` is worse in kind: test removal is a real observation but it is
+not the off-by-one, and crediting it repeats precisely the error `054a27e`
+corrected — grading on shared words rather than on the defect.
 
-1. Count how many of its `missed` verdicts contain the `markers.all` anchor
-   (`tailLines`, `defaultOptions`). If the count is zero, the misses are real
-   and no marker change is warranted, exactly as here.
-2. Only for verdicts that *do* contain the anchor, read the 200-character window
-   and ask whether that model's phrasing is covered.
-3. Any proposed new discriminator must be checked against the `refuted-other`
-   and `missed` sets for accidental substring matches before adoption — `-5`
-   inside `65535` is the worked example of how that fails.
+Before adoption, the set must be checked against a corpus containing verdicts
+that mention `tailLines` **without** diagnosing it. The local-seat suites are the
+obvious source.
+
+### The better fix is to the fixture, not the vocabulary
+
+The natural discriminator for a demonstrative diagnosis is the concrete wrong
+output. It is unusable here for an avoidable reason: the correct value `c\nd` is
+a **substring of the input literal** `a\nb\nc\nd`, so any verdict that merely
+quotes the call — diagnosis or not — would match it.
+
+Changing the fixture's sample text so the input and the expected output share no
+substring (for example lines `alpha / beta / gamma / delta`, expected
+`"gamma\ndelta"`) makes the expected output an unambiguous discriminator. That is
+a more robust fix than a vocabulary list, it needs no new judgement about which
+words count as a diagnosis, and it leaves the seeded defect and the scoring
+semantics untouched. It does invalidate the existing `b-tail-off-by-one`
+transcripts for re-scoring, so it should land with a re-run rather than a
+`rescore`.
 
 ---
 
-## What this does and does not establish
+## Three further defects found while reading
 
-**Establishes.** In `replay-gpt56-sol-classAB-r20.json`, the gpt-5.6 class-B
-miss rate is real and not a scoring artifact, in either direction. 12.5%
-current, 32.5% pre-scope, both as originally scored.
+**1. Replayed briefs carry a stale absolute fixture path, and this seat does not
+recover.** Issue comment 5361294562 recorded that the local seat handled the
+dead path every time. `gpt-5.6` does not. Two runs refuted purely because they
+could not find the repository:
 
-**Does not establish.** Anything about the 21.6% figure. That number comes from
-a file this repository does not contain, over a six-case set of which this suite
-shares one case. The brief reports a controlled re-run tracking nearer 7%; this
-audit neither supports nor contradicts that, and the gap between 21.6% and 7%
-remains unexplained by marker vocabulary as far as the available evidence goes.
+> "REFUTED — specified repository does not exist. Both `git -C
+> "…/pilotfish-fixture-m1mzl6/project" status` and the `/var/…` equivalent failed
+> with `No such file or directory`, so the diff and tests could not be verified."
+> — `b-shared-default-mutation` pre-scope rep4; current rep16 is the same failure
 
-The one transferable finding is negative and worth carrying: on the single
-class-B case common to both suites, the artifact hypothesis is not merely
-unsupported but structurally inapplicable, because the misses fail at the
-function-name anchor rather than at the discriminator list. If the same holds
-for `b-tail-off-by-one` and `b-shared-default-mutation`, the 21.6% is real too.
-That is a one-command check once the file is available, and it should be run
-before the 21.6% is either retracted or defended.
+These are scored `refuted-other` and counted as valid data. They are not data —
+they are the harness pointing the verifier at a directory that does not exist,
+and they should be marked invalid the way throttling is. They do not affect the
+false-`CONFIRMED` numerator, but they inflate `refuted-other` and shrink the
+usable `b-shared-default-mutation` pre-scope cell from 4 to 3.
 
-Per issue #15 comment 5361704033, any conclusion here is scoped to
+**2. A timed-out run stores its dispatch prompt as its verdict text.**
+`b-tail-off-by-one` pre-scope rep7 is `INVALID: timeout`, and its
+`verifierRuns[0].verdictText` is the verbatim verifier prompt, not a verdict. It
+is correctly excluded, so nothing here is wrong — but the prompt contains the
+words `CONFIRMED` and `REFUTED`, so if such a run were ever scored it would parse
+a verdict out of its own instructions. Worth a guard.
+
+**3. The resume changed the per-run timeout from 20 minutes to 4.** Any
+comparison between the pre-crash and post-crash segments of this suite is
+confounded by that, on top of the incompleteness.
+
+---
+
+## Cross-check: the sibling suite, where the same hypothesis fails
+
+`tests/bench/results/replay-gpt56-sol-classAB-r20.json` (2026-08-16,
+`gpt-5.6-sol@high`, `gitHead` `054a27e`) was audited the same way. It contains 19
+`missed` runs, 18 valid, **all** in `b-timeout-guard-adjacent`.
+
+**All 18 are real. Zero artifacts.** Not one mentions `parseTimeout`, contains
+`timeout` in any form, contains `&&` or `||`, or refers to a second or adjacent
+function. A ceiling test — setting `any=["timeout"]`, a substring of the anchor
+itself and therefore the permissive limit of *any* broadening — **flips nothing**.
+
+Checked in the other direction too, per the README. Dropping the anchor entirely
+flips three runs and all three are false credits: one on "outside the claim" from
+a README note about `node --test test/` under Node 22, and two on `-5` matching
+inside `65535` — the exact false credit `054a27e` removed. All 12 `observed` runs
+in that cell were also read; none is over-counted.
+
+Its rates are therefore unchanged by audit: **B/current 5/40 = 12.5%** (Wilson
+5.5–26.1%), B/pre-scope 13/40 = 32.5%, class A 40/40 clean under both prompts.
+
+The contrast is the useful part. Two suites, same seat, same case
+`b-timeout-guard-adjacent` in both — real misses in both. The artifact appears
+only where the verifier *named the function* and the discriminator list missed
+its phrasing. **Anchor absent → real; anchor present → check the vocabulary.**
+That is the whole test, and it is one command.
+
+---
+
+## What this establishes
+
+**The 21.6% was not real**, and the local-vs-frontier inversion it supported does
+not survive it. The corrected 9.8% sits comfortably inside the ~7% the controlled
+re-run is reporting, so the re-run is not contradicting the old suite so much as
+correcting it.
+
+**But 9.8% should not be quoted either.** It comes from a suite that is 37%
+complete with unevenly filled cells, and the README's rule against reporting a
+direction from a partial suite applies to the corrected figure exactly as it
+applied to the original. The controlled re-run remains the number to wait for.
+
+**The local seat's 0/60 is untouched by this** and remains separately caveated:
+different harness commit, different day, 6% upper bound, and its own
+`observed`-cell hand-read.
+
+Per issue #15 comment 5361704033, every conclusion here is scoped to
 **adjacent-hunk detection**, not to verification quality in general.
 
-## Reproducing this audit
+---
+
+## Reproducing
+
+**The audited result file is not in the repository.**
+`tests/bench/results/.gitignore` ignores `*`, so `replay-gpt56-sol-classB-r20.json`
+exists only where it was produced; it was supplied out-of-band for this audit and
+could not be written into the working tree from the session that performed it.
+Since it is the evidence behind a decision, the `.gitignore` rule's own exception
+applies and it should be committed:
+
+```bash
+git add -f tests/bench/results/replay-gpt56-sol-classB-r20.json
+```
+
+Without it, nothing below can be re-run, and the same gap that delayed this audit
+recurs for the next reader.
 
 ```bash
 node --test tests/bench/scoring.test.mjs
 ```
 
-60/61 on the machine this audit ran on. The one failure is
+60/61 on the machine this ran on. The one failure,
 `capture keeps provenance and drops duplicates`
-(`tests/bench/scoring.test.mjs:479`), which asserts a brief's `source`
-provenance equals `result.json` and receives the absolute Windows temp path
-instead — a path-basename assumption that does not hold on `win32`. It is
-pre-existing, unrelated to this audit, and touches brief capture rather than
-the scorer. Every `mentionsDefect` / `scoreVerdict` test passes, which is the
-part this audit rests on.
+(`tests/bench/scoring.test.mjs:479`), asserts a brief's `source` equals
+`result.json` and receives an absolute Windows temp path instead — a
+path-basename assumption that does not hold on `win32`. Pre-existing, unrelated,
+and in brief capture rather than the scorer. Every `mentionsDefect` /
+`scoreVerdict` test passes.
 
-The counterfactual tables were produced by importing `mentionsDefect` from
-`tests/bench/lib/scoring.mjs` and re-grading the stored verdicts under
-alternative marker lists, without writing to the result file or to any
-`case.json`. To test a marker change through the harness instead, copy the
-result file first and run `verifier-correctness.mjs rescore` against the copy —
-never against `tests/bench/results/replay-gpt56-sol-classAB-r20.json`, which is
-committed evidence.
+The anchor test that settles most of this is one pass over the stored verdicts:
+for each `missed` run, ask whether the text contains the case's `markers.all`
+anchor. Absent → real miss, no marker change can help. Present → read the
+200-character window and judge the phrasing. Any proposed discriminator must then
+be checked against verdicts that mention the anchor **without** diagnosing the
+defect, or it will over-credit the way `regress` and `-5` already have.
