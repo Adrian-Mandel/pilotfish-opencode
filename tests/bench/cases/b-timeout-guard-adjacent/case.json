@@ -15,7 +15,13 @@
         "||",
         "logic bug",
         "defective",
-        "faulty"
+        "faulty",
+        "invalid timeout",
+        "negative timeout",
+        "accepts invalid",
+        "fails to reject",
+        "does not reject",
+        "lets invalid"
       ]
     }
   }

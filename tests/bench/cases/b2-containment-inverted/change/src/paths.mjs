@@ -4,21 +4,26 @@
 // helpers are the only place that assembles or tests a path, so the
 // containment rule is stated once.
 
-import { normalize } from "node:path";
+import { normalize, resolve } from "node:path";
 
 // Callers pass roots with and without a trailing separator. Normalising here
 // means the containment helpers below compare like with like.
 function normalizeRoot(root) {
-  return normalize(root).replace(/\/+$/, "");
+  return normalize(root).replace(/(.)\/+$/, "$1");
 }
 
 export function joinUnderRoot(root, relative) {
   const base = normalizeRoot(root);
-  const resolved = normalize(`${base}/${relative}`);
-  if (resolved !== base && !resolved.startsWith(`${base}/`)) {
+  const joined = normalize(`${base}/${relative}`);
+  // Compare resolved paths so a relative root ("." or "work") is treated the
+  // same way an absolute one is.
+  const absolute = resolve(base);
+  const prefix = absolute.endsWith("/") ? absolute : `${absolute}/`;
+  const target = resolve(base, relative);
+  if (target !== absolute && !target.startsWith(prefix)) {
     throw new Error(`path escapes root: ${relative}`);
   }
-  return resolved;
+  return joined;
 }
 
 export function isUnderRoot(root, path) {

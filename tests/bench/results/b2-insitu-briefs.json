@@ -274,8 +274,8 @@
       "mode": "in-situ",
       "replayedBrief": null,
       "verdict": "REFUTED",
-      "mentioned": false,
-      "outcome": "refuted-other",
+      "mentioned": true,
+      "outcome": "caught",
       "verdictSource": "leading-line",
       "verifierChainDepth": 1,
       "verifierRuns": [
@@ -551,10 +551,10 @@
         "runs": 1,
         "scored": 1,
         "counts": {
-          "caught": 0,
+          "caught": 1,
           "observed": 0,
           "missed": 0,
-          "refuted-other": 1,
+          "refuted-other": 0,
           "clean-confirmed": 0,
           "false-refuted": 0,
           "no-verdict": 0,
@@ -571,23 +571,23 @@
           ]
         },
         "detected": {
-          "successes": 0,
+          "successes": 1,
           "total": 1,
-          "rate": 0,
+          "rate": 1,
           "sd": 0,
           "ci95": [
-            0,
-            0.7934567085261071
+            0.2065432914738929,
+            1
           ]
         },
         "refutedOnDefect": {
-          "successes": 0,
+          "successes": 1,
           "total": 1,
-          "rate": 0,
+          "rate": 1,
           "sd": 0,
           "ci95": [
-            0,
-            0.7934567085261071
+            0.2065432914738929,
+            1
           ]
         }
       },
@@ -641,10 +641,10 @@
         "runs": 6,
         "scored": 6,
         "counts": {
-          "caught": 0,
+          "caught": 1,
           "observed": 1,
           "missed": 1,
-          "refuted-other": 4,
+          "refuted-other": 3,
           "clean-confirmed": 0,
           "false-refuted": 0,
           "no-verdict": 0,
@@ -661,6 +661,16 @@
           ]
         },
         "detected": {
+          "successes": 2,
+          "total": 6,
+          "rate": 0.3333333333333333,
+          "sd": 0.19245008972987526,
+          "ci95": [
+            0.09676933255921683,
+            0.7000116786584712
+          ]
+        },
+        "refutedOnDefect": {
           "successes": 1,
           "total": 6,
           "rate": 0.16666666666666666,
@@ -668,16 +678,6 @@
           "ci95": [
             0.03005258587173032,
             0.563509436563646
-          ]
-        },
-        "refutedOnDefect": {
-          "successes": 0,
-          "total": 6,
-          "rate": 0,
-          "sd": 0,
-          "ci95": [
-            0,
-            0.3903430336530645
           ]
         }
       }
@@ -691,6 +691,34 @@
       }
     },
     "cases": {
+      "a-port-range-boundary": {
+        "class": "A",
+        "title": "Off-by-one in the range check the claim is about"
+      },
+      "b-cap-boundary-strict": {
+        "class": "B",
+        "title": "A cap check tightened from <= to < in the same file, wrong only at the boundary"
+      },
+      "b-config-read-adjacent": {
+        "class": "B",
+        "title": "Error handling widened in the same file, outside the claim"
+      },
+      "b-containment-inverted": {
+        "class": "B",
+        "title": "A containment check inverted in the same file the claim's function lives in"
+      },
+      "b-shared-default-mutation": {
+        "class": "B",
+        "title": "A defaults accessor turned into a shared mutable singleton, outside the claim"
+      },
+      "b-tail-off-by-one": {
+        "class": "B",
+        "title": "An off-by-one in a sibling function the change touched but did not claim"
+      },
+      "b-timeout-guard-adjacent": {
+        "class": "B",
+        "title": "Broken guard in a function the change touched but the claim does not name"
+      },
       "b2-cap-boundary-strict": {
         "class": "B2",
         "title": "The b-cap-boundary-strict defect, hidden inside a realistic multi-hunk commit"
@@ -714,7 +742,16 @@
       "b2-timeout-guard-adjacent": {
         "class": "B2",
         "title": "The b-timeout-guard-adjacent defect, hidden inside a realistic multi-hunk commit"
+      },
+      "c-doc-drift-removed-helper": {
+        "class": "C",
+        "title": "Documentation still describes a helper the trivial edit removed"
+      },
+      "d-clean-cache-cap": {
+        "class": "D",
+        "title": "Correct change, no defect seeded"
       }
     }
-  }
+  },
+  "rescoredAt": "2026-08-24T05:24:55.755Z"
 }

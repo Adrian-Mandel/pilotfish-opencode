@@ -24,7 +24,13 @@
         "edge case",
         "should be <=",
         "< instead of <=",
-        "<= to <"
+        "<= to <",
+        "exact fill",
+        "exact fit",
+        "exact-fit",
+        "exactly fills",
+        "< cap",
+        "<= changed to <"
       ]
     }
   }
