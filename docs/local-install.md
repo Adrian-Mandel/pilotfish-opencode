@@ -69,7 +69,7 @@ Use only the templates in this checkout. Show me the complete plan and get my ap
 The installer performs a read-only preflight first. It should report:
 
 - The highest-precedence global config file it will edit.
-- Whether the ChatGPT and AntiGravity presets are available.
+- Which of the ChatGPT, AntiGravity, and OpenRouter presets are available, with the exact missing model ID or variant named for each one that is not.
 - Existing agent-name, prompt-file, and same-specifier plugin collisions.
 - Every role's model and variant and the exact `profiles.json` mapping.
 - The required tuple `./pilotfish/profile-router.mjs` with the selected preset.

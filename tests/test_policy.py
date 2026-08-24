@@ -216,6 +216,54 @@ class PolicyContractTests(unittest.TestCase):
             self.assertIn("never detach", prompt)
             self.assertIn("absolute working directory", prompt)
 
+    # On 2026-08-24 preflight reported a host carrying all three ChatGPT models
+    # and all four OpenRouter models as exposing none of them, and stopped the
+    # install directing the user to repair two working providers. Step 1.3 said
+    # only to run `opencode models --verbose` and "compare the output" -- 375
+    # models, 23,029 lines, 432,604 bytes of full JSON records, with the
+    # required IDs as deep as byte 360,787. Any reader that takes a prefix and
+    # stops can follow that instruction and see nothing past `opencode/*`. This
+    # is pinned because the false negative is indistinguishable from a genuine
+    # one in the report it produces, so nothing surfaces it: the user is told a
+    # provider is broken and goes to fix the provider.
+    def test_model_availability_is_queried_not_read_whole(self) -> None:
+        installer = text("install/OPENCODE-INSTALL.md")
+        for phrase in (
+            "Query that output; never read it whole",
+            "never judge availability from a prefix of it",
+            "anchored to the start of a line",
+            "extract just that model's `variants` object",
+            "A required ID is absent only when an anchored search for that exact string "
+            "returns nothing",
+            # An unavailable preset that cannot say what is missing reads the
+            # same whether the check ran or not, which is what let the original
+            # report pass for a provider problem.
+            "name the exact model IDs or variants that did not resolve",
+            # The OpenRouter Qwen pair exposes no variants and its profile sets
+            # none, so an empty object is a match. Reading it as a missing
+            # capability fails a preset that is in fact available.
+            "An empty `variants` object is a match for a profile that sets no variant",
+        ):
+            self.assertIn(phrase, installer)
+        self.assertNotIn("compare the output with both supported preset", installer)
+
+    # The preset offer was a hardcoded pair and the requirement-list count was
+    # the word "both", so OpenRouter could be found available in preflight and
+    # still never reach the user. Both are derived from profiles.json here, so
+    # adding a preset fails this test instead of silently going unoffered.
+    def test_approval_gate_offers_every_configured_preset(self) -> None:
+        installer = text("install/OPENCODE-INSTALL.md")
+        presets = self.profiles["presets"]
+        count = {2: "two", 3: "three", 4: "four", 5: "five"}[len(presets)]
+        self.assertIn(f"all {count} supported preset requirement lists", installer)
+        offer = next(
+            line for line in installer.splitlines()
+            if line.startswith("For a fresh install, ask the user to choose")
+        )
+        for name in presets:
+            self.assertIn(name, offer.lower(), f"{name} is never offered at the approval gate")
+        self.assertIn("preflight's result rather than a fixed pair", offer)
+
     def test_installer_retains_update_contract(self) -> None:
         installer = text("install/OPENCODE-INSTALL.md")
         self.assertIn("An update is an idempotent re-run", installer)

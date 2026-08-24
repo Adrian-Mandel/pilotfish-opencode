@@ -147,9 +147,13 @@ The target file receives Pilotfish entries at the highest active global layer. L
 
 ### 3. Check Model Availability
 
-Run `opencode models --verbose` and compare the output with both supported preset requirement lists, including every exact required model **and variant**.
+Run `opencode models --verbose` and compare its output with all three supported preset requirement lists, including every exact required model **and variant**.
 
-Report each preset as available or unavailable. Offer only available presets. Do not accept a guessed alias or silently substitute another model.
+Query that output; never read it whole, and never judge availability from a prefix of it. The command prints every model's complete JSON record rather than a name list: on a host with one ChatGPT and one OpenRouter provider connected it runs to 375 models, 23,029 lines, and 432,604 bytes. Search it for each required ID anchored to the start of a line, then extract just that model's `variants` object. A required ID is absent only when an anchored search for that exact string returns nothing; absent from a truncated dump is not evidence of anything.
+
+The failure this prevents is silent in the reassuring direction, and it aims the user at the wrong repair. On 2026-08-24 a preflight run on a host carrying all three ChatGPT models and all four OpenRouter models reported that none of them were exposed, stopped before the approval gate, and asked the user to connect or repair two providers that were already working. The required IDs sit deep in that output — `openai/gpt-5.6-luna` at byte 19,742, `openrouter/deepseek/deepseek-v4-pro` at 111,494, `openrouter/qwen/qwen3.6-27b` at 360,787 — so a reader that takes the beginning and stops sees the seven `opencode/*` models and part of `openai/*`, and concludes the host has nothing. Nothing in the resulting report separates "no provider is connected" from "the installer never looked at the whole answer", so the user is sent to fix a provider instead of the runbook.
+
+Report each preset as available or unavailable, and for an unavailable one name the exact model IDs or variants that did not resolve. A report that calls a preset unavailable without naming what is missing is a report that has not done the check, and it reads identically to one that has. Offer only available presets. Do not accept a guessed alias or silently substitute another model. A preset is available when every model in its list resolves and every variant `profiles.json` names for that model appears in that model's own `variants` object. An empty `variants` object is a match for a profile that sets no variant, never a missing capability: the Qwen pair exposes none and the `qwen` profile asks for none, so it satisfies this check exactly as the DeepSeek pair's `high`/`xhigh` and `low`/`high`/`max` do.
 
 ### 4. Check Agent and Plugin Collisions
 
@@ -218,7 +222,7 @@ Carry into the approval gate, for each enabled MCP server: its name, tool count,
 
 ## Step 2: Approval Gate
 
-For a fresh install, ask the user to choose an available preset: `ChatGPT` or `AntiGravity`. For an update, use the available recorded preset unless the user asked to switch; ask only when the recorded preset is unavailable.
+For a fresh install, ask the user to choose among the presets preflight reported as available: `ChatGPT`, `AntiGravity`, or `OpenRouter`. The offer is preflight's result rather than a fixed pair — present every available preset and no unavailable one. For an update, use the available recorded preset unless the user asked to switch; ask only when the recorded preset is unavailable.
 
 Show a table containing:
 
