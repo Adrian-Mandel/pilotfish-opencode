@@ -116,15 +116,20 @@ node tests/bench/verifier-correctness.mjs report tests/bench/results/b2-seat-com
 ## Step 3 — the comparison that answers the question
 
 The B2 result is only meaningful **against the B result on the same seats**, and
-that already exists in `seat-comparison-final.json` — same six defects, same
-seats, same variant, 10 repeats. Compare detection, not just false `CONFIRMED`:
+that already exists in `seat-comparison-60.json` — same six defects, same seats,
+same variant, 10 repeats, complete at 60 runs per seat and rescored under the
+current markers on 2026-08-23. Compare detection, not just false `CONFIRMED`:
 
 | | B (measured) | B2 (to measure) |
 |---|---|---|
-| gpt-5.6-sol false `CONFIRMED` | 5/60 = 8.3% | ? |
-| bambi false `CONFIRMED` | 0/44 = 0.0% | ? |
-| gpt-5.6-sol detected (`caught` + `observed`) | 55/60 | ? |
-| bambi detected | 44/44 | ? |
+| gpt-5.6-sol false `CONFIRMED` | 4/60 = 6.7% | ? |
+| bambi false `CONFIRMED` | 0/60 = 0.0% | ? |
+| gpt-5.6-sol detected (`caught` + `observed`) | 50/60 = 83% | ? |
+| bambi detected | 60/60 = 100% | ? |
+
+The B arm of that file was measured before the 2026-08-23 fixture fixes, so one
+case is not byte-comparable to a fresh B run: `b-config-read-adjacent`'s claim
+changed. The other five are unchanged in claim and in seeded mutation.
 
 **Detection is the number that answers the calibration question**, not the false
 `CONFIRMED` rate. The worry is that near-total detection on B was diff-reading;

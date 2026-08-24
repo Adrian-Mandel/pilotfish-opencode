@@ -110,8 +110,9 @@ a seat difference that survives it is a seat difference.
 
 That 11/51 turned out not to be a seat difference at all. Audited, six of the
 eleven were detections the marker list did not match, and the suite was 88 valid
-runs of 240 planned. The controlled run this section describes puts the two
-seats at 8.3% and 0%, Fisher p = 0.07 — no significant separation. Both audits
+runs of 240 planned. The controlled run this section describes, complete at 60
+runs per seat and rescored under the current markers, puts the two seats at 6.7%
+and 0%, Fisher p = 0.12 — no significant separation. Both audits
 are in [`docs/issue-15-gpt56-miss-audit.md`](../../docs/issue-15-gpt56-miss-audit.md)
 and [`docs/issue-15-seat-comparison-audit.md`](../../docs/issue-15-seat-comparison-audit.md),
 and the section below carries what they cost.
@@ -157,6 +158,17 @@ a role gets run directly at all: the CLI refuses a subagent for `--agent`. The
 router is **removed** from that config rather than taught an exception — a bench
 mode inside the component whose value is failing closed would be a bypass; a
 config without it is not.
+
+**Editing a claim invalidates that case's captured briefs, and nothing checks
+it.** A brief is the primary's own restatement of the claim, so it quotes the
+claim as it stood when the brief was captured. Nothing ties the two together:
+change `case.json`'s `claim` and every stored brief for that case keeps asking
+the old question, silently, and a replay suite measures the claim you edited out.
+Both B2 recaptures so far were forced by exactly this — first the enumerating
+claims, then the `b-config-read-adjacent` wording. **After any claim edit,
+recapture that case's briefs before replaying it.** A `claimDigest` stamped at
+capture time and checked before replay would make this loud instead of silent;
+it does not exist yet.
 
 **Briefs are captured, never written.** A hand-written brief would make the
 result a test of the harness author's prose. Every distinct brief a real run
@@ -245,6 +257,18 @@ Two shapes recur and neither is covered by a longer word list:
 - **Formatting.** `b-cap-boundary-strict` carries the marker `<= to <`, written
   for exactly the sentence one run produced — and missed it, because the run
   wrote ``from `<=` to `<` ``. Backticks are now stripped before matching.
+- **Morphology.** `b-containment-inverted` carried `invert`, which does not
+  match *"`isUnderRoot` currently returns the **inverse** of its documented
+  behavior"*. One letter, one uncredited catch. The marker is now the stem
+  `inver`, in the style of `negat`, `revers` and `mutat` — prefer the stem to
+  the inflected word.
+- **Demonstrative phrasing recurs on the same case.** `b-cap-boundary-strict`
+  needed fixing twice for it. After the backtick fix the surviving misses were
+  ``<= changed to <`` against a marker of ``<= to <``, and *"an exact fill is
+  allowed"* / *"an exact-fit item"* against a marker of `exact-fill`. It now
+  also carries `< cap` — the defective expression itself, which cannot match
+  the claimed function's own `<= cap`, because `<` is followed by `=` there.
+  A marker written against one sentence grades that sentence and nothing else.
 
 **A discriminator can also be present and simply too far away.** The proximity
 window was 200 characters, justified as a plateau because all 120 runs of the
@@ -269,7 +293,15 @@ list. Widen the window and you rebuild the bug in a different place.
 
 **Never ship a correction that fixes one arm of a comparison and not the other.**
 This is the newest mistake and the most dangerous, because the result looks
-better rather than broken. Widening the window and stripping backticks fixed
+better rather than broken. The mechanical form of finishing it:
+after any marker edit, `rescore` **every** stored suite, not the one that
+prompted the edit, and hand-read every run that moves. The 2026-08-23 pass over
+1,127 stored verdicts moved 14 runs — 4 distinct verdicts seen across
+overlapping result files — and all four were read before the change was kept.
+Also state the sensitivity: crediting only the local seat's newly-matched run
+would have given p = 0.06 and crediting only the frontier seat's p = 0.36, where
+applying both gives p = 0.12. A correction that lands on one arm is not a
+smaller version of the right answer; it is a different answer. Widening the window and stripping backticks fixed
 *both* of the local seat's artifacts and only *one* of the frontier seat's five —
 the other four being vocabulary-shaped and deliberately left pending validation.
 The stored summary moved from p = 0.14 to p = 0.0195, crossing into significance
