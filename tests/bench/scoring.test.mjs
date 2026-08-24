@@ -16,7 +16,7 @@ import { describe, test } from "node:test";
 
 import { briefFor, loadCases, materializeCase } from "./lib/cases.mjs";
 import { loadProfiles, resolvePrimary } from "./lib/routing.mjs";
-import { classifyRunHealth, isStandingFailure } from "./lib/telemetry.mjs";
+import { classifyRunHealth, DENIED_PATTERN, isStandingFailure, THROTTLE_PATTERN } from "./lib/telemetry.mjs";
 import {
   BRIEFS_SCHEMA,
   briefFor as storeBriefFor,
@@ -576,6 +576,28 @@ describe("the case set", () => {
         original.defect.markers,
         `${item.id}: markers differ from ${original.id}`,
       );
+    }
+  });
+
+  // A fixture's commit messages are not just labels: materializeCase bakes them
+  // into the fixture's real git history, and every verifier here runs `git
+  // log` or `git show`, which prints them straight into the process's stdout.
+  // `classifyRunHealth` scans that stdout for throttle and denial language, so
+  // a commit message sharing that vocabulary invalidates every run of the case
+  // it belongs to -- for a reason that has nothing to do with the model or the
+  // account. `b2-cap-boundary-strict`'s base commit was "chore: upload queue
+  // quota arithmetic", and two otherwise-successful CONFIRMED verdicts were
+  // marked throttled-or-quota and discarded before this was caught.
+  test("no case's commit messages contain throttle or denial vocabulary", () => {
+    for (const item of CASES) {
+      for (const [label, message] of [
+        ["baseCommitMessage", item.baseCommitMessage],
+        ["changeCommitMessage", item.changeCommitMessage],
+      ]) {
+        if (!message) continue;
+        assert.doesNotMatch(message, THROTTLE_PATTERN, `${item.id} ${label}: ${JSON.stringify(message)}`);
+        assert.doesNotMatch(message, DENIED_PATTERN, `${item.id} ${label}: ${JSON.stringify(message)}`);
+      }
     }
   });
 

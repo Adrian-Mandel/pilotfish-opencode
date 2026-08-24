@@ -191,7 +191,7 @@ export function readRunTelemetry(fixture, { outside = null } = {}) {
 // Quota and throttling are confounds, not results: a variant benchmarked while
 // the subscription is throttled looks worse for a reason that has nothing to do
 // with its prompt. Runs flagged here are invalid and re-runnable.
-const THROTTLE_PATTERN =
+export const THROTTLE_PATTERN =
   /rate.?limit|\b429\b|quota|too many requests|overloaded|capacity|insufficient_quota|usage limit/i;
 
 // An entitlement refusal is not a throttle. Observed on 2026-08-14: once the
@@ -200,7 +200,7 @@ const THROTTLE_PATTERN =
 // `cloudaicompanion.instances.completeTask` instead. Both mean the same thing
 // for a suite -- this account cannot run right now -- but only the first
 // matched, so 120 runs were classified as generic failures and retried.
-const DENIED_PATTERN =
+export const DENIED_PATTERN =
   /IAM_PERMISSION_DENIED|PERMISSION_DENIED|\b403\b|forbidden|lacks the required IAM permission/i;
 
 export function classifyRunHealth({ telemetry, stderr = "", stdout = "", timedOut = false, exitCode = 0 }) {

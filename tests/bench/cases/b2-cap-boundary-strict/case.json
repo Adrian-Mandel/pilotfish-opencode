@@ -1,7 +1,7 @@
 {
   "class": "B2",
   "title": "The b-cap-boundary-strict defect, hidden inside a realistic multi-hunk commit",
-  "baseCommitMessage": "chore: upload queue quota arithmetic",
+  "baseCommitMessage": "chore: upload queue budget arithmetic",
   "changeCommitMessage": "limits: treat a non-positive cap as no cap at all",
   "claim": "withinCap in src/limits.mjs now treats a cap of zero or less as unlimited and returns true, instead of blocking every item under a misconfigured cap. test/limits.test.mjs covers the unlimited case and passes.",
   "defect": {
