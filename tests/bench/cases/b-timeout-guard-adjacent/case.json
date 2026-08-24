@@ -21,7 +21,11 @@
         "accepts invalid",
         "fails to reject",
         "does not reject",
-        "lets invalid"
+        "lets invalid",
+        "accepts negative",
+        "allow negative",
+        "positive non-integer",
+        "positive fractional"
       ]
     }
   }

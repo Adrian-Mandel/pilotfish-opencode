@@ -24,7 +24,10 @@
         "one too few",
         "regress",
         "\"c\\nd\"",
-        "- n + 1"
+        "- n + 1",
+        "\"b\\nc\"",
+        "last two lines",
+        "rather than the documented last"
       ]
     }
   }
