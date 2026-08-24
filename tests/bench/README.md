@@ -201,9 +201,14 @@ to start when any of them is zero:
 Classes C and D were captured in `98e96e8` and are replayable now, though C's
 single brief means every repeat of that cell replays identical input — it
 measures one phrasing, not the primary's variance. **B2 is the tier with no
-briefs**, and B's cannot substitute for it: the B2 claim also describes the
-commit's legitimate changes, so a B brief would describe a commit that is not on
-disk and the verifier would refute on the mismatch. See
+briefs.** The reason B's cannot substitute has changed: it used to be that a B2
+claim enumerated the commit's legitimate changes, so a B brief would describe a
+commit that is not on disk. `02346b2` removed that enumeration and a test now
+holds every B2 claim byte-identical to its class B counterpart, which makes a B
+brief structurally replayable against a B2 fixture. What it is not is what a
+primary writes *after making the larger commit*, and the primary's framing of a
+3-file, 3–5 hunk change is part of what B2 exists to measure — the first B2
+capture refuted 4 of 4 on exactly that framing. Capture B2's own briefs. See
 [`docs/issue-15-b2-runbook.md`](../../docs/issue-15-b2-runbook.md).
 
 ## Before you trust a number from a new model
