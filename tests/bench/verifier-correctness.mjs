@@ -18,8 +18,8 @@
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -1033,7 +1033,16 @@ async function main() {
   // `merge` read stored runs and need no briefs.
   if (options.replay && !["rescore", "report", "merge", "capture-briefs"].includes(command)) {
     assertBriefsFor(cases, options.replayBriefs);
-    assertBriefCommitIds(cases, options.replayBriefs, join(RESULTS_DIR, ".validate"));
+    // Its own scratch directory, not `results/.validate`: a suite split across
+    // seats with --only-seat runs two processes that both start with this
+    // check, and sharing one directory would have them materializing over each
+    // other's fixtures.
+    const preflightDir = mkdtempSync(join(tmpdir(), "pilotfish-preflight-"));
+    try {
+      assertBriefCommitIds(cases, options.replayBriefs, preflightDir);
+    } finally {
+      rmSync(preflightDir, { recursive: true, force: true });
+    }
   }
 
   // Every verdict is retained in full, which means a scorer fix can be applied

@@ -242,6 +242,42 @@ nothing else, and it does not touch the twelve verdicts on that case that merely
 name `parseTimeout` in a passing-test list. The scorer now agrees with that
 audit's own hand ruling, and it moves the frontier seat's rate *down*.
 
+### The B2 briefs could not have been replayed at all
+
+Found while composing the recapture, and it would have silently corrupted the
+B2 half of the suite. This preset's primary writes the fixture's commit ids into
+the brief — *"Immutable pre-edit baseline commit: 9216815…, Claimed
+implementation commit: f98d9cc…"* — and git stamps author and committer dates at
+one-second resolution, so two materializations of the same case produced
+different SHAs. Every one of the six captured B2 briefs names two commits that
+exist in no fixture. Sixty verifier sessions would have been told to diff a
+commit that is not there, and that arrives as a verdict rather than as an invalid
+run.
+
+The 45 older briefs are SHA-free — the gemini and early-gpt captures wrote *"git
+show HEAD"* — so **the stored class B result is unaffected**. The problem arrives
+with this primary's brief style, which is exactly what B2 captured.
+
+Fixed at the source in `7c54e7e`: commit dates are pinned, so a case's ids are a
+function of its content and a captured brief stays true for as long as the
+fixture does. Deliberately not a rewrite, unlike the fixture path — a path can be
+repointed and the sentence stays true, but the primary chose those two ids to
+bound the change it was describing. Editing a fixture still invalidates its
+briefs, so that is now loud: a replay pre-flight materializes every selected case
+and refuses to start when a brief names an id outside it, naming the case, the
+brief, and the file it came from.
+
+### Brief symmetry between the tiers
+
+Worth knowing before reading the B2 number. Replay selects a brief by
+`repeat % count`, so a case with one brief replays one phrasing ten times. Class
+B carried 2–12 briefs per case and a fresh B2 capture gives 1, which would have
+made a B-versus-B2 difference impossible to separate from brief diversity. Both
+tiers are therefore captured up to **3 briefs per case and trimmed to 3**, so the
+only difference between them is the commit. Consequence to state when quoting the
+B arm: it is no longer the same input set as `seat-comparison-60.json`, which
+replayed every brief it had.
+
 ### Still to do
 
 1. **Recapture briefs.** Required for all six B2 cases, and now also for
