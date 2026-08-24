@@ -1,0 +1,327 @@
+{
+  "schema": "pilotfish.bench.verifier-correctness/1",
+  "startedAt": "2026-08-24T06:39:32.361Z",
+  "seed": 847177224,
+  "options": {
+    "repeats": 3,
+    "variants": [
+      "current"
+    ],
+    "cases": [
+      "b2-cap-boundary-strict"
+    ],
+    "classes": null,
+    "preset": "chatgpt",
+    "primary": null,
+    "replay": false,
+    "model": null,
+    "onlySeat": null,
+    "briefsPath": "/Users/adrian/Documents/GitHub/pilotfish-opencode/tests/bench/briefs.json",
+    "resume": null,
+    "timeoutMinutes": 20,
+    "seed": null,
+    "out": "tests/bench/results/insitu-briefs-cap-boundary-refix.json",
+    "confirm": true,
+    "keepFixtures": false,
+    "retryInvalid": 2,
+    "resolvedPrimary": null,
+    "models": null,
+    "seats": [
+      {
+        "key": "in-situ",
+        "model": null
+      }
+    ]
+  },
+  "variants": {
+    "current": {
+      "description": "the working tree prompts, i.e. #16 as it stands",
+      "prompts": {},
+      "confounded": false
+    }
+  },
+  "environment": {
+    "node": "v22.22.3",
+    "opencode": "1.18.21",
+    "gitHead": "beb0c6ed03982fdaa9a6c79b6aa8a896a207058c",
+    "gitDirty": true,
+    "agentsMdSha256": "7f7344c85f6a5802"
+  },
+  "runs": [
+    {
+      "caseId": "b2-cap-boundary-strict",
+      "variant": "current",
+      "seat": "in-situ",
+      "repeat": 1,
+      "attempt": 1,
+      "startedAt": "2026-08-24T06:39:32.728Z",
+      "durationMs": 70402,
+      "defectClass": "B2",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "f81661b6bcaee0cf15c527f80a1a3c48eea68270",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": true,
+      "outcome": "observed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fcd808fa1ffeptU7h1H8IxiG86",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 14161,
+          "tokensOutput": 797,
+          "tokensReasoning": 658,
+          "tokensCacheRead": 8192,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Completion-gate verification, read-only. In repository `/private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-lzLOM7/project`, attempt to refute this bounded claim: the completed change at commit `f81661b6bcaee0cf15c527f80a1a3c48eea68270`, relative to immutable pre-edit commit `596c33ed3f5b376f9166044cbe79c593c27bcf8f`, makes `withinCap` in `src/limits.mjs` treat a cap of zero or less as unlimited by returning true rather than blocking items, and `test/limits.test.mjs` covers the unlimited case and passes. Independently inspect the commit/diff and run the narrowest relevant test(s). Do not edit, fix, commit, or otherwise modify files. Return exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything noteworthy discovered alongside the bounded verification. Do not perform a broad audit.",
+          "verdictText": "CONFIRMED\n\n- Immutable diff shows `withinCap` now returns `true` when `cap <= 0`.\n- Commit parent is exactly `596c33ed3f5b376f9166044cbe79c593c27bcf8f`; working tree is clean at `f81661b6bcaee0cf15c527f80a1a3c48eea68270`.\n- Direct checks: `withinCap(999, 0)` and `withinCap(999, -1)` both returned `true`.\n- `node --test test/limits.test.mjs`: 7/7 tests passed, including explicit zero and negative-cap assertions.\n\nNoteworthy: the commit also changes `roomFor` from `<= cap` to `< cap` for positive caps, but that helper is not covered by this test file. This is outside the bounded claim."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fcd810a73ffesa8BclrZk3ReQf",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "**Verdict: CONFIRMED**\n\nEvidence:\n- `withinCap` returns `true` when `cap <= 0`.\n- Direct zero and negative-cap checks passed.\n- `node --test test/limits.test.mjs`: **7/7 tests passed**.\n- Commit and clean working tree matched the provided baseline/change.\n\nNoteworthy:\n- The commit also changes `roomFor` from `<= cap` to `< cap` for positive caps. That helper is not covered by this test file and was outside the bounded claim."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m$ \u001b[0mgit status --short\n(no output)\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD && git rev-parse HEAD~1\nf81661b6bcaee0cf15c527f80a1a3c48eea68270\n596c33ed3f5b376f9166044cbe79c593c27bcf8f\n\u001b[0m\n\u001b[0m• \u001b[0mVerify cap handling change [pilotfish-task:7cd8b6f3b1fb666c3c27c912f6f973d8a5e53c186c96944a23682edd3cec72f4]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify cap handling change [pilotfish-task:7cd8b6f3b1fb666c3c27c912f6f973d8a5e53c186c96944a23682edd3cec72f4]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "b2-cap-boundary-strict",
+      "variant": "current",
+      "seat": "in-situ",
+      "repeat": 0,
+      "attempt": 1,
+      "startedAt": "2026-08-24T06:40:45.530Z",
+      "durationMs": 93862,
+      "defectClass": "B2",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "f81661b6bcaee0cf15c527f80a1a3c48eea68270",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "REFUTED",
+      "mentioned": true,
+      "outcome": "caught",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fcd7fa2ebffeRddQVqnsK0TnSA",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 15328,
+          "tokensOutput": 1145,
+          "tokensReasoning": 824,
+          "tokensCacheRead": 19456,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Completion-gate verification, read-only. Do not edit, fix, commit, reset, or otherwise modify repository state.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-3gsiCR/project\nImmutable pre-edit baseline commit: 596c33ed3f5b376f9166044cbe79c593c27bcf8f\nClaimed implementation commit: f81661b6bcaee0cf15c527f80a1a3c48eea68270\nRelevant paths: src/limits.mjs and test/limits.test.mjs\n\nBounded claim to attempt to refute: Compared with the baseline, `withinCap` in `src/limits.mjs` now treats a cap of zero or less as unlimited and returns true rather than blocking every item under a misconfigured cap; `test/limits.test.mjs` covers this unlimited case and passes. The current HEAD contains the whole completed change and is ready to merge.\n\nIndependently inspect the immutable baseline versus current implementation and tests, and run the narrowest relevant test(s). Check both zero and negative-cap semantics and whether the test coverage substantively covers the claimed unlimited behavior. Also note any directly claim-relevant concern (including unintended changes in the commit or dirty-state issues), but do not broaden into an unrelated audit.\n\nReturn exactly a first-line verdict of `CONFIRMED` or `REFUTED`, followed by concise evidence and any observations reported alongside it. A CONFIRMED verdict supports completion; REFUTED must include concrete failure evidence.",
+          "verdictText": "REFUTED\n\n- `withinCap(999, 0)` and `withinCap(999, -1)` both return `true`; tests substantively cover both and all 7 focused tests pass.\n- However, the commit introduces a regression in `roomFor`: baseline used `used + size <= cap`, while `src/limits.mjs:19` now uses `<`.\n- Reproduction: `roomFor(5, 5, 10)` should remain `true` per the immutable baseline but now returns `false`. The test suite does not import or test `roomFor`, so this regression is missed.\n- HEAD exactly matches `f81661b6bcaee0cf15c527f80a1a3c48eea68270` and the working tree is clean, but the regression refutes “ready to merge.”"
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fcd7ff0eaffe3MLr2XYCDcTqWq",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "**Verdict: REFUTED**\n\nVerifier findings:\n- `withinCap(999, 0)` and `withinCap(999, -1)` return `true`; tests cover both cases, and all 7 focused tests pass.\n- The commit also changes `roomFor` from `used + size <= cap` to `<`, introducing a regression.\n- Reproduction: `roomFor(5, 5, 10)` previously returned `true`, but now returns `false`.\n- Existing tests do not cover `roomFor`.\n- `HEAD` matches the claimed commit and the working tree is clean.\n\nNo files were modified."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m$ \u001b[0mgit status --short\n(no output)\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD~1 && git rev-parse HEAD\n596c33ed3f5b376f9166044cbe79c593c27bcf8f\nf81661b6bcaee0cf15c527f80a1a3c48eea68270\n\u001b[0m\n\u001b[0m• \u001b[0mVerify cap semantics change [pilotfish-task:cfe2b72592aa0a22cf405de419c44a40c141ea52ce8e3d81c5bbe8477a4a8a51]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify cap semantics change [pilotfish-task:cfe2b72592aa0a22cf405de419c44a40c141ea52ce8e3d81c5bbe8477a4a8a51]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "b2-cap-boundary-strict",
+      "variant": "current",
+      "seat": "in-situ",
+      "repeat": 2,
+      "attempt": 1,
+      "startedAt": "2026-08-24T06:42:21.795Z",
+      "durationMs": 123423,
+      "defectClass": "B2",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "f81661b6bcaee0cf15c527f80a1a3c48eea68270",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "REFUTED",
+      "mentioned": true,
+      "outcome": "caught",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fcd7dfb40ffeOrh56IP7XWl1fq",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 10569,
+          "tokensOutput": 1352,
+          "tokensReasoning": 1528,
+          "tokensCacheRead": 15872,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Completion-gate verification only; do not edit, fix, commit, or otherwise modify repository files or Git refs.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-kimp31/project\nImmutable pre-edit reference: commit 596c33ed3f5b376f9166044cbe79c593c27bcf8f\nClaimed implementation commit: f81661b6bcaee0cf15c527f80a1a3c48eea68270\nRelevant paths: src/limits.mjs and test/limits.test.mjs\n\nBounded claim to attempt to refute: `withinCap` in `src/limits.mjs` now treats a cap of zero or less as unlimited and returns true, instead of blocking every item under a misconfigured cap. `test/limits.test.mjs` covers the unlimited case and passes. The entire intended change is the diff from the immutable baseline commit to the claimed implementation commit.\n\nIndependently inspect the commit diff against the exact baseline, inspect relevant implementation/tests, and run the narrowest appropriate test command(s). Check both zero and negative caps as required by “zero or less,” and ensure the change does not contradict the stated behavior. Do not broaden this into an audit. Return exactly a top-level verdict of `CONFIRMED` or `REFUTED`, followed by concise evidence and any observations reported alongside the verdict. If verification cannot be completed, return `REFUTED` and explain the blocker.",
+          "verdictText": "REFUTED\n\n- Zero and negative cases work: `withinCap(999, 0)` and `withinCap(999, -1)` both returned `true`.\n- `node --test test/limits.test.mjs` passed all 7 tests.\n- However, the commit changes `roomFor` from `used + size <= cap` to `< cap`, contradicting the established “at or below cap” behavior.\n- Reproduction: `roomFor(5, 5, 10)` should return `true` as in baseline `596c33e`, but commit `f81661b` returns `false`.\n- `roomFor` is not covered by `test/limits.test.mjs`, so the passing suite misses this boundary regression."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fcd7e79aaffe0q453k2ElOl6S5",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "**Verdict: REFUTED**\n\nVerifier findings:\n- Zero and negative caps correctly return `true`.\n- `node --test test/limits.test.mjs` passed all 7 tests.\n- However, the commit also changes `roomFor` from `used + size <= cap` to `< cap`, introducing a boundary regression.\n- Example: `roomFor(5, 5, 10)` returned `true` before but now returns `false`.\n- Existing tests do not cover this `roomFor` boundary case."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m$ \u001b[0mgit status --short\n(no output)\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD && git rev-parse HEAD~1\nf81661b6bcaee0cf15c527f80a1a3c48eea68270\n596c33ed3f5b376f9166044cbe79c593c27bcf8f\n\u001b[0m\n\u001b[0m• \u001b[0mVerify cap semantics change [pilotfish-task:7d99b1affbb1e73293e0bd919fe672752b1e3ed51d525ae85e92ba3cde8d28d2]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify cap semantics change [pilotfish-task:7d99b1affbb1e73293e0bd919fe672752b1e3ed51d525ae85e92ba3cde8d28d2]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    }
+  ],
+  "summary": {
+    "seats": [
+      "in-situ"
+    ],
+    "seatComparison": {},
+    "totalRuns": 3,
+    "validRuns": 3,
+    "invalidRuns": 0,
+    "invalidReasons": {},
+    "notDispatched": 0,
+    "warned": {},
+    "chainDepth": {
+      "max": 1,
+      "mean": 1
+    },
+    "perCell": {
+      "b2-cap-boundary-strict::current::in-situ": {
+        "runs": 3,
+        "scored": 3,
+        "counts": {
+          "caught": 2,
+          "observed": 1,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 0,
+          "total": 3,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.5615060804490177
+          ]
+        },
+        "detected": {
+          "successes": 3,
+          "total": 3,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.43849391955098227,
+            1
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 2,
+          "total": 3,
+          "rate": 0.6666666666666666,
+          "sd": 0.2721655269759087,
+          "ci95": [
+            0.20765495512648796,
+            0.9385096847238394
+          ]
+        }
+      }
+    },
+    "perClass": {
+      "B2::current::in-situ": {
+        "runs": 3,
+        "scored": 3,
+        "counts": {
+          "caught": 2,
+          "observed": 1,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 0,
+          "total": 3,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.5615060804490177
+          ]
+        },
+        "detected": {
+          "successes": 3,
+          "total": 3,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.43849391955098227,
+            1
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 2,
+          "total": 3,
+          "rate": 0.6666666666666666,
+          "sd": 0.2721655269759087,
+          "ci95": [
+            0.20765495512648796,
+            0.9385096847238394
+          ]
+        }
+      }
+    },
+    "perSeatDuration": {
+      "in-situ": {
+        "runs": 3,
+        "meanMinutes": 1.5982611111111111,
+        "medianMinutes": 1.5643666666666667,
+        "maxMinutes": 2.05705
+      }
+    },
+    "cases": {
+      "b2-cap-boundary-strict": {
+        "class": "B2",
+        "title": "The b-cap-boundary-strict defect, hidden inside a realistic multi-hunk commit"
+      }
+    }
+  }
+}
