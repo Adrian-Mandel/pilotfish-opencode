@@ -291,3 +291,61 @@ replayed every brief it had.
 4. Not built, worth building: a `claimDigest` stamped on each captured brief and
    checked before replay. Both B2 recaptures were forced by claim edits that
    nothing detected.
+
+---
+
+## Update 2026-08-24: the suite is running, and two launch bugs are worth not repeating
+
+**Running now**, both halves on seed `1526538140`, 12 cases x 10 repeats x 2
+seats = 240 runs:
+
+```bash
+node tests/bench/verifier-correctness.mjs run --replay \
+  --model bambi/qwen3.8-27b-mtp-pure,openai/gpt-5.6-sol \
+  --classes B,B2 --variants current --repeats 10 --seed 1526538140 \
+  --only-seat <seat> --out tests/bench/results/seat-comparison-b-b2-<half>.json --confirm
+```
+
+Then `merge` the two halves and `report`. Measured: bambi ~5.8h, gpt ~1.4h of
+subscription quota.
+
+**Pass `--seed` explicitly when splitting with `--only-seat`.** Two halves
+launched seconds apart each defaulted to their own `Date.now() & 0x7fffffff`,
+producing seeds 846538136 and 846542134. `merge` refuses different seeds --
+correctly, it calls that "a different suite" -- so the split would have run to
+completion and then been unmergeable. Caught by reading the `seed` field out of
+both result files before either left its plan output; zero runs, zero cost.
+
+**Never pipe a long run through `head`.** The first launch used
+`... --confirm 2>&1 | tee log | head -6`, left over from a quick sanity peek.
+`head` exits after 6 lines, the pipe breaks, `node` dies -- and bash reports the
+*pipeline's* status, which is `head`'s clean 0. Both halves reported "exit code
+0" having completed 2 runs of 120. The background-task notification said
+"completed" and it was technically true. **A "completed" notification is not
+evidence a suite finished; check `len(runs)` in the result file.** Redirect to a
+file instead.
+
+### One more real fixture defect, found by chasing a fake quota error
+
+The two bambi runs from that aborted launch came back `throttled-or-quota` and
+invalid. Neither was throttled -- both `verdictText` fields are complete
+CONFIRMED verdicts with real evidence. `materializeCase` bakes `case.json`'s
+commit messages into the fixture's actual git history, every verifier here runs
+`git log`/`git show` while verifying, and `b2-cap-boundary-strict`'s base commit
+message was *"chore: upload queue quota arithmetic"*. That word reached the
+process's stdout, where `classifyRunHealth` scans for throttle language.
+
+Three consecutive hits in a shuffled 240-run queue would have tripped
+`STANDING_FAILURE_LIMIT` and stopped the whole suite believing the account was
+rate-limited. Renamed to "budget" in `34f5c30`, both patterns are now exported
+from `telemetry.mjs`, and a test asserts no case's commit messages contain
+throttle or denial vocabulary. The case's three briefs were stale under the new
+message -- the `7c54e7e` pre-flight caught that correctly -- and were recaptured.
+
+### Brief store as it stands
+
+Every one of the 12 B/B2 cases carries exactly 3 briefs from the same chatgpt
+primary (`163a4eb`). 24 in-situ runs bought that. Excluded from the store but
+still in their result files: `b-config-read-adjacent`'s 12 briefs captured under
+the superseded claim, `b-timeout-guard-adjacent`'s 8 gemini-origin briefs, and
+`b2-cap-boundary-strict`'s 3 pre-rename briefs.
