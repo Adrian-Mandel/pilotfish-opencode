@@ -579,25 +579,54 @@ describe("the case set", () => {
     }
   });
 
-  // A fixture's commit messages are not just labels: materializeCase bakes them
-  // into the fixture's real git history, and every verifier here runs `git
-  // log` or `git show`, which prints them straight into the process's stdout.
-  // `classifyRunHealth` scans that stdout for throttle and denial language, so
-  // a commit message sharing that vocabulary invalidates every run of the case
-  // it belongs to -- for a reason that has nothing to do with the model or the
-  // account. `b2-cap-boundary-strict`'s base commit was "chore: upload queue
-  // quota arithmetic", and two otherwise-successful CONFIRMED verdicts were
-  // marked throttled-or-quota and discarded before this was caught.
-  test("no case's commit messages contain throttle or denial vocabulary", () => {
-    for (const item of CASES) {
-      for (const [label, message] of [
-        ["baseCommitMessage", item.baseCommitMessage],
-        ["changeCommitMessage", item.changeCommitMessage],
-      ]) {
-        if (!message) continue;
-        assert.doesNotMatch(message, THROTTLE_PATTERN, `${item.id} ${label}: ${JSON.stringify(message)}`);
-        assert.doesNotMatch(message, DENIED_PATTERN, `${item.id} ${label}: ${JSON.stringify(message)}`);
+  // Everything a verifier reads can reach the harness's own health check, and
+  // that check cannot tell a fixture's prose from a provider's error. Commit
+  // messages become real git history; source and test files get `cat`ed and
+  // `git show`n; the module header is printed by any verifier that opens the
+  // file under test. `classifyRunHealth` scans the process's stdout for
+  // throttle and denial language, so a fixture using that vocabulary marks its
+  // own runs invalid -- and three in a row trips STANDING_FAILURE_LIMIT and
+  // aborts the suite as if the account were rate-limited.
+  //
+  // This was found twice. First `b2-cap-boundary-strict`'s base commit message
+  // ("chore: upload queue quota arithmetic"), which a commit-message-only check
+  // caught. Then, after that fix, the same case's `src/limits.mjs` header --
+  // "// Quota arithmetic for the upload queue." -- invalidated 12 of the gpt
+  // seat's runs and stopped that half 8 cells short of finishing. The lesson is
+  // the scope: check the file contents, not just the labels.
+  test("no fixture content contains throttle or denial vocabulary", () => {
+    const root = mkdtempSync(join(tmpdir(), "bench-vocab-"));
+    try {
+      for (const item of CASES) {
+        for (const [label, message] of [
+          ["baseCommitMessage", item.baseCommitMessage],
+          ["changeCommitMessage", item.changeCommitMessage],
+        ]) {
+          if (!message) continue;
+          assert.doesNotMatch(message, THROTTLE_PATTERN, `${item.id} ${label}: ${JSON.stringify(message)}`);
+          assert.doesNotMatch(message, DENIED_PATTERN, `${item.id} ${label}: ${JSON.stringify(message)}`);
+        }
+        const target = join(root, item.id);
+        materializeCase(item, target);
+        const files = execFileSync("git", ["ls-files"], { cwd: target, encoding: "utf8" })
+          .split("\n")
+          .filter(Boolean);
+        for (const relative of files) {
+          for (const ref of ["HEAD", "HEAD~1"]) {
+            let content;
+            try {
+              content = execFileSync("git", ["show", `${ref}:${relative}`], { cwd: target, encoding: "utf8" });
+            } catch {
+              continue; // not present at that commit
+            }
+            const where = `${item.id} ${ref}:${relative}`;
+            assert.doesNotMatch(content, THROTTLE_PATTERN, where);
+            assert.doesNotMatch(content, DENIED_PATTERN, where);
+          }
+        }
       }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
     }
   });
 

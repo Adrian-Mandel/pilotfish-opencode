@@ -1,4 +1,4 @@
-// Quota arithmetic for the upload queue.
+// Byte-budget arithmetic for the upload queue.
 //
 // A cap is a byte budget. Every call site asks these helpers rather than
 // comparing numbers itself, so the meaning of "at the cap" is decided once.
