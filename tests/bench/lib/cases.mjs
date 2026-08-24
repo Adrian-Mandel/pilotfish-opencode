@@ -44,8 +44,36 @@ const GIT_IDENTITY = [
   "-c", "core.hooksPath=/dev/null",
 ];
 
+// Commit dates are pinned, which makes a case's commit ids a function of its
+// content alone: materialize `b2-timeout-guard-adjacent` today and next month
+// and both repositories have the same two SHAs.
+//
+// This is not tidiness. A brief is captured from a real primary, and this
+// preset's primary writes the fixture's commit ids into it -- *"Immutable
+// pre-edit baseline commit: 9216815..., Claimed implementation commit:
+// f98d9cc..."*. Git stamps author and committer dates at one-second resolution,
+// so without pinning, two materializations of one case produce different SHAs
+// and every such brief names commits that do not exist in the fixture it is
+// replayed into. The verifier then cannot diff the claimed change at all, and
+// the failure arrives as a verdict rather than as an invalid run -- the same
+// shape as the dead fixture path in `briefs.mjs`, and the same reason it is
+// worth removing at the source rather than papering over on the way in.
+//
+// The change commit is a minute after the base so ordering is well-defined.
+// Both are fixed points, not offsets from now.
+const BASE_DATE = "2026-01-05T09:00:00+00:00";
+const CHANGE_DATE = "2026-01-05T09:01:00+00:00";
+
 function git(cwd, ...args) {
   return execFileSync("git", [...GIT_IDENTITY, ...args], { cwd, encoding: "utf8" });
+}
+
+function commit(cwd, message, date) {
+  return execFileSync("git", [...GIT_IDENTITY, "commit", "-q", "-m", message], {
+    cwd,
+    encoding: "utf8",
+    env: { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date },
+  });
 }
 
 export function loadCases({ ids = null, classes = null } = {}) {
@@ -121,16 +149,19 @@ export function materializeCase(item, targetDir) {
   cpSync(join(item.dir, "base"), targetDir, { recursive: true });
   git(targetDir, "init", "-b", "main", "-q");
   git(targetDir, "add", "-A");
-  git(targetDir, "commit", "-q", "-m", item.baseCommitMessage ?? "chore: initial state");
+  commit(targetDir, item.baseCommitMessage ?? "chore: initial state", BASE_DATE);
 
   cpSync(join(item.dir, "change"), targetDir, { recursive: true });
   for (const relative of item.delete ?? []) {
     rmSync(join(targetDir, relative), { recursive: true, force: true });
   }
   git(targetDir, "add", "-A");
-  git(targetDir, "commit", "-q", "-m", item.changeCommitMessage ?? item.claim.split("\n")[0]);
+  commit(targetDir, item.changeCommitMessage ?? item.claim.split("\n")[0], CHANGE_DATE);
 
-  return { head: git(targetDir, "rev-parse", "HEAD").trim() };
+  return {
+    base: git(targetDir, "rev-parse", "HEAD~1").trim(),
+    head: git(targetDir, "rev-parse", "HEAD").trim(),
+  };
 }
 
 // The brief handed to `pilotfish`. It forces the completion gate to fire but

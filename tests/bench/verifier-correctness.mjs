@@ -32,6 +32,7 @@ import {
   captureBriefs,
   loadBriefs,
   normalizeFixturePaths,
+  staleCommitIds,
   writeBriefs,
 } from "./lib/briefs.mjs";
 import { resolvePrimary } from "./lib/routing.mjs";
@@ -71,8 +72,21 @@ const ESTIMATE_FALLBACK = {
 };
 
 const ESTIMATES = {
-  // 9.5 min, 18.3k input / 1.2k output tokens in the verifier alone.
-  "openai/gpt-5.6-sol": ESTIMATE_FALLBACK,
+  // 22 in-situ runs across four capture files (`insitu-newB-briefs`,
+  // `gpt56-insitu-briefs-CD`, and both B2 captures), classes B, B2, C and D:
+  // 0.7-2.3 min, median 1.1. This replaces the single 2026-08-10 class D run
+  // that measured 9.5 min and stood as the fallback for everything after it --
+  // a `plan` for seven capture runs quoted 1.2h against an actual ~10 min, and
+  // an estimate that wrong stops being read. The range keeps headroom above the
+  // observed maximum because a REFUTED verdict can start a re-verification
+  // round and none of the 22 did.
+  "openai/gpt-5.6-sol": {
+    source:
+      "22 measured in-situ runs (2026-08-14 to 08-21, classes B/B2/C/D, chatgpt)",
+    minutesPerRun: 1.2,
+    minutesPerRunRange: [0.7, 5],
+    measuredOn: "chatgpt / openai/gpt-5.6-sol",
+  },
   // 31s wall clock, 21.6k input / 283 output / 798 reasoning tokens in the
   // verifier. Class B, `current`, CONFIRMED-with-observation, chain depth 1.
   // The upper bound stays well above it because a REFUTED verdict starts a
@@ -817,6 +831,39 @@ export function assertBriefsFor(cases, store) {
   );
 }
 
+// Coverage is not the only way a captured brief can fail to describe the
+// repository it is replayed into. Commit ids are pinned to the case's content,
+// so a fixture edit invalidates every brief that names them -- see
+// `staleCommitIds`. Checked here, before a queue starts, because the alternative
+// is a verifier being told to diff a commit that does not exist and reporting
+// its confusion as a verdict.
+export function assertBriefCommitIds(cases, store, scratchDir) {
+  const stale = [];
+  for (const item of cases) {
+    const briefs = store?.cases?.[item.id] ?? [];
+    if (briefs.length === 0) continue;
+    const { base, head } = materializeCase(item, join(scratchDir, item.id));
+    briefs.forEach((entry, index) => {
+      const ids = staleCommitIds(entry.brief, { base, head });
+      if (ids.length > 0) stale.push({ id: item.id, index, source: entry.source, ids });
+    });
+  }
+  if (stale.length === 0) return;
+  const lines = stale.map(
+    ({ id, index, source, ids }) =>
+      `  ${id} brief ${index} (captured from ${source}) names ${ids.join(", ")}`,
+  );
+  const cases_ = [...new Set(stale.map((entry) => entry.id))];
+  throw new Error(
+    `${stale.length} captured brief(s) name commit ids that are not in the fixture they would be ` +
+      `replayed into. The fixture content changed after capture, so the brief describes a commit ` +
+      `that no longer exists:\n${lines.join("\n")}\n` +
+      "Recapture those cases rather than replaying them:\n" +
+      `  node tests/bench/verifier-correctness.mjs run --confirm --cases ${cases_.join(",")} --repeats 1\n` +
+      "  node tests/bench/verifier-correctness.mjs capture-briefs tests/bench/results/<that-file>.json <the-others>",
+  );
+}
+
 function routingText(options, cases = null) {
   const primary = options.resolvedPrimary;
   if (options.replay) {
@@ -986,6 +1033,7 @@ async function main() {
   // `merge` read stored runs and need no briefs.
   if (options.replay && !["rescore", "report", "merge", "capture-briefs"].includes(command)) {
     assertBriefsFor(cases, options.replayBriefs);
+    assertBriefCommitIds(cases, options.replayBriefs, join(RESULTS_DIR, ".validate"));
   }
 
   // Every verdict is retained in full, which means a scorer fix can be applied

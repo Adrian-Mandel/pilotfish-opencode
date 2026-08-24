@@ -115,6 +115,33 @@ export function briefCounts(store) {
 // from authoring a brief -- which this harness never does.
 export const FIXTURE_PATH_PATTERN = /[^\s`'"()[\],;]*\/pilotfish-fixture-[A-Za-z0-9]{6,}/g;
 
+// The other thing a brief pins to the run that produced it: commit ids. This
+// preset's primary writes them out -- *"Immutable pre-edit baseline commit:
+// 9216815..., Claimed implementation commit: f98d9cc..."* -- and a brief naming
+// commits that are not in the fixture is worse than a dead path, because the
+// verifier cannot diff the claimed change at all and its confusion arrives as a
+// verdict rather than as an invalid run.
+//
+// Fixture commit ids are pinned to fixed dates (see `cases.mjs`), so a brief's
+// ids stay valid for as long as the case's content does. Editing a fixture's
+// files changes them, and this is what makes that loud: anything that looks like
+// an abbreviated or full commit id and is not a prefix of this case's base or
+// head is stale, and the brief has to be recaptured.
+//
+// Deliberately not a rewrite. A path can be repointed and the sentence stays
+// true; a commit id cannot, because the primary chose those two ids to bound the
+// change it was talking about, and substituting different ones would be writing
+// the brief rather than capturing it.
+const COMMIT_ID_PATTERN = /\b[0-9a-f]{7,40}\b/g;
+
+export function staleCommitIds(brief, { base, head }) {
+  if (typeof brief !== "string") return [];
+  const valid = [base, head].filter(Boolean);
+  return [...new Set(brief.match(COMMIT_ID_PATTERN) ?? [])].filter(
+    (id) => !valid.some((sha) => sha.startsWith(id)),
+  );
+}
+
 export function normalizeFixturePaths(brief, root) {
   if (typeof brief !== "string" || !root) return { brief, occurrences: 0, from: [] };
   const from = new Set();

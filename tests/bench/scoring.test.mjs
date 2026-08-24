@@ -22,8 +22,10 @@ import {
   briefFor as storeBriefFor,
   captureBriefs,
   normalizeFixturePaths,
+  staleCommitIds,
 } from "./lib/briefs.mjs";
 import {
+  assertBriefCommitIds,
   assertBriefsFor,
   assertResumable,
   cellKey,
@@ -156,6 +158,60 @@ describe("replay brief coverage", () => {
     const shipped = JSON.parse(readFileSync(new URL("./briefs.json", import.meta.url), "utf8"));
     const classB = CASES.filter((item) => item.defectClass === "B");
     assert.doesNotThrow(() => assertBriefsFor(classB, shipped));
+  });
+});
+
+describe("commit ids in captured briefs", () => {
+  const base = "1111111111111111111111111111111111111111";
+  const head = "2222222222222222222222222222222222222222";
+
+  test("the fixture's own ids, full or abbreviated, are not stale", () => {
+    const brief = `Baseline commit: ${base}. Claimed commit: ${head} (${head.slice(0, 8)}).`;
+    assert.deepEqual(staleCommitIds(brief, { base, head }), []);
+  });
+
+  test("an id from the run that captured the brief is stale", () => {
+    const brief = `Baseline commit: 9216815a66071aa5dd1fe7af60e064f9b6d9d658. Claimed: ${head}.`;
+    assert.deepEqual(staleCommitIds(brief, { base, head }), [
+      "9216815a66071aa5dd1fe7af60e064f9b6d9d658",
+    ]);
+  });
+
+  test("a brief that names no commit id is not stale", () => {
+    assert.deepEqual(staleCommitIds("compare HEAD against HEAD~1", { base, head }), []);
+  });
+
+  test("the pre-flight refuses a stale brief and names the case and its source", () => {
+    const scratch = mkdtempSync(join(tmpdir(), "bench-preflight-"));
+    try {
+      const item = CASES.find((entry) => entry.defectClass === "B");
+      const store = {
+        cases: {
+          [item.id]: [
+            { brief: "Claimed commit: 9216815a66071aa5dd1fe7af60e064f9b6d9d658", source: "old.json" },
+          ],
+        },
+      };
+      assert.throws(
+        () => assertBriefCommitIds([item], store, scratch),
+        (error) =>
+          error.message.includes(item.id) &&
+          error.message.includes("old.json") &&
+          error.message.includes("9216815a66071aa5dd1fe7af60e064f9b6d9d658"),
+      );
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  });
+
+  test("every brief in the shipped store passes the pre-flight", () => {
+    const scratch = mkdtempSync(join(tmpdir(), "bench-preflight-all-"));
+    try {
+      const shipped = JSON.parse(readFileSync(new URL("./briefs.json", import.meta.url), "utf8"));
+      assertBriefCommitIds(CASES, shipped, scratch);
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
   });
 });
 
@@ -424,6 +480,24 @@ describe("the case set", () => {
         const target = join(root, item.id);
         materializeCase(item, target);
         execFileSync(process.execPath, ["--test", "test/"], { cwd: target, stdio: "pipe" });
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  // A brief captured from a real primary can name the fixture's commit ids, and
+  // this preset's primary does. Unpinned dates made those ids a function of the
+  // second the fixture was built in, so a replayed brief pointed at commits that
+  // were never in the repository it was replayed into.
+  test("a case materializes to the same two commit ids every time", () => {
+    const root = mkdtempSync(join(tmpdir(), "bench-determinism-"));
+    try {
+      for (const item of CASES) {
+        const first = materializeCase(item, join(root, `${item.id}-1`));
+        const second = materializeCase(item, join(root, `${item.id}-2`));
+        assert.deepEqual(second, first, `${item.id}: commit ids are not reproducible`);
+        assert.notEqual(first.base, first.head, `${item.id}: base and head coincide`);
       }
     } finally {
       rmSync(root, { recursive: true, force: true });
