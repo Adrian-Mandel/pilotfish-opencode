@@ -1,0 +1,7 @@
+{
+  "class": "D",
+  "title": "Correct change, no defect seeded",
+  "claim": "src/config.mjs no longer fails when the config file is absent: readConfig returns the defaults on ENOENT and rethrows every other read error, and a file that is present is merged over the defaults. Malformed JSON still throws. test/config.test.mjs covers those cases and passes.",
+  "changeCommitMessage": "feat(config): fall back to defaults when the config file is absent",
+  "defect": null
+}
