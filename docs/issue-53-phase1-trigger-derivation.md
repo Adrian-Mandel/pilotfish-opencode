@@ -12,6 +12,47 @@ recommendation keeps P1's goal and moves its mechanism.
 
 ## 0. The source sample no longer exists on disk
 
+> **Correction, 2026-08-25. This section is wrong, and the 44 are recoverable.**
+>
+> `~/.local/share/opencode/opencode.db` is now 977 MB and holds 405 sessions. It
+> contains **62 `verifier` sessions: 44 `REFUTED`, 12 `CONFIRMED`, and 6 whose
+> stored text is an echoed brief rather than a verdict.** The identification is
+> not inferred from the count alone — every axis the calibration review named
+> matches:
+>
+> | the review says | the database holds |
+> |---|---|
+> | 44 refutations | 44 `REFUTED` |
+> | window 2026-07-14 to 2026-08-10 | 2026-07-14 21:43 to 2026-08-10 06:08 |
+> | seat `openai/gpt-5.6-sol` | all 62 sessions, no other model |
+>
+> The sessions sit in real working directories — `pilotfish-opencode` (23),
+> `opencode-video-vision` (18), `rpgmz-test-01` (13+6) — so they are production
+> work, not fixtures.
+>
+> What was measured below was true when it was taken; the directory was
+> recreated on 2026-08-14 and the database was empty. It has since been
+> repopulated. The section is left standing because the derivation that follows
+> was built on its conclusion, and because the reasoning it forced — bucket-level
+> miss rates rather than per-session ones — is still what §2 reports.
+>
+> **What this reopens.** The partition can now be *verified* rather than trusted,
+> §1's "permanently unverifiable at source" no longer holds, and #53's acceptance
+> line about miss rate "against all 44 historical refutations" can be satisfied
+> per session. §6.6 is withdrawn.
+>
+> **What it does not change.** No conclusion in §2 through §5 depends on the
+> sample being unreadable; they depend on the partition, which the recovered
+> sessions can now confirm or refute. Nothing below has been re-derived against
+> them yet.
+>
+> One number the recovered sessions give immediately, and the first in this
+> investigation measured on real work rather than seeded fixtures: the pre-scope
+> verifier refuted **44 of 56 parsed verdicts, 79%**. The bench puts `pre-scope`
+> at 35% and `current` at 6.7% on class B2. All 62 predate `9332e48`
+> (2026-08-10 14:04), so every one is pre-scope-change behaviour.
+
+
 #53 names the source as the 44 historical `REFUTED` verifier sessions in
 `~/.local/share/opencode/opencode.db`, and asks for the seven-bucket partition
 to be verified rather than trusted. **It cannot be verified at source.** That
@@ -349,6 +390,8 @@ test suite passes is not grounds* to the 41%.
    experimental arm — and right now it is guaranteed only by the probes above,
    not by the suite. Three cases would cover it (anchor missing, anchor
    duplicated, mixed endings). Say the word and I will write them.
-6. **The 44 are gone.** Any future question about them is now unanswerable. If
-   the current install's sessions matter for a later phase, they need exporting
-   before the next data-directory reset.
+6. ~~**The 44 are gone.** Any future question about them is now unanswerable.~~
+   **Withdrawn 2026-08-25** — see the correction at the top of §0. They are in
+   the database again, identified on count, window and seat. The advice in the
+   second half stands and is now urgent rather than theoretical: they survived
+   one data-directory reset by luck, and should be exported before the next.
