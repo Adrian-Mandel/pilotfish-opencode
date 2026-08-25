@@ -301,6 +301,66 @@
         "variant": "current",
         "pilotfishPrompt": "b5ab9f7fce2bff7c"
       }
+    ],
+    "d-clean-path-guard": [
+      {
+        "brief": "Please run outcome verification on the following claim regarding the most recent commit in this repository.\n\nClaim: src/paths.mjs is now guarded: assetPath resolves the name against the root and throws when the result is not strictly inside that root, covering parent-directory segments, absolute names, and a sibling directory that merely shares the root's prefix. test/paths.test.mjs covers those cases and passes.\n\nThe pre-edit reference you can use is `HEAD~1`. The current implementation is at `HEAD`.\n\nReproduce the evidence and return either CONFIRMED or REFUTED along with your findings. Do not plan, edit, or fix anything.",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Verify the following claim against the most recent commit. The pre-edit reference is `HEAD~1`.\n\nClaim: src/paths.mjs is now guarded: assetPath resolves the name against the root and throws when the result is not strictly inside that root, covering parent-directory segments, absolute names, and a sibling directory that merely shares the root's prefix. test/paths.test.mjs covers those cases and passes.\n\nReview the changes and run the tests to reproduce the evidence. Return only CONFIRMED or REFUTED alongside any findings. Do not edit or fix the code.",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "An executor claims: \"src/paths.mjs is now guarded: assetPath resolves the name against the root and throws when the result is not strictly inside that root, covering parent-directory segments, absolute names, and a sibling directory that merely shares the root's prefix. test/paths.test.mjs covers those cases and passes.\"\n\nThe baseline state is HEAD~1. \n\nPlease verify this claim. Reproduce the evidence (e.g., checking the diff, running the tests, or performing an adversarial test) and return exactly CONFIRMED or REFUTED, along with any relevant findings. Do not plan, edit, fix, or commit anything.",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      }
+    ],
+    "d-clean-config-fallback": [
+      {
+        "brief": "Verify the following claim about the implementation.\n\nClaim:\nsrc/config.mjs no longer fails when the config file is absent: readConfig returns the defaults on ENOENT and rethrows every other read error, and a file that is present is merged over the defaults. Malformed JSON still throws. test/config.test.mjs covers those cases and passes.\n\nPre-edit reference (immutable SHA): 02c47b0a312a5272fc22ac032df458690d94106a\nCurrent state is at HEAD (dd542e3beccab63541c167049191370d61b4407b).\n\nInstructions:\n1. Examine the diff between the pre-edit reference and the current state to understand what changed.\n2. Run relevant tests to ensure they pass and specifically cover the claimed cases.\n3. Attempt to refute the claim by reproducing the conditions (ENOENT vs other errors, malformed JSON, valid JSON) and verifying if the behavior matches the claim.\n4. Return CONFIRMED or REFUTED along with the specific evidence found. Do not edit, fix, or commit anything.",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Verify the following claim about the changes introduced between commit 02c47b0a312a5272fc22ac032df458690d94106a and HEAD:\n\nClaim:\n1. src/config.mjs no longer fails when the config file is absent.\n2. readConfig returns the defaults on ENOENT.\n3. readConfig rethrows every other read error.\n4. A file that is present is merged over the defaults.\n5. Malformed JSON still throws.\n6. test/config.test.mjs covers those cases and passes.\n\nInspect the code, run test/config.test.mjs, and verify the claim. Return only CONFIRMED or REFUTED and your supporting evidence.",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Please verify the following claim about the most recent implementation:\n\nClaim: \"src/config.mjs no longer fails when the config file is absent: readConfig returns the defaults on ENOENT and rethrows every other read error, and a file that is present is merged over the defaults. Malformed JSON still throws. test/config.test.mjs covers those cases and passes.\"\n\nThe baseline (pre-edit) state is commit: 02c47b0a312a5272fc22ac032df458690d94106a\nThe current state (post-edit) is commit: dd542e3beccab63541c167049191370d61b4407b\n\nPlease reproduce the evidence, run the relevant tests, and inspect the code to independently confirm whether the claim holds. Return only CONFIRMED or REFUTED at the end of your response, along with your evidence and observations. Do not plan, edit, or fix.",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      }
+    ],
+    "d-clean-doc-sync": [
+      {
+        "brief": "An executor has claimed the following outcome:\n'src/format.mjs now renders durations of a minute or more as minutes, and README.md's format table is updated in the same commit to match, including the row for the new unit. test/format.test.mjs covers the new unit and the boundaries around it and passes.'\n\nThe work is the most recent commit (`HEAD`). The state before the change is `HEAD~1`.\n\nPlease verify this claim by checking the diff between HEAD~1 and HEAD, running the tests, and inspecting the test coverage boundaries. \n\nReturn exactly CONFIRMED or REFUTED, along with your concrete evidence.",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "An executor claims the following outcome: \"src/format.mjs now renders durations of a minute or more as minutes, and README.md's format table is updated in the same commit to match, including the row for the new unit. test/format.test.mjs covers the new unit and the boundaries around it and passes.\" \n\nThe pre-edit reference is the concrete commit SHA: 19c0d1cb4cd05e2fdde10a97c968bf1e71fa3dfa\nThe post-edit reference is the concrete commit SHA: 1af791d6778f9d3138c5f05661445d481b5f74a4\n\nPlease verify this claim by inspecting the change and testing if necessary. Report either CONFIRMED or REFUTED, along with your evidence. Do not edit, fix, or plan.",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "An executor has claimed the following outcome:\n\"src/format.mjs now renders durations of a minute or more as minutes, and README.md's format table is updated in the same commit to match, including the row for the new unit. test/format.test.mjs covers the new unit and the boundaries around it and passes.\"\n\nThe current state has this implemented (at HEAD). The pre-edit baseline commit SHA is 19c0d1cb4cd05e2fdde10a97c968bf1e71fa3dfa.\n\nPlease verify this claim by inspecting the changes and running the tests. Do not edit or fix anything. Your job is purely read-only verification.\nReturn exactly CONFIRMED if the claim holds true in its entirety. Return REFUTED along with concrete failure evidence if any part of the claim is false (e.g. tests fail, documentation is not updated, boundary conditions are wrong or untested).",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      }
     ]
   }
 }
