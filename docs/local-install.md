@@ -2,14 +2,23 @@
 
 This walkthrough installs Pilotfish from a pinned local checkout. OpenCode reads the runbook and templates directly from the repository; no remote files are fetched during installation.
 
-Pilotfish `0.2.0` requires OpenCode `1.18.10` or newer.
+Pilotfish `0.2.0` (unreleased; see #51) requires OpenCode `1.18.10` or newer.
 
-## 1. Clone the Pinned Release
+## 1. Clone and Pin the Checkout
+
+No release tags are published yet (#51), so pin to a commit SHA rather than a
+tag. It gives the same guarantee: the runbook and templates you review are the
+ones that install.
 
 ```bash
-git clone --branch v0.2.0 --depth 1 https://github.com/Adrian-Mandel/pilotfish-opencode.git
+git clone https://github.com/Adrian-Mandel/pilotfish-opencode.git
 cd pilotfish-opencode
+git checkout <commit-sha>
 ```
+
+Omit the `git checkout` line to install the default branch as it stands. Do not
+add `--depth 1` when pinning; a shallow clone fetches no other commit to check
+out.
 
 Review the local runbook and templates before launching OpenCode.
 

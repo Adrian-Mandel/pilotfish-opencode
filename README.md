@@ -116,13 +116,22 @@ These are the first supported models whose IDs carry two slashes; the router reb
 
 ## Install
 
-The recommended path is to clone the pinned `v0.2.0` release locally, then start OpenCode from that checkout so it reads a local runbook and matching templates:
+The recommended path is to clone this repository locally and pin it to a commit, then start OpenCode from that checkout so it reads a local runbook and matching templates:
 
 ```bash
-git clone --branch v0.2.0 --depth 1 https://github.com/Adrian-Mandel/pilotfish-opencode.git
+git clone https://github.com/Adrian-Mandel/pilotfish-opencode.git
 cd pilotfish-opencode
+git checkout <commit-sha>
 opencode
 ```
+
+> **No release tags are published yet** (#51), so there is nothing named `v0.1.0`
+> or `v0.2.0` to clone — `CHANGELOG.md` still marks `v0.2.0` as Unreleased.
+> Pinning to a commit SHA gives the same property a tag would: the runbook and
+> templates cannot change between the moment you review them and the moment you
+> install. Omit the `git checkout` line to install the default branch as it
+> stands. Do not use `--depth 1` with a pinned checkout; a shallow clone has no
+> other commit to check out.
 
 In that OpenCode session, using a normal primary agent such as Build, paste:
 
