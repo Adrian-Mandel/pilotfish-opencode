@@ -27,11 +27,19 @@ const PROMPT_DIR = "templates/pilotfish/prompts";
 // holds the same text, but git is the reproducible source.
 const PRE_SCOPE = "9332e48~1";
 
+// The commit at which severity-triggered became the working-tree prompt. Every
+// stored result labelled `current` before this ref was produced under the older
+// scope paragraph, so reproducing one means `pre-severity`, not `current`.
+const PRE_SEVERITY = "5e36476";
+
 // The paragraph `severity-triggered` replaces, quoted exactly as it stands in
 // the working tree. Anchoring on the text rather than on a line number means a
 // reordered prompt fails the resolve instead of silently patching the wrong
 // paragraph.
-const CURRENT_SCOPE = `Verify the claim you were given. Your verdict is about that claim, not about the general health of the surrounding code. If you notice a defect outside the claim, report it below the verdict as a separate, clearly labelled observation; do not refute work that did what it said. That observation is information for the primary session to scope, and folding it into the verdict restarts a fix-and-reverify round for work nobody claimed.`;
+// The scope paragraph as it stood before severity-triggered shipped. No longer
+// present in the working tree, so nothing can anchor an edit on it -- kept only
+// to name what `pre-severity` below reproduces from a ref.
+const PRE_SEVERITY_SCOPE_FOR_THE_RECORD = `Verify the claim you were given. Your verdict is about that claim, not about the general health of the surrounding code. If you notice a defect outside the claim, report it below the verdict as a separate, clearly labelled observation; do not refute work that did what it said. That observation is information for the primary session to scope, and folding it into the verdict restarts a fix-and-reverify round for work nobody claimed.`;
 
 // The replacement, derived in docs/issue-53-phase1-trigger-derivation.md from
 // the 44 historical REFUTED sessions. The bar it draws is reachability and
@@ -106,16 +114,21 @@ export const VARIANTS = {
   // copy would quietly accumulate every other difference and stop being the
   // contrast the A/B is trying to isolate. The replacement is two paragraphs;
   // the passage it replaces is one.
-  "severity-triggered": {
-    description: "current verifier.md, scope paragraph replaced by the derived bar",
-    edits: { "verifier.md": { replace: CURRENT_SCOPE, with: SEVERITY_TRIGGERED_SCOPE } },
+  // `severity-triggered` is gone from this table because it shipped: as of
+  // PRE_SEVERITY, `current` *is* it, byte for byte. Re-running that arm means
+  // running `current`. The contrast it was measured against has not
+  // disappeared -- it moved to `pre-severity`, which pins the prompt every
+  // stored `current` result was produced under.
+  "pre-severity": {
+    description: `verifier.md from ${PRE_SEVERITY}, before severity-triggered shipped`,
+    prompts: { "verifier.md": PRE_SEVERITY },
   },
   // Phase 1b. Same anchor, same reachability bar; adds the refusal conditions
   // the v1 non-catches reached past. Kept separate from `severity-triggered`
   // so the B/B2 results already stored against v1 keep meaning what they say.
   "severity-triggered-v2": {
     description: "current verifier.md, scope paragraph replaced by the derived bar plus refusal conditions",
-    edits: { "verifier.md": { replace: CURRENT_SCOPE, with: SEVERITY_TRIGGERED_V2_SCOPE } },
+    edits: { "verifier.md": { replace: SEVERITY_TRIGGERED_SCOPE, with: SEVERITY_TRIGGERED_V2_SCOPE } },
   },
 };
 
