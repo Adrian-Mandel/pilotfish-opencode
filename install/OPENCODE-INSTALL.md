@@ -242,6 +242,15 @@ Ask which MCP servers, if any, each Pilotfish worker should keep. Offer three sh
 2. **Whole server** — `"<server>_*": "allow"`; costs the server's full tool-schema budget on every request of that role.
 3. **Named tools** — `"<server>_<tool>": "allow"` per tool; costs only those schemas. MCP tools are always named `<server>_<tool>`, and the name must match exactly. Usage is typically a steep power law, so a handful of tools usually covers nearly all real calls: on one measured install, 8 of 44 GitHub tools were 91% of ~899 calls, and narrowing to those 8 saved 9,598 tokens per request while keeping the workflow intact.
 
+**How to word this question.** The three shapes above are the mechanism, and restating a mechanism is not explaining a choice. A user who does not already know how tool schemas reach a model cannot tell these apart, and the option text above is not sufficient on its own — reproducing it verbatim as the choice list is a failure of this step, not a completion of it. Say four things, in this order, in the user's terms:
+
+1. **What changes for them.** Name the capability, not the config: "during verification, can this role look things up on GitHub — reading a PR, checking whether a commit is merged — or not?" A user can answer that. They cannot answer "should the worker retain a whole-server grant".
+2. **Why a tool list costs anything at all.** One sentence, because it is the fact the whole question rests on and nobody arrives knowing it: the model keeps no memory between steps, so the full text of every tool it may call — each name, description and parameter — is sent again with every single step, whether or not it calls one.
+3. **The real number for this install, and what it buys.** Multiply it out rather than quoting a per-request figure: this server's schema size × a typical session's step count, and how much of that is tools the role has never once called. A count of tools is not a cost.
+4. **That it is reversible, and how.** A grant is one line in that role's `permission` block, applied on the next restart. Nothing here is a one-way door, and a user told that decides faster.
+
+Do not use `tool-schema budget`, `whole-server grant`, `closed scope`, or `per request` in the text shown to the user; each names an internal concept rather than an effect they can weigh. If usage history exists, say what it observed in plain terms — which tools this role actually called, and how many times — because that is the evidence making one option recommended, and a recommendation whose basis is not stated reads as arbitrary.
+
 Explain that OpenCode must be restarted after installation. Do not write anything until the user approves this exact plan.
 
 ## Step 3: Apply
