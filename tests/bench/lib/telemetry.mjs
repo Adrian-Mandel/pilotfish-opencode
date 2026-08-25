@@ -211,8 +211,22 @@ export function classifyRunHealth({ telemetry, stderr = "", stdout = "", timedOu
     ...telemetry.errors.map((e) => `${e.name}: ${e.message ?? ""}`),
   ].join("\n");
 
-  if (THROTTLE_PATTERN.test(haystack)) reasons.push("throttled-or-quota");
-  if (DENIED_PATTERN.test(haystack)) reasons.push("provider-denied");
+  // Both patterns are matched against a haystack that includes the verifier's
+  // own transcript, so the wording alone cannot tell a throttle from a session
+  // reasoning out loud about the code it was handed. Gate on completion first.
+  //
+  // A throttle or an entitlement refusal *stops* a run: it arrives as a provider
+  // error and the session does not finish. A run that exited cleanly with no
+  // provider error completed, so whatever matched came from its own output.
+  // Measured across every stored suite on 2026-08-24: 18 real throttles, all in
+  // the gemini suite, all carrying a provider error and exit 1; and 10 false
+  // ones, exit 0, empty `errors`, each with a finished verdict already in it and
+  // every single one a cap, cache, or timeout fixture -- the fixtures whose
+  // subject matter is capacity and rate limiting. Discarding a completed run
+  // because it discussed the word "capacity" cost a real measurement each time.
+  const providerFailed = exitCode !== 0 || timedOut || telemetry.errors.length > 0;
+  if (providerFailed && THROTTLE_PATTERN.test(haystack)) reasons.push("throttled-or-quota");
+  if (providerFailed && DENIED_PATTERN.test(haystack)) reasons.push("provider-denied");
   if (telemetry.errors.some((e) => e.name === "ProviderAuthError")) reasons.push("provider-auth");
   if (telemetry.errors.some((e) => e.name === "MessageAbortedError")) reasons.push("aborted");
   if (timedOut) reasons.push("timeout");
