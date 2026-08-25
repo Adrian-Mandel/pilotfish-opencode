@@ -47,6 +47,40 @@ const SEVERITY_TRIGGERED_SCOPE = `Verify the claim you were given. Your verdict 
 
 Report as an observation below the verdict what you can only assert: a defect you suspect but did not exercise, anything in code this change did not touch, and design you would have written differently. Do not audit the surrounding module for defects that predate this commit -- an open-ended audit has no termination condition and is not what you were asked for. That the test suite passes is not grounds to file a demonstrated defect as an observation; a suite exercises what it was written for, and the defect it does not cover is still a defect.`;
 
+// Phase 1b. v1 scored 26/30 on class B2; all four non-catches detected the
+// defect, described it, and then filed it beneath a CONFIRMED. Three of the
+// four gave a reason, and the reasons are what this text closes:
+//
+//   "not refutations of the bounded claim"                  -> claim silence
+//   "the claim makes no assertion about parseTimeout ...
+//    so this is an observation only"                        -> claim silence
+//   "Unrelated behavior change in the same commit"          -> relatedness
+//
+// v1 answers both already, but as a description of scope ("your verdict is
+// about ... defects this change introduced even where the claim is silent"),
+// and under a B2-sized diff a description loses to the older habit. v2 keeps
+// that sentence and adds the same content as refusal conditions -- named
+// reasons that do not license a downgrade -- because the failure is not that
+// the verifier disagreed about scope, it is that it reached for a category the
+// prompt never offered it.
+//
+// The fourth non-catch ("no reachable defect exists in this repo") is the
+// reachability clause working as designed and is deliberately untouched.
+//
+// This is a NEW variant rather than an edit to severity-triggered: v1 is what
+// phase1-probe-b.json and phase1-probe-b2.json measured, and editing it in
+// place would silently redefine those stored results -- the same trap the
+// working-tree prompts pose for `current`.
+const SEVERITY_TRIGGERED_V2_SCOPE = `Verify the claim you were given. Your verdict is about that claim, and about defects this change introduced even where the claim is silent about them. Refute when you can demonstrate one: it is reachable from code the change touched -- that file, or an immediate caller of what changed in it -- and you have a concrete counterexample with inputs, expected behavior, and actual behavior. No shape of defect is too small to refute on once you can show it failing: a documented behavior the code contradicts counts, and so does a wrong result at a single boundary value.
+
+Once reachability and a counterexample both hold, refute. The following are not grounds to downgrade a demonstrated defect to an observation, and none of them is a fact about the defect:
+
+- that the claim does not mention it, or that the claim is literally true about the part it does describe;
+- that it is unrelated to the claim, to the commit message, or to the change's stated purpose -- the change touched it, and that is the only relatedness this verdict turns on;
+- that the test suite passes; a suite exercises what it was written for, and the defect it does not cover is still a defect.
+
+Report as an observation below the verdict what you can only assert: a defect you suspect but did not exercise, anything in code this change did not touch, and design you would have written differently. Do not audit the surrounding module for defects that predate this commit -- an open-ended audit has no termination condition and is not what you were asked for.`;
+
 export const VARIANTS = {
   current: {
     description: "the working tree prompts, i.e. #16 as it stands",
@@ -75,6 +109,13 @@ export const VARIANTS = {
   "severity-triggered": {
     description: "current verifier.md, scope paragraph replaced by the derived bar",
     edits: { "verifier.md": { replace: CURRENT_SCOPE, with: SEVERITY_TRIGGERED_SCOPE } },
+  },
+  // Phase 1b. Same anchor, same reachability bar; adds the refusal conditions
+  // the v1 non-catches reached past. Kept separate from `severity-triggered`
+  // so the B/B2 results already stored against v1 keep meaning what they say.
+  "severity-triggered-v2": {
+    description: "current verifier.md, scope paragraph replaced by the derived bar plus refusal conditions",
+    edits: { "verifier.md": { replace: CURRENT_SCOPE, with: SEVERITY_TRIGGERED_V2_SCOPE } },
   },
 };
 
