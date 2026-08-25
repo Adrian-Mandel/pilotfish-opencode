@@ -227,8 +227,18 @@ describe("echoed-brief guard", () => {
     assert.equal(echoesBrief(`\n  "${brief}"  \n`, brief), true);
   });
 
-  test("that text would otherwise have parsed as a verdict", () => {
-    assert.equal(parseVerdict(brief), "CONFIRMED");
+  // This brief names both verdicts on one line, which the parser now refuses to
+  // score from, so it no longer reaches `echoesBrief` as a false verdict. The
+  // guard is still load-bearing: a brief naming only one of the two parses as a
+  // verdict exactly as before, which is the case asserted below it.
+  test("a brief naming both verdicts no longer parses as one", () => {
+    assert.equal(parseVerdict(brief), null);
+  });
+
+  test("a brief naming a single verdict still parses, so the guard is still needed", () => {
+    const oneSided = "Verify the claim about HEAD. Return CONFIRMED with evidence.";
+    assert.equal(parseVerdict(oneSided), "CONFIRMED");
+    assert.equal(echoesBrief(oneSided, oneSided), true);
   });
 
   test("a real verdict that quotes the brief back is not discarded", () => {

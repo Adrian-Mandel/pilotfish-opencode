@@ -20,14 +20,40 @@ function normalizeLine(line) {
     .toUpperCase();
 }
 
+// A line that names both verdicts is not a verdict, it is commentary about one.
+// Observed once in 1,960 stored runs: "**REFUTED? No -- CONFIRMED.**", a
+// verifier answering its own rhetorical question. `startsWith` read it as
+// REFUTED and the run scored as the only false-REFUTED in an 80-run class D
+// floor -- the single number that decides whether a variant ships. Both words
+// occur only on that line, so the fallback below mis-read it identically.
+//
+// Deliberately not "take the last verdict word on the line", which grades that
+// line correctly and then mis-grades "CONFIRMED -- this is not REFUTED". A line
+// this ambiguous is not scored from; it is skipped and surfaced by
+// `verdictSource` as "ambiguous" so it gets read by a person.
+function isAmbiguous(normalized) {
+  return normalized.includes("CONFIRMED") && normalized.includes("REFUTED");
+}
+
+function withoutAmbiguousLines(text) {
+  return text
+    .split("\n")
+    .filter((line) => !isAmbiguous(normalizeLine(line)))
+    .join("\n");
+}
+
 export function parseVerdict(text) {
   if (typeof text !== "string" || !text.trim()) return null;
 
   for (const line of text.split("\n")) {
     const normalized = normalizeLine(line);
+    if (isAmbiguous(normalized)) continue;
     if (normalized.startsWith("CONFIRMED")) return "CONFIRMED";
     if (normalized.startsWith("REFUTED")) return "REFUTED";
   }
+
+  text = withoutAmbiguousLines(text);
+  if (!text.trim()) return null;
 
   // Fall back to whichever word appears first anywhere. This catches a verdict
   // buried mid-sentence and mis-reads a verifier that quotes its own brief
@@ -44,11 +70,17 @@ export function parseVerdict(text) {
 
 export function verdictSource(text) {
   if (typeof text !== "string" || !text.trim()) return "none";
+  let skipped = false;
   for (const line of text.split("\n")) {
     const normalized = normalizeLine(line);
+    if (isAmbiguous(normalized)) {
+      if (normalized.startsWith("CONFIRMED") || normalized.startsWith("REFUTED")) skipped = true;
+      continue;
+    }
     if (normalized.startsWith("CONFIRMED") || normalized.startsWith("REFUTED")) return "leading-line";
   }
-  return parseVerdict(text) ? "anywhere" : "none";
+  if (parseVerdict(text)) return "anywhere";
+  return skipped ? "ambiguous" : "none";
 }
 
 // `all` must every one be present, and at least one of `any` must appear NEAR
