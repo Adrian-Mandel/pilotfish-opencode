@@ -10,6 +10,22 @@ Issue #16 requires this measurement before the Completion Gate is rewritten:
 
 They cluster outside it. **P1 as written should not be implemented.**
 
+> **Superseded in part, 2026-08-21.** The finer seven-shape partition of the
+> same 44 (from the [class-B calibration review](https://github.com/Adrian-Mandel/pilotfish-opencode/issues/15#issuecomment-5361704033))
+> reaches the same wall from better resolution, and proposes a way through it
+> rather than closing P1: see
+> [`issue-53-phase1-trigger-derivation.md`](issue-53-phase1-trigger-derivation.md).
+> The conclusion below — that no *shape-based* trigger list is a filter — holds
+> and is now quantified per candidate set. What changes is the recommendation:
+> the filter moves off shape and onto reachability and demonstrability, which
+> targets the chain depth this section identifies rather than the gate frequency
+> P1 proposed.
+>
+> **The source sample is also gone.** The data directory was recreated
+> 2026-08-14; `opencode.db` now holds no sessions, so the `Reproducing` block
+> below returns nothing and every count in this document is unreproducible. The
+> ratios stand as recorded on 2026-08-10 and cannot be re-derived.
+
 ### Method
 
 Source: `~/.local/share/opencode/opencode.db`, all 62 sessions with `agent = 'verifier'`, sampled 2026-08-10.
@@ -468,8 +484,20 @@ The class D control matters as much as the class B result: a verifier that objec
 score 0% missed and 100% detected and be worthless. Forty consecutive `clean-confirmed` verdicts on
 defect-free code establish that the detection rate is discrimination, not reflex.
 
-For comparison on the same harness, `replay-gpt56-sol-classB-r20` missed 22% (11/51) and
-`replay-qwen3.6-27b-classAB-r20` missed 27% (16/60). The local model missed none.
+For comparison on the same harness, `replay-qwen3.6-27b-classAB-r20` missed 27% (16/60). The local
+model missed none.
+
+> **Withdrawn:** this paragraph previously cited `replay-gpt56-sol-classB-r20` at 22% (11/51). That
+> figure does not survive audit and should not be quoted. Six of the eleven were detections the marker
+> list failed to match, and the suite was 88 valid runs of 240 planned with cells between 4 and 11 of
+> 20. Corrected, that cell is 5/51 = 9.8%. The controlled two-seat re-run puts the frontier seat at
+> 5/60 = 8.3% against the local seat's 0/44, Fisher p = 0.07 — not a significant separation.
+> **Superseded 2026-08-23:** complete at 60 runs per seat and rescored under corrected markers, that
+> is 4/60 = 6.7% against 0/60 = 0.0%, Fisher p = 0.12. Still not a significant separation. See
+> [`issue-15-gpt56-miss-audit.md`](issue-15-gpt56-miss-audit.md) and
+> [`issue-15-seat-comparison-audit.md`](issue-15-seat-comparison-audit.md). The `qwen3.6-27b` and
+> `gpt-5.6@high` class-A/B figures in this document are unaffected: re-scoring under the corrected
+> scorer moves zero of their runs.
 
 ### The unresolved tension with this issue's own bar
 

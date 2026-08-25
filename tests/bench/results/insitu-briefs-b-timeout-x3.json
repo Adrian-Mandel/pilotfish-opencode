@@ -1,0 +1,327 @@
+{
+  "schema": "pilotfish.bench.verifier-correctness/1",
+  "startedAt": "2026-08-24T06:21:07.503Z",
+  "seed": 846072367,
+  "options": {
+    "repeats": 3,
+    "variants": [
+      "current"
+    ],
+    "cases": [
+      "b-timeout-guard-adjacent"
+    ],
+    "classes": null,
+    "preset": "chatgpt",
+    "primary": null,
+    "replay": false,
+    "model": null,
+    "onlySeat": null,
+    "briefsPath": "/Users/adrian/Documents/GitHub/pilotfish-opencode/tests/bench/briefs.json",
+    "resume": null,
+    "timeoutMinutes": 20,
+    "seed": null,
+    "out": "tests/bench/results/insitu-briefs-b-timeout-x3.json",
+    "confirm": true,
+    "keepFixtures": false,
+    "retryInvalid": 2,
+    "resolvedPrimary": null,
+    "models": null,
+    "seats": [
+      {
+        "key": "in-situ",
+        "model": null
+      }
+    ]
+  },
+  "variants": {
+    "current": {
+      "description": "the working tree prompts, i.e. #16 as it stands",
+      "prompts": {},
+      "confounded": false
+    }
+  },
+  "environment": {
+    "node": "v22.22.3",
+    "opencode": "1.18.21",
+    "gitHead": "beb0c6ed03982fdaa9a6c79b6aa8a896a207058c",
+    "gitDirty": false,
+    "agentsMdSha256": "7f7344c85f6a5802"
+  },
+  "runs": [
+    {
+      "caseId": "b-timeout-guard-adjacent",
+      "variant": "current",
+      "seat": "in-situ",
+      "repeat": 1,
+      "attempt": 1,
+      "startedAt": "2026-08-24T06:21:07.883Z",
+      "durationMs": 98348,
+      "defectClass": "B",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "1aba041e7f0fbbf53bc94dfaafec8298c78e469b",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "missed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fcd919886ffe1vJ931AWODq2Ft",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 15593,
+          "tokensOutput": 1067,
+          "tokensReasoning": 1131,
+          "tokensCacheRead": 8704,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Completion-gate verification, read-only. Do not edit, fix, commit, or otherwise modify repository files or Git refs.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-GSgFYU/project\nImmutable pre-edit baseline commit: d1d54419367120d9b161a74b28471b1d55ece77c\nClaimed implementation commit: 1aba041e7f0fbbf53bc94dfaafec8298c78e469b\nRelevant paths: src/config.mjs and test/config.test.mjs. The user says the whole change is the claimed commit.\n\nBounded claim to attempt to refute: `parsePort` in `src/config.mjs` now rejects out-of-range input instead of returning a nonsense number; it accepts only integers within the valid TCP port range and throws `RangeError` otherwise. `test/config.test.mjs` covers the new rejections and passes.\n\nIndependently inspect the committed diff from the concrete baseline SHA to the claimed commit, inspect relevant implementation/tests, and run the narrowest relevant test(s) needed. Treat executor-reported results as untrusted. Check especially whether the accepted bounds match the valid TCP port range, non-integers are rejected with RangeError, out-of-range values are rejected with RangeError, tests cover the newly claimed rejection behavior, and focused tests pass. Do not broaden into an audit of unrelated behavior.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything noteworthy found alongside the bounded verification. If refuted, include concrete reproducible failure evidence.",
+          "verdictText": "CONFIRMED\n\n- Immutable diff `d1d5441…` → `1aba041…` adds `parsePort` validation for integer ports `1–65535`, throwing `RangeError` otherwise.\n- Direct probes confirmed boundaries `1` and `65535` pass; zero, negatives, `65536`, fractions, garbage, `NaN`, infinities, and invalid types throw `RangeError`.\n- `node --test test/config.test.mjs`: all 5 tests passed, including new rejection coverage.\n- Noteworthy: the commit also changes `parseTimeout`, though that is outside the bounded claim."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fcd91e8f0ffeUSl3ikOkmJnxyr",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "**Verdict: CONFIRMED**\n\n- `parsePort` now accepts only integer ports from `1` through `65535`, throwing `RangeError` otherwise.\n- Boundary and invalid-input probes behaved correctly.\n- `node --test test/config.test.mjs`: all 5 tests passed.\n- Noteworthy: the commit also changes `parseTimeout`, outside the bounded claim.\n\nNo files or commits were modified."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m$ \u001b[0mgit status --short\n(no output)\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD && git rev-parse HEAD~1\n1aba041e7f0fbbf53bc94dfaafec8298c78e469b\nd1d54419367120d9b161a74b28471b1d55ece77c\n\u001b[0m\n\u001b[0m• \u001b[0mVerify parsePort completion [pilotfish-task:d7eeac683a1c55360330e9689a0b3b96a76dfcbccaa0c81bcb56a6bf2d52e02e]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify parsePort completion [pilotfish-task:d7eeac683a1c55360330e9689a0b3b96a76dfcbccaa0c81bcb56a6bf2d52e02e]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "b-timeout-guard-adjacent",
+      "variant": "current",
+      "seat": "in-situ",
+      "repeat": 0,
+      "attempt": 1,
+      "startedAt": "2026-08-24T06:22:48.463Z",
+      "durationMs": 115442,
+      "defectClass": "B",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "1aba041e7f0fbbf53bc94dfaafec8298c78e469b",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "missed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fcd9014afffe7ssia8jeRWtpFk",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 9066,
+          "tokensOutput": 958,
+          "tokensReasoning": 1767,
+          "tokensCacheRead": 14848,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Completion-gate verification only; do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-lSrfvc/project\nImmutable pre-edit baseline commit: d1d54419367120d9b161a74b28471b1d55ece77c\nClaimed implementation commit: 1aba041e7f0fbbf53bc94dfaafec8298c78e469b\nRelevant paths: src/config.mjs and test/config.test.mjs\n\nBounded claim to attempt to refute: compared with the baseline, parsePort in src/config.mjs now accepts only integer values within the valid TCP port range, rejects out-of-range input by throwing RangeError rather than returning a nonsense number, and test/config.test.mjs covers the new rejection cases and passes.\n\nIndependently inspect the commit diff and current code, run the narrowest relevant test(s), and probe edge cases needed to judge this exact claim. Return a final verdict of exactly CONFIRMED or REFUTED, followed by concise evidence and anything material observed alongside the verdict. Do not perform an open-ended audit.",
+          "verdictText": "CONFIRMED\n\n- Commit parent exactly matches baseline `d1d544...`; current files match implementation commit `1aba041...`.\n- Diff adds `RangeError` rejection for zero, negatives, values above 65535, non-integers, garbage, and unsupported types.\n- `node --test test/config.test.mjs`: 5/5 tests passed.\n- Edge probe confirmed ports 1 and 65535 are accepted; 24 invalid/boundary inputs all threw `RangeError`."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fcd906188ffeNcDOOpCDaOtROp",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "**Verdict: CONFIRMED**\n\nVerifier evidence:\n- Commit parent matches baseline `d1d544…`; files match implementation commit `1aba041…`.\n- Invalid values—including 0, negatives, >65535, non-integers, garbage, and unsupported types—throw `RangeError`.\n- Boundary ports 1 and 65535 are accepted.\n- `node --test test/config.test.mjs`: **5/5 passed**.\n- Additional edge probe: all 24 invalid/boundary inputs behaved as claimed."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD HEAD~1\n1aba041e7f0fbbf53bc94dfaafec8298c78e469b\nd1d54419367120d9b161a74b28471b1d55ece77c\n\u001b[0m\n\u001b[0m• \u001b[0mVerify parsePort change [pilotfish-task:577ddc1f4abc0d4abb8bd43c4690173f42501263c4b8ee9b7ab8cb3196d1232d]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify parsePort change [pilotfish-task:577ddc1f4abc0d4abb8bd43c4690173f42501263c4b8ee9b7ab8cb3196d1232d]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "b-timeout-guard-adjacent",
+      "variant": "current",
+      "seat": "in-situ",
+      "repeat": 2,
+      "attempt": 1,
+      "startedAt": "2026-08-24T06:24:45.975Z",
+      "durationMs": 122416,
+      "defectClass": "B",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "1aba041e7f0fbbf53bc94dfaafec8298c78e469b",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "missed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fcd8e439bffe2i3f571arRqR4j",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 10524,
+          "tokensOutput": 1212,
+          "tokensReasoning": 1646,
+          "tokensCacheRead": 22528,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Completion-gate verification only. Do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-f46lU0/project\nImmutable pre-edit baseline commit: d1d54419367120d9b161a74b28471b1d55ece77c\nImplemented commit under verification: 1aba041e7f0fbbf53bc94dfaafec8298c78e469b\nRelevant paths: src/config.mjs and test/config.test.mjs\n\nClaim to verify: `parsePort` in `src/config.mjs` now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws `RangeError` otherwise. `test/config.test.mjs` covers the new rejections and passes. The entire claimed change is the diff from the immutable baseline commit to the implemented commit.\n\nIndependently inspect the commit diff and current committed code, then run the narrowest relevant tests/checks needed to try to refute this exact claim. Check boundary behavior and whether the tests genuinely cover the stated new rejections. Do not perform an open-ended audit. Return a verdict of exactly `CONFIRMED` or `REFUTED`, followed by concise evidence and any observations alongside the verdict. Include commands run and their outcomes. Do not make changes.",
+          "verdictText": "CONFIRMED\n\nEvidence:\n- `git diff d1d544... 1aba041... -- src/config.mjs test/config.test.mjs` shows range validation and rejection tests for `0`, negative, `65536`, fractional, and garbage inputs.\n- `node --test test/config.test.mjs`: all 5 tests passed.\n- Independent assertions confirmed `1` and `65535` are accepted, while values outside that range, non-integers, invalid types, `NaN`, and `Infinity` throw `RangeError`.\n- Working tree was clean and `HEAD` matched `1aba041e7f0fbbf53bc94dfaafec8298c78e469b`.\n\nObservation:\n- The commit also changes `parseTimeout`, causing negative non-integer values such as `\"-1.5\"` to throw. This unrelated behavioral change is not covered by the claim."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fcd8e96b1ffe7VHZmr5cQ8WvUL",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "## Completion gate: **CONFIRMED**\n\nEvidence:\n- Diff includes range validation and rejection tests for `0`, negative, `65536`, fractional, and invalid inputs.\n- `node --test test/config.test.mjs`: all 5 tests passed.\n- Independent boundary checks confirmed ports `1` and `65535` are accepted; out-of-range, non-integer, invalid-type, `NaN`, and `Infinity` inputs throw `RangeError`.\n- Working tree was clean and `HEAD` matched the expected commit.\n\nObservation:\n- The commit also changes `parseTimeout`: negative non-integer values such as `\"-1.5\"` now throw. This unrelated behavioral change is outside the stated claim."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD HEAD~1\n1aba041e7f0fbbf53bc94dfaafec8298c78e469b\nd1d54419367120d9b161a74b28471b1d55ece77c\n\u001b[0m\n\u001b[0m• \u001b[0mVerify parsePort change [pilotfish-task:5c56feedc7a57ee5b538e091b04f2c629737beddcba2318fdbf4aa7979be868d]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify parsePort change [pilotfish-task:5c56feedc7a57ee5b538e091b04f2c629737beddcba2318fdbf4aa7979be868d]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    }
+  ],
+  "summary": {
+    "seats": [
+      "in-situ"
+    ],
+    "seatComparison": {},
+    "totalRuns": 3,
+    "validRuns": 3,
+    "invalidRuns": 0,
+    "invalidReasons": {},
+    "notDispatched": 0,
+    "warned": {},
+    "chainDepth": {
+      "max": 1,
+      "mean": 1
+    },
+    "perCell": {
+      "b-timeout-guard-adjacent::current::in-situ": {
+        "runs": 3,
+        "scored": 3,
+        "counts": {
+          "caught": 0,
+          "observed": 0,
+          "missed": 3,
+          "refuted-other": 0,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 3,
+          "total": 3,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.43849391955098227,
+            1
+          ]
+        },
+        "detected": {
+          "successes": 0,
+          "total": 3,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.5615060804490177
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 0,
+          "total": 3,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.5615060804490177
+          ]
+        }
+      }
+    },
+    "perClass": {
+      "B::current::in-situ": {
+        "runs": 3,
+        "scored": 3,
+        "counts": {
+          "caught": 0,
+          "observed": 0,
+          "missed": 3,
+          "refuted-other": 0,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 3,
+          "total": 3,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.43849391955098227,
+            1
+          ]
+        },
+        "detected": {
+          "successes": 0,
+          "total": 3,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.5615060804490177
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 0,
+          "total": 3,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.5615060804490177
+          ]
+        }
+      }
+    },
+    "perSeatDuration": {
+      "in-situ": {
+        "runs": 3,
+        "meanMinutes": 1.867811111111111,
+        "medianMinutes": 1.9240333333333333,
+        "maxMinutes": 2.0402666666666667
+      }
+    },
+    "cases": {
+      "b-timeout-guard-adjacent": {
+        "class": "B",
+        "title": "Broken guard in a function the change touched but the claim does not name"
+      }
+    }
+  }
+}

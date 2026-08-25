@@ -16,11 +16,26 @@ import { describe, test } from "node:test";
 
 import { briefFor, loadCases, materializeCase } from "./lib/cases.mjs";
 import { loadProfiles, resolvePrimary } from "./lib/routing.mjs";
-import { classifyRunHealth, isStandingFailure } from "./lib/telemetry.mjs";
-import { BRIEFS_SCHEMA, briefFor as storeBriefFor, captureBriefs } from "./lib/briefs.mjs";
-import { assertResumable, cellKey } from "./verifier-correctness.mjs";
+import { classifyRunHealth, DENIED_PATTERN, isStandingFailure, THROTTLE_PATTERN } from "./lib/telemetry.mjs";
+import {
+  BRIEFS_SCHEMA,
+  briefFor as storeBriefFor,
+  captureBriefs,
+  normalizeFixturePaths,
+  staleCommitIds,
+} from "./lib/briefs.mjs";
+import {
+  assertBriefCommitIds,
+  assertBriefsFor,
+  assertResumable,
+  cellKey,
+  echoesBrief,
+  parseArgs,
+} from "./verifier-correctness.mjs";
 import {
   OUTCOMES,
+  compareProportions,
+  fisherExact,
   mentionsDefect,
   parseVerdict,
   proportion,
@@ -71,6 +86,172 @@ describe("verdict parsing", () => {
   });
 });
 
+// The class-B suite died at run 88 of 240 because `--resume` was given without
+// a path, took `--timeout` as its value, and crashed on
+// `readFileSync("--timeout")`. The retyped command resumed with a 4-minute cap
+// where the original had 20, which is why every invalid run in that file is a
+// timeout. An hours-long queue must not be able to lose an option silently.
+describe("option parsing", () => {
+  test("an option whose value is missing fails instead of eating the next option", () => {
+    assert.throws(
+      () => parseArgs(["run", "--resume", "--timeout", "4"]),
+      /--resume needs a value, but the next argument is --timeout/,
+    );
+  });
+
+  test("an option at the end of the line with no value fails", () => {
+    assert.throws(() => parseArgs(["run", "--out"]), /--out needs a value/);
+  });
+
+  test("ordinary values, including negative-looking ones, still parse", () => {
+    const { command, options } = parseArgs([
+      "run",
+      "--resume",
+      "results/prior.json",
+      "--timeout",
+      "4",
+      "--confirm",
+    ]);
+    assert.equal(command, "run");
+    assert.equal(options.resume, "results/prior.json");
+    assert.equal(options.timeoutMinutes, 4);
+    assert.equal(options.confirm, true);
+  });
+
+  test("an unknown option is still rejected", () => {
+    assert.throws(() => parseArgs(["run", "--nope", "x"]), /unknown option: --nope/);
+  });
+});
+
+// A timed-out session leaves the input as the last text part, so the telemetry
+// query reads the brief back out as the verdict -- and it parses, because the
+// brief itself says to return CONFIRMED or REFUTED.
+// The B2 tier landed with no captured briefs and `plan` quoted 60 runs without
+// complaint, because the brief line printed the whole store rather than the
+// selected cases. The first run of the suite would have thrown.
+describe("replay brief coverage", () => {
+  const store = { cases: { "b-tail-off-by-one": [{ brief: "x" }], "b-empty": [] } };
+
+  test("a case with no captured brief is refused before the suite starts", () => {
+    assert.throws(
+      () => assertBriefsFor([{ id: "b-tail-off-by-one" }, { id: "b2-tail-off-by-one" }], store),
+      /1 have none: b2-tail-off-by-one/,
+    );
+  });
+
+  test("an empty brief list counts as none", () => {
+    assert.throws(() => assertBriefsFor([{ id: "b-empty" }], store), /b-empty/);
+  });
+
+  test("the error names every missing case, not just the first", () => {
+    assert.throws(
+      () => assertBriefsFor([{ id: "b2-a" }, { id: "b2-b" }, { id: "b2-c" }], store),
+      /3 have none: b2-a, b2-b, b2-c/,
+    );
+  });
+
+  test("full coverage passes", () => {
+    assert.doesNotThrow(() => assertBriefsFor([{ id: "b-tail-off-by-one" }], store));
+  });
+
+  test("every class B case in the shipped store is covered", () => {
+    const shipped = JSON.parse(readFileSync(new URL("./briefs.json", import.meta.url), "utf8"));
+    const classB = CASES.filter((item) => item.defectClass === "B");
+    assert.doesNotThrow(() => assertBriefsFor(classB, shipped));
+  });
+});
+
+describe("commit ids in captured briefs", () => {
+  const base = "1111111111111111111111111111111111111111";
+  const head = "2222222222222222222222222222222222222222";
+
+  test("the fixture's own ids, full or abbreviated, are not stale", () => {
+    const brief = `Baseline commit: ${base}. Claimed commit: ${head} (${head.slice(0, 8)}).`;
+    assert.deepEqual(staleCommitIds(brief, { base, head }), []);
+  });
+
+  test("an id from the run that captured the brief is stale", () => {
+    const brief = `Baseline commit: 9216815a66071aa5dd1fe7af60e064f9b6d9d658. Claimed: ${head}.`;
+    assert.deepEqual(staleCommitIds(brief, { base, head }), [
+      "9216815a66071aa5dd1fe7af60e064f9b6d9d658",
+    ]);
+  });
+
+  test("a brief that names no commit id is not stale", () => {
+    assert.deepEqual(staleCommitIds("compare HEAD against HEAD~1", { base, head }), []);
+  });
+
+  test("the pre-flight refuses a stale brief and names the case and its source", () => {
+    const scratch = mkdtempSync(join(tmpdir(), "bench-preflight-"));
+    try {
+      const item = CASES.find((entry) => entry.defectClass === "B");
+      const store = {
+        cases: {
+          [item.id]: [
+            { brief: "Claimed commit: 9216815a66071aa5dd1fe7af60e064f9b6d9d658", source: "old.json" },
+          ],
+        },
+      };
+      assert.throws(
+        () => assertBriefCommitIds([item], store, scratch),
+        (error) =>
+          error.message.includes(item.id) &&
+          error.message.includes("old.json") &&
+          error.message.includes("9216815a66071aa5dd1fe7af60e064f9b6d9d658"),
+      );
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  });
+
+  test("every brief in the shipped store passes the pre-flight", () => {
+    const scratch = mkdtempSync(join(tmpdir(), "bench-preflight-all-"));
+    try {
+      const shipped = JSON.parse(readFileSync(new URL("./briefs.json", import.meta.url), "utf8"));
+      assertBriefCommitIds(CASES, shipped, scratch);
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("echoed-brief guard", () => {
+  const brief = "Verify the claim about HEAD. Return exactly CONFIRMED or REFUTED with evidence.";
+
+  test("a brief read back as the verdict is recognised", () => {
+    assert.equal(echoesBrief(brief, brief), true);
+  });
+
+  test("the quoted form the harness actually stored is recognised", () => {
+    assert.equal(echoesBrief(`"${brief}"`, brief), true);
+    assert.equal(echoesBrief(`\n  "${brief}"  \n`, brief), true);
+  });
+
+  // This brief names both verdicts on one line, which the parser now refuses to
+  // score from, so it no longer reaches `echoesBrief` as a false verdict. The
+  // guard is still load-bearing: a brief naming only one of the two parses as a
+  // verdict exactly as before, which is the case asserted below it.
+  test("a brief naming both verdicts no longer parses as one", () => {
+    assert.equal(parseVerdict(brief), null);
+  });
+
+  test("a brief naming a single verdict still parses, so the guard is still needed", () => {
+    const oneSided = "Verify the claim about HEAD. Return CONFIRMED with evidence.";
+    assert.equal(parseVerdict(oneSided), "CONFIRMED");
+    assert.equal(echoesBrief(oneSided, oneSided), true);
+  });
+
+  test("a real verdict that quotes the brief back is not discarded", () => {
+    assert.equal(echoesBrief(`CONFIRMED\n\nThe brief asked: "${brief}"\n\nTests pass.`, brief), false);
+  });
+
+  test("an empty or absent brief never discards anything", () => {
+    assert.equal(echoesBrief("CONFIRMED", ""), false);
+    assert.equal(echoesBrief("CONFIRMED", null), false);
+    assert.equal(echoesBrief(null, brief), false);
+  });
+});
+
 describe("defect detection", () => {
   const markers = { all: ["parseTimeout"], any: ["negative", "-5"] };
 
@@ -85,8 +266,19 @@ describe("defect detection", () => {
   });
 
   test("a discriminator far from the anchor is not a finding", () => {
-    const text = `parseTimeout is mentioned here.${" filler.".repeat(60)} a negative value elsewhere.`;
+    const text = `parseTimeout is mentioned here.${" filler.".repeat(120)} a negative value elsewhere.`;
     assert.equal(mentionsDefect(text, markers), false);
+  });
+
+  // The window was 200, calibrated on gpt-5.6's 300-700 character verdicts. A
+  // verbose seat separates the anchor from the diagnosis by more than that:
+  // both of bambi/qwen3.8's misses in the controlled two-seat suite had the
+  // discriminator at 224-250 characters and were scored as non-detections.
+  test("a discriminator a verbose seat's paragraph away is still a finding", () => {
+    const text = `parseTimeout is discussed here.${" filler.".repeat(28)} a negative value.`;
+    const gap = text.indexOf("a negative value") - "parseTimeout".length;
+    assert.ok(gap > 200 && gap < 400, `gap ${gap} should sit between the old and new window`);
+    assert.equal(mentionsDefect(text, markers), true);
   });
 
   // The real b-timeout markers, and the shape that credited five real runs with
@@ -116,6 +308,39 @@ describe("defect detection", () => {
     const text =
       "**Observation:** `parseTimeout` has a logic bug: `!Number.isInteger(ms) && ms < 0` uses `&&` instead of `||`.";
     assert.equal(mentionsDefect(text, real), true);
+  });
+
+  // Why the window is 400 and not larger. Four qwen3.6-27b runs are genuine
+  // misses that name parseTimeout only in a passing-test list, and a wider
+  // window credits them with the `||` from parsePort's own guard 700+
+  // characters away -- the claimed function's code, which is the shared-
+  // vocabulary false credit 054a27e removed, arriving via proximity instead.
+  test("a wider window would credit the claimed function's own operator", () => {
+    const text = [
+      "**CONFIRMED**",
+      "",
+      "The function checks `!Number.isInteger(port) || port < 1 || port > 65535`.",
+      " filler.".repeat(80),
+      "- `parseTimeout reads a numeric string` ✓",
+    ].join("\n");
+    assert.equal(mentionsDefect(text, real), false);
+    assert.equal(mentionsDefect(text, { ...real, window: 2000 }), true);
+  });
+
+  // b-cap-boundary-strict's `<= to <` marker was written for precisely the
+  // sentence one gpt-5.6 run produced, and missed it on the backticks alone.
+  test("markdown formatting does not hide a discriminator", () => {
+    const cap = { all: ["roomFor"], any: ["<= to <", "boundary"] };
+    const text =
+      "Noteworthy: the commit also changes `roomFor` from `<=` to `<`, removing exact-cap acceptance and its test.";
+    assert.equal(mentionsDefect(text, cap), true);
+    assert.equal(mentionsDefect(text.replaceAll("`", ""), cap), true);
+  });
+
+  test("stripping backticks does not credit an unrelated verdict", () => {
+    const cap = { all: ["roomFor"], any: ["<= to <", "boundary"] };
+    const text = "CONFIRMED\n\n- `roomFor` is unchanged by this commit and was not examined.";
+    assert.equal(mentionsDefect(text, cap), false);
   });
 
   test("the finding still counts when it is the second mention", () => {
@@ -271,6 +496,150 @@ describe("the case set", () => {
     }
   });
 
+  // A brief captured from a real primary can name the fixture's commit ids, and
+  // this preset's primary does. Unpinned dates made those ids a function of the
+  // second the fixture was built in, so a replayed brief pointed at commits that
+  // were never in the repository it was replayed into.
+  test("a case materializes to the same two commit ids every time", () => {
+    const root = mkdtempSync(join(tmpdir(), "bench-determinism-"));
+    try {
+      for (const item of CASES) {
+        const first = materializeCase(item, join(root, `${item.id}-1`));
+        const second = materializeCase(item, join(root, `${item.id}-2`));
+        assert.deepEqual(second, first, `${item.id}: commit ids are not reproducible`);
+        assert.notEqual(first.base, first.head, `${item.id}: base and head coincide`);
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  // B2 exists only if its commits are actually harder to read than B's. A B2
+  // case that degenerated back to "the claim plus the defect" would answer the
+  // calibration question with the same fixture that raised it, so the property
+  // is asserted rather than intended.
+  //
+  // The check is on the commit, not on the file. A 200-line module whose
+  // commit touches two functions still produces a two-hunk diff -- growing the
+  // module without growing the change buys nothing and looks like it did.
+  test("every B2 commit spreads the defect among other legitimate changes", () => {
+    const root = mkdtempSync(join(tmpdir(), "bench-b2-"));
+    try {
+      const b2 = CASES.filter((item) => item.defectClass === "B2");
+      assert.ok(b2.length > 0, "no B2 cases");
+      for (const item of b2) {
+        const target = join(root, item.id);
+        materializeCase(item, target);
+        const show = (args) =>
+          execFileSync("git", ["show", ...args, "HEAD"], { cwd: target, encoding: "utf8" });
+        const files = show(["--name-only", "--format="]).trim().split("\n").filter(Boolean);
+        const hunks = show([]).split("\n").filter((line) => line.startsWith("@@")).length;
+        assert.ok(files.length >= 3, `${item.id}: ${files.length} file(s), expected 3+`);
+        assert.ok(hunks >= 3, `${item.id}: ${hunks} hunk(s), expected 3+`);
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  // The counterpart, and the reason the comparison is a comparison: every B2
+  // case must restate a B case's defect exactly. Different markers or a
+  // different mutation would make a difference between the tiers a difference
+  // in the defect rather than in the commit around it.
+  // The claim must not enumerate the commit's other changes. The first six B2
+  // claims did, and the first in-situ capture showed exactly why that is fatal:
+  // the verifier ticked the listed items off and named the one change left
+  // over. Its own verdict said so -- "the negative-count clamp, API-key
+  // redaction, README updates, and focused tests otherwise behaved as claimed."
+  // Found by elimination, not by judgement.
+  //
+  // That made B2 *easier* than B, inverting the tier's whole purpose: class B
+  // leaves one unclaimed hunk, and an enumerating B2 claim leaves one unclaimed
+  // hunk plus four the claim has pre-excused.
+  //
+  // Holding the claim identical to the class B counterpart's is the strongest
+  // form of the invariant, because then the only thing that differs between the
+  // tiers is the commit -- which is the variable under test. It is possible
+  // only because every B2 case reuses its counterpart's file paths and function
+  // names deliberately.
+  test("each B2 case makes exactly its class B counterpart's claim", () => {
+    const byId = new Map(CASES.map((item) => [item.id, item]));
+    for (const item of CASES.filter((entry) => entry.defectClass === "B2")) {
+      const original = byId.get(item.id.replace(/^b2-/, "b-"));
+      assert.ok(original, `${item.id} has no class B counterpart`);
+      assert.equal(
+        item.claim,
+        original.claim,
+        `${item.id}: claim differs from ${original.id}. A B2 claim that describes ` +
+          "the commit's other changes lets the verifier find the defect by elimination.",
+      );
+    }
+  });
+
+  test("each B2 case mirrors a B case's defect exactly", () => {
+    const byId = new Map(CASES.map((item) => [item.id, item]));
+    for (const item of CASES.filter((entry) => entry.defectClass === "B2")) {
+      const original = byId.get(item.id.replace(/^b2-/, "b-"));
+      assert.ok(original, `${item.id} has no class B counterpart`);
+      assert.deepEqual(
+        item.defect.markers,
+        original.defect.markers,
+        `${item.id}: markers differ from ${original.id}`,
+      );
+    }
+  });
+
+  // Everything a verifier reads can reach the harness's own health check, and
+  // that check cannot tell a fixture's prose from a provider's error. Commit
+  // messages become real git history; source and test files get `cat`ed and
+  // `git show`n; the module header is printed by any verifier that opens the
+  // file under test. `classifyRunHealth` scans the process's stdout for
+  // throttle and denial language, so a fixture using that vocabulary marks its
+  // own runs invalid -- and three in a row trips STANDING_FAILURE_LIMIT and
+  // aborts the suite as if the account were rate-limited.
+  //
+  // This was found twice. First `b2-cap-boundary-strict`'s base commit message
+  // ("chore: upload queue quota arithmetic"), which a commit-message-only check
+  // caught. Then, after that fix, the same case's `src/limits.mjs` header --
+  // "// Quota arithmetic for the upload queue." -- invalidated 12 of the gpt
+  // seat's runs and stopped that half 8 cells short of finishing. The lesson is
+  // the scope: check the file contents, not just the labels.
+  test("no fixture content contains throttle or denial vocabulary", () => {
+    const root = mkdtempSync(join(tmpdir(), "bench-vocab-"));
+    try {
+      for (const item of CASES) {
+        for (const [label, message] of [
+          ["baseCommitMessage", item.baseCommitMessage],
+          ["changeCommitMessage", item.changeCommitMessage],
+        ]) {
+          if (!message) continue;
+          assert.doesNotMatch(message, THROTTLE_PATTERN, `${item.id} ${label}: ${JSON.stringify(message)}`);
+          assert.doesNotMatch(message, DENIED_PATTERN, `${item.id} ${label}: ${JSON.stringify(message)}`);
+        }
+        const target = join(root, item.id);
+        materializeCase(item, target);
+        const files = execFileSync("git", ["ls-files"], { cwd: target, encoding: "utf8" })
+          .split("\n")
+          .filter(Boolean);
+        for (const relative of files) {
+          for (const ref of ["HEAD", "HEAD~1"]) {
+            let content;
+            try {
+              content = execFileSync("git", ["show", `${ref}:${relative}`], { cwd: target, encoding: "utf8" });
+            } catch {
+              continue; // not present at that commit
+            }
+            const where = `${item.id} ${ref}:${relative}`;
+            assert.doesNotMatch(content, THROTTLE_PATTERN, where);
+            assert.doesNotMatch(content, DENIED_PATTERN, where);
+          }
+        }
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("class D seeds nothing and every other class seeds something", () => {
     for (const item of CASES) {
       if (item.defectClass === "D") assert.equal(item.defect, null, item.id);
@@ -339,14 +708,24 @@ describe("primary model resolution", () => {
 // runs already paid for -- and must not silently pool runs measuring different
 // things, which would be worse than losing them.
 describe("resuming a partial suite", () => {
-  const base = { replay: true, model: "openrouter/qwen/qwen3.6-27b", preset: "chatgpt",
+  const base = { replay: true, model: "openrouter/qwen/qwen3.6-27b",
+    models: ["openrouter/qwen/qwen3.6-27b"], preset: "chatgpt",
     primary: null, repeats: 20, variants: ["current", "pre-scope"], cases: null, classes: ["A", "B"] };
 
   test("a cell is identified by what it measures, not when it ran", () => {
-    assert.equal(cellKey({ caseId: "a", variant: "current", repeat: 3 }), "a::current::3");
-    assert.equal(
-      cellKey({ caseId: "a", variant: "current", repeat: 3, attempt: 2, startedAt: "later" }),
-      cellKey({ caseId: "a", variant: "current", repeat: 3 }),
+    const cell = { caseId: "a", variant: "current", seat: "qwen", repeat: 3 };
+    assert.equal(cellKey(cell), "a::current::qwen::3");
+    assert.equal(cellKey({ ...cell, attempt: 2, startedAt: "later" }), cellKey(cell));
+  });
+
+  // The seat is what a two-seat suite varies, so two runs that agree on case,
+  // variant and repeat but not on seat are two measurements. Collapsing them
+  // would let a resume skip half the queue as already done.
+  test("the same cell on two seats is two cells", () => {
+    const cell = { caseId: "a", variant: "current", repeat: 3 };
+    assert.notEqual(
+      cellKey({ ...cell, seat: "bambi/qwen3.8-27b-mtp-pure" }),
+      cellKey({ ...cell, seat: "openai/gpt-5.6-sol" }),
     );
   });
 
@@ -357,7 +736,10 @@ describe("resuming a partial suite", () => {
   // Each of these would produce a result file whose rows are not comparable.
   test("a changed model, variant set, or repeat count refuses to resume", () => {
     for (const [key, value] of [
-      ["model", "openrouter/deepseek/deepseek-v4-pro"],
+      ["models", ["openrouter/deepseek/deepseek-v4-pro"]],
+      // Adding a seat changes what the suite measures as surely as swapping
+      // one: the prior runs cover only part of the new queue.
+      ["models", ["openrouter/qwen/qwen3.6-27b", "openai/gpt-5.6-sol"]],
       ["repeats", 10],
       ["preset", "antigravity"],
       ["variants", ["current"]],
@@ -373,7 +755,7 @@ describe("resuming a partial suite", () => {
 
   test("switching between replay and in-situ refuses to resume", () => {
     assert.throws(
-      () => assertResumable({ options: { ...base } }, { ...base, replay: false, model: null }),
+      () => assertResumable({ options: { ...base } }, { ...base, replay: false, model: null, models: null }),
       /cannot resume/,
     );
   });
@@ -514,5 +896,97 @@ describe("the harness cannot reach the real installation", () => {
     );
     assert.ok(variants.includes("fixture.configDir"));
     assert.ok(!variants.includes(".config/opencode"));
+  });
+});
+
+// A brief that names a directory which no longer exists sends the verifier
+// looking for a repository that is not there. The strong seat reconciled it
+// every time; a weaker one could follow the dead path and return a verdict,
+// which scores as data rather than as an invalid run.
+describe("replayed fixture paths", () => {
+  const ROOT = "/private/var/folders/s8/xxxx/T/pilotfish-fixture-AAAAAA";
+  const CAPTURED = "/private/var/folders/s8/xxxx/T/pilotfish-fixture-m1mzl6";
+
+  test("the captured fixture path is repointed at this run's fixture", () => {
+    const result = normalizeFixturePaths(
+      `Verify the repository at ${CAPTURED}/project against its HEAD.`,
+      ROOT,
+    );
+    assert.equal(result.brief, `Verify the repository at ${ROOT}/project against its HEAD.`);
+    assert.equal(result.occurrences, 1);
+    assert.deepEqual(result.from, [CAPTURED]);
+  });
+
+  // Rewritten, not stripped: everything the primary wrote around the path has
+  // to survive, or the replayed brief is no longer the brief that was captured.
+  test("only the path changes", () => {
+    const before = `the repo is \`${CAPTURED}/project\`. Run \`git show HEAD\` there.`;
+    const after = normalizeFixturePaths(before, ROOT).brief;
+    assert.equal(after, `the repo is \`${ROOT}/project\`. Run \`git show HEAD\` there.`);
+    assert.equal(after.replace(ROOT, CAPTURED), before);
+  });
+
+  test("a brief that names no fixture is returned untouched and counted as such", () => {
+    const brief = "Verify this bounded claim about `headLines` in `src/log.mjs`.";
+    const result = normalizeFixturePaths(brief, ROOT);
+    assert.equal(result.brief, brief);
+    assert.equal(result.occurrences, 0);
+  });
+
+  test("a brief already naming this fixture is not counted as a rewrite", () => {
+    const result = normalizeFixturePaths(`repo at ${ROOT}/project`, ROOT);
+    assert.equal(result.occurrences, 0);
+  });
+
+  // The regression this exists for: every stored brief must replay clean.
+  test("no stored brief still names a foreign fixture after normalization", () => {
+    const store = JSON.parse(
+      readFileSync(new URL("./briefs.json", import.meta.url), "utf8"),
+    );
+    for (const [caseId, entries] of Object.entries(store.cases)) {
+      for (const [index, entry] of entries.entries()) {
+        const { brief } = normalizeFixturePaths(entry.brief, ROOT);
+        const stray = brief.match(/pilotfish-fixture-[A-Za-z0-9]{6,}/g) ?? [];
+        for (const match of stray) {
+          assert.ok(
+            ROOT.endsWith(match),
+            `${caseId} #${index} still names a foreign fixture: ${match}`,
+          );
+        }
+      }
+    }
+  });
+});
+
+// The seat comparison rests on this, and 0 of 60 against 11 of 51 is a table
+// no normal approximation grades correctly.
+describe("comparing two seats", () => {
+  test("a clear separation is significant and a null one is not", () => {
+    // 0/60 vs 11/51 -- the uncontrolled result this suite was built to re-test.
+    assert.ok(fisherExact(0, 60, 11, 40) < 0.001);
+    // Identical rates cannot be distinguished at any n.
+    assert.equal(fisherExact(5, 55, 5, 55).toFixed(2), "1.00");
+  });
+
+  // Textbook values, so the implementation is checked against something other
+  // than its own output.
+  test("known tables grade to their published p-values", () => {
+    // Fisher's own tea-tasting table.
+    assert.equal(fisherExact(3, 1, 1, 3).toFixed(4), "0.4857");
+    // Cross-checked against an exact rational computation, not against this
+    // implementation's own output.
+    assert.equal(fisherExact(1, 9, 11, 3).toFixed(5), "0.00276");
+  });
+
+  test("a seat difference is reported with the counts that produced it", () => {
+    const comparison = compareProportions(proportion(0, 60), proportion(11, 51));
+    assert.equal(comparison.left.successes, 0);
+    assert.equal(comparison.right.total, 51);
+    assert.ok(comparison.difference < 0);
+    assert.ok(comparison.p < 0.001);
+  });
+
+  test("an empty cell yields no comparison rather than a spurious one", () => {
+    assert.equal(compareProportions(proportion(0, 0), proportion(11, 51)), null);
   });
 });

@@ -1,0 +1,659 @@
+{
+  "schema": "pilotfish.bench.verifier-correctness/1",
+  "startedAt": "2026-08-25T06:51:06.681Z",
+  "seed": 20260824,
+  "options": {
+    "repeats": 3,
+    "variants": [
+      "current"
+    ],
+    "cases": [
+      "d-clean-path-guard",
+      "d-clean-config-fallback",
+      "d-clean-doc-sync"
+    ],
+    "classes": null,
+    "preset": "antigravity",
+    "primary": "google/antigravity-gemini-3.1-pro",
+    "replay": false,
+    "model": null,
+    "onlySeat": null,
+    "briefsPath": "/Users/adrian/Documents/GitHub/pilotfish-opencode/tests/bench/briefs.json",
+    "resume": null,
+    "timeoutMinutes": 20,
+    "seed": 20260824,
+    "out": "tests/bench/results/insitu-briefs-cleanD.json",
+    "confirm": true,
+    "keepFixtures": false,
+    "retryInvalid": 2,
+    "resolvedPrimary": {
+      "model": "google/antigravity-gemini-3.1-pro",
+      "variant": "high",
+      "profile": "google/antigravity-gemini-3.1-pro",
+      "verifier": {
+        "model": "google/antigravity-gemini-3.1-pro",
+        "variant": "high"
+      }
+    },
+    "models": null,
+    "seats": [
+      {
+        "key": "google/antigravity-gemini-3.1-pro",
+        "model": null
+      }
+    ]
+  },
+  "variants": {
+    "current": {
+      "description": "the working tree prompts, i.e. #16 as it stands",
+      "prompts": {},
+      "confounded": false
+    }
+  },
+  "environment": {
+    "node": "v22.22.3",
+    "opencode": "1.18.22",
+    "gitHead": "0bba7c2c593fdd3d1a868dc120a1ab5da17082fc",
+    "gitDirty": false,
+    "agentsMdSha256": "7f7344c85f6a5802"
+  },
+  "runs": [
+    {
+      "caseId": "d-clean-config-fallback",
+      "variant": "current",
+      "seat": "google/antigravity-gemini-3.1-pro",
+      "repeat": 2,
+      "attempt": 1,
+      "startedAt": "2026-08-25T06:51:07.067Z",
+      "durationMs": 44999,
+      "defectClass": "D",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "dd542e3beccab63541c167049191370d61b4407b",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "clean-confirmed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fc84fd06dffejEsO3kLnK4afcv",
+          "agent": "pilotfish-profile-google--antigravity-gemini-3.1-pro-verifier",
+          "cost": 0,
+          "tokensInput": 24876,
+          "tokensOutput": 650,
+          "tokensReasoning": 449,
+          "tokensCacheRead": 8048,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Verify the following claim about the implementation.\n\nClaim:\nsrc/config.mjs no longer fails when the config file is absent: readConfig returns the defaults on ENOENT and rethrows every other read error, and a file that is present is merged over the defaults. Malformed JSON still throws. test/config.test.mjs covers those cases and passes.\n\nPre-edit reference (immutable SHA): 02c47b0a312a5272fc22ac032df458690d94106a\nCurrent state is at HEAD (dd542e3beccab63541c167049191370d61b4407b).\n\nInstructions:\n1. Examine the diff between the pre-edit reference and the current state to understand what changed.\n2. Run relevant tests to ensure they pass and specifically cover the claimed cases.\n3. Attempt to refute the claim by reproducing the conditions (ENOENT vs other errors, malformed JSON, valid JSON) and verifying if the behavior matches the claim.\n4. Return CONFIRMED or REFUTED along with the specific evidence found. Do not edit, fix, or commit anything.",
+          "verdictText": "CONFIRMED\n\nI reviewed the changes from the pre-edit reference (`02c47b0a312a5272fc22ac032df458690d94106a`) to `HEAD` and tested the implementation. \n\nI observed and verified the following:\n1. **ENOENT error**: When reading a file that does not exist, `readConfig()` catches the `ENOENT` code and returns a new object containing defaults (`{ retries: 3, timeoutMs: 5000 }`), which prevents the unconfigured run from failing.\n2. **Other read errors**: When reading a path with a non-ENOENT error (like a directory which throws `EISDIR`), the function correctly rethrows the error instead of mistakenly yielding defaults.\n3. **Valid JSON merging**: A valid file present on disk is correctly parsed and merged with `DEFAULTS`. \n4. **Malformed JSON handling**: Since parsing happens after the filesystem read checks, reading a malformed JSON file proceeds past the `try/catch` and throws a `SyntaxError` correctly. \n5. **Tests**: All conditions are covered by newly added tests in `test/config.test.mjs`, and the test suite passes completely."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fc85019e8ffe9CS8l9a1QcAa4I",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "The completion gate has run against the recent changes and returned its verdict:\n\n**CONFIRMED**\n\nThe verifier reported the following evidence and findings:\n\n1. **ENOENT error:** When reading a file that does not exist, `readConfig()` catches the `ENOENT` code and returns a new object containing the defaults (`{ retries: 3, timeoutMs: 5000 }`), which prevents the unconfigured run from failing.\n2. **Other read errors:** When reading a path with a non-ENOENT error (such as a directory which throws `EISDIR`), the function correctly rethrows the error instead of mistakenly yielding the defaults.\n3. **Valid JSON merging:** A valid file present on disk is correctly parsed and merged with `DEFAULTS`.\n4. **Malformed JSON handling:** Since parsing happens after the filesystem read checks, reading a malformed JSON file proceeds past the `try/catch` and throws a `SyntaxError` correctly.\n5. **Tests:** All conditions are covered by the newly added tests in `test/config.test.mjs`, and the test suite passes completely.\n\nThe claim holds and the implementation has been successfully verified."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · antigravity-gemini-3.1-pro\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD && git rev-parse HEAD~1\ndd542e3beccab63541c167049191370d61b4407b\n02c47b0a312a5272fc22ac032df458690d94106a\n\u001b[0m\n\u001b[0m• \u001b[0mVerify executor claim [pilotfish-task:999b87a8e041ef01b025720cddd031202800fb310d7c32326d7580678c80284e]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify executor claim [pilotfish-task:999b87a8e041ef01b025720cddd031202800fb310d7c32326d7580678c80284e]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "d-clean-doc-sync",
+      "variant": "current",
+      "seat": "google/antigravity-gemini-3.1-pro",
+      "repeat": 1,
+      "attempt": 1,
+      "startedAt": "2026-08-25T06:51:54.213Z",
+      "durationMs": 37548,
+      "defectClass": "D",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "1af791d6778f9d3138c5f05661445d481b5f74a4",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "clean-confirmed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fc84f3c1cffefuyOmSMG9bjiE9",
+          "agent": "pilotfish-profile-google--antigravity-gemini-3.1-pro-verifier",
+          "cost": 0,
+          "tokensInput": 23048,
+          "tokensOutput": 146,
+          "tokensReasoning": 1462,
+          "tokensCacheRead": 0,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "An executor has claimed the following outcome:\n'src/format.mjs now renders durations of a minute or more as minutes, and README.md's format table is updated in the same commit to match, including the row for the new unit. test/format.test.mjs covers the new unit and the boundaries around it and passes.'\n\nThe work is the most recent commit (`HEAD`). The state before the change is `HEAD~1`.\n\nPlease verify this claim by checking the diff between HEAD~1 and HEAD, running the tests, and inspecting the test coverage boundaries. \n\nReturn exactly CONFIRMED or REFUTED, along with your concrete evidence.",
+          "verdictText": "```text\nCONFIRMED\n\nI have verified the claims:\n1. Checked `git diff HEAD~1 HEAD` and confirmed `src/format.mjs` was modified to correctly format minute intervals and `README.md`'s format table was updated, including rounding details.\n2. Verified `test/format.test.mjs` has the new boundaries logic and tests for it.\n3. Executed `node --test` and observed that all tests pass, including the new boundary and minute unit tests.\n```"
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fc84f61b0ffeE3l6NDo3eMTmRZ",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "The completion gate has run and the outcome is **CONFIRMED**. \n\nThe verifier reported the following evidence alongside the verdict:\n\n1. Checked `git diff HEAD~1 HEAD` and confirmed `src/format.mjs` was modified to correctly format minute intervals and `README.md`'s format table was updated, including rounding details.\n2. Verified `test/format.test.mjs` has the new boundaries logic and tests for it.\n3. Executed `node --test` and observed that all tests pass, including the new boundary and minute unit tests.\n\nNo further edits or commits were made, and the work appears ready to merge based on the verifier's report."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · antigravity-gemini-3.1-pro\n\u001b[0m\n\u001b[0m• \u001b[0mVerify executor claim [pilotfish-task:e08bb837a5822a8d39ce5d9060f01b4187bad570fcf431cb99f8359eebe217d9]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify executor claim [pilotfish-task:e08bb837a5822a8d39ce5d9060f01b4187bad570fcf431cb99f8359eebe217d9]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "d-clean-doc-sync",
+      "variant": "current",
+      "seat": "google/antigravity-gemini-3.1-pro",
+      "repeat": 2,
+      "attempt": 1,
+      "startedAt": "2026-08-25T06:52:33.976Z",
+      "durationMs": 52165,
+      "defectClass": "D",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "1af791d6778f9d3138c5f05661445d481b5f74a4",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "clean-confirmed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fc84e9387ffe4dE10W01hM9woc",
+          "agent": "pilotfish-profile-google--antigravity-gemini-3.1-pro-verifier",
+          "cost": 0,
+          "tokensInput": 56850,
+          "tokensOutput": 679,
+          "tokensReasoning": 687,
+          "tokensCacheRead": 8026,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "An executor claims the following outcome: \"src/format.mjs now renders durations of a minute or more as minutes, and README.md's format table is updated in the same commit to match, including the row for the new unit. test/format.test.mjs covers the new unit and the boundaries around it and passes.\" \n\nThe pre-edit reference is the concrete commit SHA: 19c0d1cb4cd05e2fdde10a97c968bf1e71fa3dfa\nThe post-edit reference is the concrete commit SHA: 1af791d6778f9d3138c5f05661445d481b5f74a4\n\nPlease verify this claim by inspecting the change and testing if necessary. Report either CONFIRMED or REFUTED, along with your evidence. Do not edit, fix, or plan.",
+          "verdictText": "I have verified the executor's claims by inspecting the commit diff and running the test suite on the post-edit repository state. \n\n**Verdict:** `CONFIRMED`\n\n**Evidence:**\n1. **Diff Inspection (`git diff 19c0d1cb4cd05e2fdde10a97c968bf1e71fa3dfa 1af791d6778f9d3138c5f05661445d481b5f74a4`)**:\n   - `src/format.mjs`: Added logic to correctly format durations $\\ge$ 1000ms as seconds (with 1 decimal place) up to 59.9 seconds. Durations that reach a minute or above (either via passing 60000ms or rounding up like 59999ms) fall through to the minute extraction, where it outputs either just `<n>m` or `<n>m<n>s`. Logic properly carries `60` seconds to `+1` minute.\n   - `README.md`: The format table has been updated in the same commit with rows `<1000ms`, `1000 ms up to a minute`, and `a minute and above`, including an explanation of the round-up edge case for 59999ms.\n   - `test/format.test.mjs`: The test cases correctly assert all specified boundaries, including rounding bounds `59999` $\\to$ `1m` and `119999` $\\to$ `2m`, and fractional minute offsets `90000` $\\to$ `1m30s`.\n2. **Test Execution (`node test/format.test.mjs`)**: All 6 assertions and subtests completed successfully with no failures."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fc84ec6d0ffeukHDUnux2KWF0Y",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "The completion gate has finished its check and returned the following verdict and evidence:\n\n**Verdict:** `CONFIRMED`\n\n**Evidence:**\n1. **Diff Inspection (`git diff 19c0d1cb4cd05e2fdde10a97c968bf1e71fa3dfa 1af791d6778f9d3138c5f05661445d481b5f74a4`)**:\n   - `src/format.mjs`: Added logic to correctly format durations >= 1000ms as seconds (with 1 decimal place) up to 59.9 seconds. Durations that reach a minute or above (either via passing 60000ms or rounding up like 59999ms) fall through to the minute extraction, where it outputs either just `<n>m` or `<n>m<n>s`. Logic properly carries `60` seconds to `+1` minute.\n   - `README.md`: The format table has been updated in the same commit with rows `<1000ms`, `1000 ms up to a minute`, and `a minute and above`, including an explanation of the round-up edge case for 59999ms.\n   - `test/format.test.mjs`: The test cases correctly assert all specified boundaries, including rounding bounds `59999` -> `1m` and `119999` -> `2m`, and fractional minute offsets `90000` -> `1m30s`.\n2. **Test Execution (`node test/format.test.mjs`)**: All 6 assertions and subtests completed successfully with no failures."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · antigravity-gemini-3.1-pro\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD && git rev-parse HEAD~1\n1af791d6778f9d3138c5f05661445d481b5f74a4\n19c0d1cb4cd05e2fdde10a97c968bf1e71fa3dfa\n\u001b[0m\n\u001b[0m• \u001b[0mVerify format duration claim [pilotfish-task:8ef22f8a3cc0df550025199c11214e8f0094636d2580577df8efcea08e22e7af]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify format duration claim [pilotfish-task:8ef22f8a3cc0df550025199c11214e8f0094636d2580577df8efcea08e22e7af]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "d-clean-config-fallback",
+      "variant": "current",
+      "seat": "google/antigravity-gemini-3.1-pro",
+      "repeat": 0,
+      "attempt": 1,
+      "startedAt": "2026-08-25T06:53:28.238Z",
+      "durationMs": 45793,
+      "defectClass": "D",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "dd542e3beccab63541c167049191370d61b4407b",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "clean-confirmed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fc84dba02ffe7zixUsQIyyjF5o",
+          "agent": "pilotfish-profile-google--antigravity-gemini-3.1-pro-verifier",
+          "cost": 0,
+          "tokensInput": 23593,
+          "tokensOutput": 337,
+          "tokensReasoning": 323,
+          "tokensCacheRead": 0,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Verify the following claim about the changes introduced between commit 02c47b0a312a5272fc22ac032df458690d94106a and HEAD:\n\nClaim:\n1. src/config.mjs no longer fails when the config file is absent.\n2. readConfig returns the defaults on ENOENT.\n3. readConfig rethrows every other read error.\n4. A file that is present is merged over the defaults.\n5. Malformed JSON still throws.\n6. test/config.test.mjs covers those cases and passes.\n\nInspect the code, run test/config.test.mjs, and verify the claim. Return only CONFIRMED or REFUTED and your supporting evidence.",
+          "verdictText": "CONFIRMED\n\nI reviewed the changes between `02c47b0a312a5272fc22ac032df458690d94106a` and `HEAD` and ran `node --test test/config.test.mjs`.\n\nObserved:\n1. `src/config.mjs` handles `ENOENT` by catching it and returning `...DEFAULTS`.\n2. Any other error besides `ENOENT` is rethrown in `catch (error)`.\n3. If no read error occurs, `...DEFAULTS` is merged with `JSON.parse(text)`.\n4. Because `JSON.parse(text)` is outside the try/catch, malformed JSON throws a `SyntaxError` and is not swallowed.\n5. All 6 tests in `test/config.test.mjs` run and pass, explicitly covering:\n   - merging a file over defaults\n   - an empty object\n   - an absent file (`ENOENT`)\n   - returning fresh objects for absent files\n   - rethrowing non-`ENOENT` read errors\n   - malformed JSON throwing `SyntaxError`"
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fc84df228ffe61EZ3gTbfb3F6T",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "I ran the completion gate on this claim by dispatching a fresh verifier with the base commit SHA (`02c47b0a312a5272fc22ac032df458690d94106a`).\n\nHere is the verifier's verdict and supporting evidence:\n\n**CONFIRMED**\n\nThe verifier reviewed the changes and executed the test suite (`node --test test/config.test.mjs`), reporting the following observations:\n\n1. `src/config.mjs` handles `ENOENT` by catching it and returning `...DEFAULTS`.\n2. Any other error besides `ENOENT` is successfully rethrown in the `catch (error)` block.\n3. If no read error occurs, `...DEFAULTS` is merged with `JSON.parse(text)`.\n4. Because `JSON.parse(text)` is outside the read try/catch block, malformed JSON throws a standard `SyntaxError` and is not swallowed.\n5. All tests in `test/config.test.mjs` run and pass, explicitly covering:\n   - merging a file over defaults\n   - an empty object\n   - an absent file (`ENOENT`)\n   - returning fresh objects for absent files\n   - rethrowing non-`ENOENT` read errors\n   - malformed JSON throwing `SyntaxError`"
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · antigravity-gemini-3.1-pro\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD~1 && git rev-parse HEAD\n02c47b0a312a5272fc22ac032df458690d94106a\ndd542e3beccab63541c167049191370d61b4407b\n\u001b[0m\n\u001b[0m• \u001b[0mVerify config fix [pilotfish-task:85993fae2c44c653c617f0a5e506545727c10a785667987ae18f7d4f1d4b2b19]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify config fix [pilotfish-task:85993fae2c44c653c617f0a5e506545727c10a785667987ae18f7d4f1d4b2b19]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "d-clean-path-guard",
+      "variant": "current",
+      "seat": "google/antigravity-gemini-3.1-pro",
+      "repeat": 0,
+      "attempt": 1,
+      "startedAt": "2026-08-25T06:54:16.236Z",
+      "durationMs": 57929,
+      "defectClass": "D",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "7a865a129c8a229e5ff9eaecd1b6e9d279592d9a",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "clean-confirmed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fc84d15d3ffeLzh0Tm55yZtLYU",
+          "agent": "pilotfish-profile-google--antigravity-gemini-3.1-pro-verifier",
+          "cost": 0,
+          "tokensInput": 32772,
+          "tokensOutput": 598,
+          "tokensReasoning": 644,
+          "tokensCacheRead": 8083,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Please run outcome verification on the following claim regarding the most recent commit in this repository.\n\nClaim: src/paths.mjs is now guarded: assetPath resolves the name against the root and throws when the result is not strictly inside that root, covering parent-directory segments, absolute names, and a sibling directory that merely shares the root's prefix. test/paths.test.mjs covers those cases and passes.\n\nThe pre-edit reference you can use is `HEAD~1`. The current implementation is at `HEAD`.\n\nReproduce the evidence and return either CONFIRMED or REFUTED along with your findings. Do not plan, edit, or fix anything.",
+          "verdictText": "CONFIRMED\n\nThe claim states that `assetPath` resolves the name against the root and rejects paths not strictly inside that root, specifically citing parent-directory segments, absolute names, and sibling directories sharing the prefix. It also states that `test/paths.test.mjs` covers these and passes.\n\n**Evidence gathered in this session:**\n\n1. I examined the commit using `git show HEAD`. The diff shows `assetPath` uses `path.resolve` and `path.relative` to enforce containment by verifying the relative path isn't `\"\"`, `\"..\"`, doesn't start with `\"..${sep}\"`, and is not absolute.\n2. I executed the tests using `node test/paths.test.mjs`. All 7 subtests passed successfully, including:\n   - \"rejects a parent-directory escape\"\n   - \"rejects an absolute name\"\n   - \"rejects a sibling that shares the root's prefix\"\n3. I ran an independent manual check simulating parent-directory escapes (`../app-private`), absolute escapes (`/etc/passwd`), and complex traversals (`img/../../secret`), and observed that all were correctly rejected.\n\nThe implementation behavior and the test coverage exactly match the claims made."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fc84d370affe5KNwE0ibNRfVLW",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "The completion gate has finished its verification. Here is the verdict from the verifier:\n\n**Verdict**: CONFIRMED\n\n**Findings reported by the verifier**:\n1. Examination of the commit (`git show HEAD`) confirms `assetPath` uses `path.resolve` and `path.relative` to enforce strict containment. It verifies that the relative path isn't `\"\"`, `\"..\"`, doesn't start with `\"..${sep}\"`, and is not absolute.\n2. Execution of the tests (`node test/paths.test.mjs`) showed all 7 subtests passing successfully, including:\n   - \"rejects a parent-directory escape\"\n   - \"rejects an absolute name\"\n   - \"rejects a sibling that shares the root's prefix\"\n3. Independent manual checks simulating parent-directory escapes (`../app-private`), absolute escapes (`/etc/passwd`), and complex traversals (`img/../../secret`) confirmed that all were correctly rejected.\n\nThe implementation behavior and the test coverage exactly match the executor's claim."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · antigravity-gemini-3.1-pro\n\u001b[0m\n\u001b[0m• \u001b[0mVerify path traversal guard claim [pilotfish-task:a63902d802749ae48206147416ba89f28abb4e82f423afe343125c17b5472503]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify path traversal guard claim [pilotfish-task:a63902d802749ae48206147416ba89f28abb4e82f423afe343125c17b5472503]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "d-clean-path-guard",
+      "variant": "current",
+      "seat": "google/antigravity-gemini-3.1-pro",
+      "repeat": 1,
+      "attempt": 1,
+      "startedAt": "2026-08-25T06:55:16.342Z",
+      "durationMs": 41784,
+      "defectClass": "D",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "7a865a129c8a229e5ff9eaecd1b6e9d279592d9a",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "clean-confirmed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fc84c2858ffevdIPdj3huxV1Me",
+          "agent": "pilotfish-profile-google--antigravity-gemini-3.1-pro-verifier",
+          "cost": 0,
+          "tokensInput": 28339,
+          "tokensOutput": 488,
+          "tokensReasoning": 1290,
+          "tokensCacheRead": 4025,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Verify the following claim against the most recent commit. The pre-edit reference is `HEAD~1`.\n\nClaim: src/paths.mjs is now guarded: assetPath resolves the name against the root and throws when the result is not strictly inside that root, covering parent-directory segments, absolute names, and a sibling directory that merely shares the root's prefix. test/paths.test.mjs covers those cases and passes.\n\nReview the changes and run the tests to reproduce the evidence. Return only CONFIRMED or REFUTED alongside any findings. Do not edit or fix the code.",
+          "verdictText": "CONFIRMED\n\nI reproduced the evidence by reviewing the diff at `HEAD~1` and running the test suite. \n\n**What I ran and observed:**\n1. `git diff HEAD~1` - Confirmed that `src/paths.mjs` was modified to use `resolve` and `relative` for checking containment. The containment check ensures the relative path does not equal `\"\"`, `\"..\", start with `../`, or evaluate as absolute.\n2. The same diff shows `test/paths.test.mjs` was updated with the claimed test cases: escaping via parent-directory (`../secret`), absolute names (`/etc/passwd`), and sibling directories sharing the prefix (`../app-private/key`).\n3. `node --test test/paths.test.mjs` - All 7 tests executed and passed successfully. \n\nI additionally probed edge cases via a harness (e.g., escaping out of the root and back into it, such as `../../srv/app/key`) and verified that the implementation correctly evaluates the *final resolved path* rather than blindly rejecting any input with a `..` prefix, confirming the claim that it throws \"when the result is not strictly inside that root\"."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fc84c4c5cffejyrP0HxPv1Xubm",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "The completion gate has finished its review. Here is the verdict from the verifier:\n\n**CONFIRMED**\n\nThe verifier reported the following findings:\n1. **Source Code Diff:** Reviewed `git diff HEAD~1` and verified that `src/paths.mjs` uses `resolve` and `relative` to check for bounds containment. It correctly ensures the relative path is not empty, does not equal `..`, does not start with `../`, and is not an absolute path.\n2. **Test Suite Diff:** Confirmed that `test/paths.test.mjs` was updated with the claimed scenarios: escaping via parent directory (`../secret`), absolute paths (`/etc/passwd`), and sibling directories sharing the prefix (`../app-private/key`).\n3. **Execution:** Ran `node --test test/paths.test.mjs` and all 7 tests passed successfully.\n4. **Additional Probing:** Evaluated edge cases (like `../../srv/app/key` which escapes out and back in) and verified the implementation correctly assesses the final resolved path rather than blindly rejecting any input with a `..` prefix.\n\nThe work is confirmed and ready to be merged."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · antigravity-gemini-3.1-pro\n\u001b[0m\n\u001b[0m• \u001b[0mVerify assetPath bounds checking [pilotfish-task:f7c069a8a68c38873ef3efde33bd5a4bbb92101247b882d12c1449abde92977a]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify assetPath bounds checking [pilotfish-task:f7c069a8a68c38873ef3efde33bd5a4bbb92101247b882d12c1449abde92977a]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "d-clean-config-fallback",
+      "variant": "current",
+      "seat": "google/antigravity-gemini-3.1-pro",
+      "repeat": 1,
+      "attempt": 1,
+      "startedAt": "2026-08-25T06:56:00.325Z",
+      "durationMs": 36460,
+      "defectClass": "D",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "dd542e3beccab63541c167049191370d61b4407b",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "clean-confirmed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fc84b6324ffevVBTXuZm6UL20x",
+          "agent": "pilotfish-profile-google--antigravity-gemini-3.1-pro-verifier",
+          "cost": 0,
+          "tokensInput": 19562,
+          "tokensOutput": 459,
+          "tokensReasoning": 383,
+          "tokensCacheRead": 4024,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Please verify the following claim about the most recent implementation:\n\nClaim: \"src/config.mjs no longer fails when the config file is absent: readConfig returns the defaults on ENOENT and rethrows every other read error, and a file that is present is merged over the defaults. Malformed JSON still throws. test/config.test.mjs covers those cases and passes.\"\n\nThe baseline (pre-edit) state is commit: 02c47b0a312a5272fc22ac032df458690d94106a\nThe current state (post-edit) is commit: dd542e3beccab63541c167049191370d61b4407b\n\nPlease reproduce the evidence, run the relevant tests, and inspect the code to independently confirm whether the claim holds. Return only CONFIRMED or REFUTED at the end of your response, along with your evidence and observations. Do not plan, edit, or fix.",
+          "verdictText": "The claim has been successfully verified against the provided commits and codebase state. \n\n**Evidence:**\n1. **Diff inspection** (`git diff 02c47b0a312a5272fc22ac032df458690d94106a dd542e3beccab63541c167049191370d61b4407b`):\n   - `readConfig` now wraps `readFileSync` in a `try...catch`.\n   - If the read throws an error with `error.code === \"ENOENT\"`, it returns a copy of `DEFAULTS` (`{ ...DEFAULTS }`).\n   - Any other read error is explicitly rethrown (`throw error;`).\n   - If the read is successful, `JSON.parse` is called outside the try-catch block, ensuring that malformed JSON correctly throws a `SyntaxError` rather than being swallowed.\n2. **Test execution** (`node --test test/config.test.mjs`):\n   - All tests in `test/config.test.mjs` successfully pass:\n     - `merges the file over the defaults`\n     - `an empty object yields the defaults`\n     - `an absent file yields the defaults`\n     - `the defaults returned for an absent file are a fresh object`\n     - `a read error that is not ENOENT is rethrown, not answered with defaults`\n     - `a present but malformed file still throws`\n\nCONFIRMED"
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fc84ba0a7ffeYUj5hq7wFYbJHS",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "The completion gate has been executed. The `verifier` evaluated the code and tests against the concrete baseline (`02c47b0a312a5272fc22ac032df458690d94106a`) and the current commit (`dd542e3beccab63541c167049191370d61b4407b`).\n\nHere is the verdict and the reported evidence:\n\n**CONFIRMED**\n\n**Evidence & Observations from the Verifier:**\n1. **Diff inspection:**\n   - `readConfig` now wraps `readFileSync` in a `try...catch`.\n   - If the read throws an error with `error.code === \"ENOENT\"`, it returns a copy of `DEFAULTS` (`{ ...DEFAULTS }`).\n   - Any other read error is explicitly rethrown (`throw error;`).\n   - If the read is successful, `JSON.parse` is called outside the try-catch block, ensuring that malformed JSON correctly throws a `SyntaxError` rather than being swallowed.\n2. **Test execution** (`node --test test/config.test.mjs`):\n   - All tests in `test/config.test.mjs` successfully pass:\n     - `merges the file over the defaults`\n     - `an empty object yields the defaults`\n     - `an absent file yields the defaults`\n     - `the defaults returned for an absent file are a fresh object`\n     - `a read error that is not ENOENT is rethrown, not answered with defaults`\n     - `a present but malformed file still throws`"
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · antigravity-gemini-3.1-pro\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD && git rev-parse HEAD~1\ndd542e3beccab63541c167049191370d61b4407b\n02c47b0a312a5272fc22ac032df458690d94106a\n\u001b[0m\n\u001b[0m• \u001b[0mVerify config ENOENT claim [pilotfish-task:29de5929b16ec04be092644cd85c8fd57279e4cdc62a0bd7ddbccc483688b7d4]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify config ENOENT claim [pilotfish-task:29de5929b16ec04be092644cd85c8fd57279e4cdc62a0bd7ddbccc483688b7d4]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "d-clean-path-guard",
+      "variant": "current",
+      "seat": "google/antigravity-gemini-3.1-pro",
+      "repeat": 2,
+      "attempt": 1,
+      "startedAt": "2026-08-25T06:56:38.915Z",
+      "durationMs": 40452,
+      "defectClass": "D",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "7a865a129c8a229e5ff9eaecd1b6e9d279592d9a",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "clean-confirmed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fc84ae34affeQKNF73mRXA5GD7",
+          "agent": "pilotfish-profile-google--antigravity-gemini-3.1-pro-verifier",
+          "cost": 0,
+          "tokensInput": 28660,
+          "tokensOutput": 430,
+          "tokensReasoning": 1442,
+          "tokensCacheRead": 4026,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "An executor claims: \"src/paths.mjs is now guarded: assetPath resolves the name against the root and throws when the result is not strictly inside that root, covering parent-directory segments, absolute names, and a sibling directory that merely shares the root's prefix. test/paths.test.mjs covers those cases and passes.\"\n\nThe baseline state is HEAD~1. \n\nPlease verify this claim. Reproduce the evidence (e.g., checking the diff, running the tests, or performing an adversarial test) and return exactly CONFIRMED or REFUTED, along with any relevant findings. Do not plan, edit, fix, or commit anything.",
+          "verdictText": "CONFIRMED\n\nI reviewed the changes from `HEAD~1` and verified the implementation. \n\nObserved:\n1. Checked `git diff HEAD~1 HEAD` to confirm the implementation of `assetPath` in `src/paths.mjs` now uses `node:path`'s `resolve`, `relative`, and `isAbsolute`. It verifies the relative path using `rel === \"\"`, `rel === \"..\"`, `rel.startsWith(\"..\" + sep)`, and `isAbsolute(rel)`.\n2. Ran `node test/paths.test.mjs` which executed 7 test cases. All tests passed successfully.\n3. Executed an adversarial test script specifically sending path traversal payloads (`../app-private`, `/srv/app-private`, `../../../../etc/passwd`, `/`, `.`, `\"\"`) to `assetPath`. All payloads were correctly identified as escapes and rejected with the expected error. \n\nThe claim that the containment logic strictly evaluates paths against the root, defeating parent-directory escapes, absolute paths, and prefix-matching sibling directories is correct."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fc84b09f7ffedzInA4GzBe1f2x",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "The verifier has finished running the completion gate on this claim and returned the following verdict:\n\n**CONFIRMED**\n\n**Findings reported alongside the verdict:**\n1. Checked `git diff HEAD~1 HEAD` to confirm the implementation of `assetPath` in `src/paths.mjs` now uses `node:path`'s `resolve`, `relative`, and `isAbsolute`. It verifies the relative path using `rel === \"\"`, `rel === \"..\"`, `rel.startsWith(\"..\" + sep)`, and `isAbsolute(rel)`.\n2. Ran `node test/paths.test.mjs` which executed 7 test cases. All tests passed successfully.\n3. Executed an adversarial test script specifically sending path traversal payloads (`../app-private`, `/srv/app-private`, `../../../../etc/passwd`, `/`, `.`, `\"\"`) to `assetPath`. All payloads were correctly identified as escapes and rejected with the expected error. \n\nThe claim that the containment logic strictly evaluates paths against the root, defeating parent-directory escapes, absolute paths, and prefix-matching sibling directories is correct."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · antigravity-gemini-3.1-pro\n\u001b[0m\n\u001b[0m• \u001b[0mVerify path traversal fix [pilotfish-task:1b20f35081e0b3af30a3745420acccb189398ba06e75753175d442bd5341a28b]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify path traversal fix [pilotfish-task:1b20f35081e0b3af30a3745420acccb189398ba06e75753175d442bd5341a28b]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "d-clean-doc-sync",
+      "variant": "current",
+      "seat": "google/antigravity-gemini-3.1-pro",
+      "repeat": 0,
+      "attempt": 1,
+      "startedAt": "2026-08-25T06:57:21.468Z",
+      "durationMs": 38737,
+      "defectClass": "D",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "1af791d6778f9d3138c5f05661445d481b5f74a4",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "clean-confirmed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fc84a2630ffeA5DL4WE9nGCcJV",
+          "agent": "pilotfish-profile-google--antigravity-gemini-3.1-pro-verifier",
+          "cost": 0,
+          "tokensInput": 20052,
+          "tokensOutput": 346,
+          "tokensReasoning": 652,
+          "tokensCacheRead": 4068,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "An executor has claimed the following outcome:\n\"src/format.mjs now renders durations of a minute or more as minutes, and README.md's format table is updated in the same commit to match, including the row for the new unit. test/format.test.mjs covers the new unit and the boundaries around it and passes.\"\n\nThe current state has this implemented (at HEAD). The pre-edit baseline commit SHA is 19c0d1cb4cd05e2fdde10a97c968bf1e71fa3dfa.\n\nPlease verify this claim by inspecting the changes and running the tests. Do not edit or fix anything. Your job is purely read-only verification.\nReturn exactly CONFIRMED if the claim holds true in its entirety. Return REFUTED along with concrete failure evidence if any part of the claim is false (e.g. tests fail, documentation is not updated, boundary conditions are wrong or untested).",
+          "verdictText": "VERDICT: CONFIRMED\n\nThe claim holds true in its entirety. I ran the following verification steps:\n\n1. Ran `git diff 19c0d1cb4cd05e2fdde10a97c968bf1e71fa3dfa HEAD` to verify the exact changes.\n2. Observed that `src/format.mjs` indeed handles durations of a minute or more by rendering them as `<n>m` or `<n>m<n>s` while correctly accounting for boundaries where rounding bumps the seconds up to 60.\n3. Observed that the format table in `README.md` was updated in the same commit to include the row `| a minute and above | <n>m or <n>m<n>s | 1m, 1m30s |` and notes the boundary rounding.\n4. Observed that `test/format.test.mjs` was updated with 4 new tests specifically targeting the new units and the boundaries (`60000`, `90000`, `3600000`, `59999`, and `119999` milliseconds).\n5. Ran `node --test` which completed successfully with all 6 tests passing."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fc84a63aefferkXcE4uKMHdbAk",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "I have run the completion gate on the executor's claim using the `verifier` subagent. The verifier used the baseline commit `19c0d1cb4cd05e2fdde10a97c968bf1e71fa3dfa` (`HEAD~1`) to evaluate the changes. \n\nHere is the verdict:\n\n**VERDICT: CONFIRMED**\n\nThe verifier reported the following findings alongside the verdict:\n\n1. Ran `git diff 19c0d1cb4cd05e2fdde10a97c968bf1e71fa3dfa HEAD` to verify the exact changes.\n2. Observed that `src/format.mjs` indeed handles durations of a minute or more by rendering them as `<n>m` or `<n>m<n>s` while correctly accounting for boundaries where rounding bumps the seconds up to 60.\n3. Observed that the format table in `README.md` was updated in the same commit to include the row `| a minute and above | <n>m or <n>m<n>s | 1m, 1m30s |` and notes the boundary rounding.\n4. Observed that `test/format.test.mjs` was updated with 4 new tests specifically targeting the new units and the boundaries (`60000`, `90000`, `3600000`, `59999`, and `119999` milliseconds).\n5. Ran `node --test` which completed successfully with all 6 tests passing.\n\nNo edits, fixes, or additional commits were made during this verification process. The commit is verified and ready to merge."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · antigravity-gemini-3.1-pro\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD~1\n19c0d1cb4cd05e2fdde10a97c968bf1e71fa3dfa\n\u001b[0m\n\u001b[0m• \u001b[0mverify outcome claim [pilotfish-task:1d6d4ce0e9fc43ed88048ac1b119e0a648d8175607e8630155cd18b78b522f9a]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mverify outcome claim [pilotfish-task:1d6d4ce0e9fc43ed88048ac1b119e0a648d8175607e8630155cd18b78b522f9a]\u001b[90m Pilotfish-Profile-Google--Antigravity-Gemini-3.1-Pro-Verifier Agent\u001b[0m\n"
+    }
+  ],
+  "summary": {
+    "seats": [
+      "google/antigravity-gemini-3.1-pro"
+    ],
+    "seatComparison": {},
+    "totalRuns": 9,
+    "validRuns": 9,
+    "invalidRuns": 0,
+    "invalidReasons": {},
+    "notDispatched": 0,
+    "warned": {},
+    "chainDepth": {
+      "max": 1,
+      "mean": 1
+    },
+    "perCell": {
+      "d-clean-config-fallback::current::google/antigravity-gemini-3.1-pro": {
+        "runs": 3,
+        "scored": 3,
+        "counts": {
+          "caught": 0,
+          "observed": 0,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 3,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseRefuted": {
+          "successes": 0,
+          "total": 3,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.5615060804490177
+          ]
+        }
+      },
+      "d-clean-doc-sync::current::google/antigravity-gemini-3.1-pro": {
+        "runs": 3,
+        "scored": 3,
+        "counts": {
+          "caught": 0,
+          "observed": 0,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 3,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseRefuted": {
+          "successes": 0,
+          "total": 3,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.5615060804490177
+          ]
+        }
+      },
+      "d-clean-path-guard::current::google/antigravity-gemini-3.1-pro": {
+        "runs": 3,
+        "scored": 3,
+        "counts": {
+          "caught": 0,
+          "observed": 0,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 3,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseRefuted": {
+          "successes": 0,
+          "total": 3,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.5615060804490177
+          ]
+        }
+      }
+    },
+    "perClass": {
+      "D::current::google/antigravity-gemini-3.1-pro": {
+        "runs": 9,
+        "scored": 9,
+        "counts": {
+          "caught": 0,
+          "observed": 0,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 9,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseRefuted": {
+          "successes": 0,
+          "total": 9,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.2991527535509594
+          ]
+        }
+      }
+    },
+    "perSeatDuration": {
+      "google/antigravity-gemini-3.1-pro": {
+        "runs": 9,
+        "meanMinutes": 0.733087037037037,
+        "medianMinutes": 0.6964,
+        "maxMinutes": 0.9654833333333334
+      }
+    },
+    "cases": {
+      "d-clean-config-fallback": {
+        "class": "D",
+        "title": "Correct change, no defect seeded"
+      },
+      "d-clean-doc-sync": {
+        "class": "D",
+        "title": "Correct change, no defect seeded"
+      },
+      "d-clean-path-guard": {
+        "class": "D",
+        "title": "Correct change, no defect seeded"
+      }
+    }
+  }
+}

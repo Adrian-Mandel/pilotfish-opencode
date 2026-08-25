@@ -1,0 +1,37 @@
+{
+  "class": "B2",
+  "title": "The b-cap-boundary-strict defect, hidden inside a realistic multi-hunk commit",
+  "baseCommitMessage": "chore: upload queue budget arithmetic",
+  "changeCommitMessage": "limits: treat a non-positive cap as no cap at all",
+  "claim": "withinCap in src/limits.mjs now treats a cap of zero or less as unlimited and returns true, instead of blocking every item under a misconfigured cap. test/limits.test.mjs covers the unlimited case and passes.",
+  "defect": {
+    "file": "src/limits.mjs",
+    "summary": "roomFor, changed by the same commit as part of the isUnlimited routing but absent from the claim, now uses `used + size < cap` instead of `<= cap`, so an item that exactly fills the remaining capacity is wrongly rejected. The error appears only at the exact boundary.",
+    "markers": {
+      "all": [
+        "roomFor"
+      ],
+      "any": [
+        "off-by-one",
+        "off by one",
+        "strict",
+        "strictly",
+        "exactly",
+        "exact-fill",
+        "boundary",
+        "fits exactly",
+        "one too few",
+        "edge case",
+        "should be <=",
+        "< instead of <=",
+        "<= to <",
+        "exact fill",
+        "exact fit",
+        "exact-fit",
+        "exactly fills",
+        "< cap",
+        "<= changed to <"
+      ]
+    }
+  }
+}

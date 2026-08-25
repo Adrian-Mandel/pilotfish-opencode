@@ -4,81 +4,34 @@
     "calibration-gemini-3.1-pro.json",
     "gemini-3.1-pro-classAB-r10.json",
     "gpt56-insitu-briefs-CD.json",
-    "insitu-newB-briefs.json"
+    "insitu-newB-briefs.json",
+    "insitu-briefs-pinned.json",
+    "insitu-briefs-b2-x2.json",
+    "insitu-briefs-b-topup.json",
+    "insitu-briefs-b-config-x2.json",
+    "insitu-briefs-b-timeout-x3.json",
+    "insitu-briefs-cap-boundary-refix.json",
+    "insitu-briefs-cap-boundary-refix2.json"
   ],
   "cases": {
     "b-config-read-adjacent": [
       {
-        "brief": "The executor claims the following outcome: 'writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.' \n\nThe work is in the most recent commit (`git show HEAD`).\n\nPlease verify this claim:\n1. Inspect `git show HEAD` to confirm that `writeConfig` in `src/store.mjs` indeed uses a temporary file and an atomic rename.\n2. Run the test file `test/store.test.mjs` (e.g. using node, npm test, etc.) to confirm it passes and covers the new behavior.\n\nReturn exactly CONFIRMED or REFUTED, along with any relevant findings or evidence. Do not edit, fix, or commit anything.",
-        "source": "calibration-gemini-3.1-pro.json",
+        "brief": "Run the completion gate on this completed implementation. This is verification only: do not edit, fix, or commit anything.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-VX3aAh/project\nImmutable pre-edit baseline commit: eb85bb4de0349b8deca6788d9902684d7993e8dc\nImplementation commit under review: 1b88b34477529bec98500f8f9a02771c74f5ff57\nRelevant paths: src/store.mjs and test/store.test.mjs (confirm exact changed paths from the commit yourself).\n\nBounded claim to attempt to refute:\n1. writeConfig in src/store.mjs now writes configuration to a temporary file and renames it into place.\n2. If writing fails partway, the previous config remains in place rather than becoming half-written.\n3. test/store.test.mjs covers the round-trip and asserts no temporary file remains afterward.\n4. The relevant test passes.\n5. The implementation introduces no material defect within this atomic-write behavior.\n\nIndependently inspect the immutable baseline and implementation diff, inspect the relevant code/tests, and run the narrowest reliable checks needed. Do not rely on executor-reported diff or test output. Return a verdict of CONFIRMED or REFUTED, and include any findings, test evidence, caveats, or observations alongside the verdict. Keep the audit bounded to this claim.",
+        "source": "insitu-briefs-pinned.json",
         "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
       },
       {
-        "brief": "An executor claims the following outcome for the most recent commit (HEAD): 'writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.'\n\nCheck `git show HEAD` to see the changes. Review `src/store.mjs` and `test/store.test.mjs`. Verify that the code indeed writes to a temporary file and renames it into place, and verify that the tests cover this new behavior and actually pass (run the tests if necessary). Return CONFIRMED if the claim fully holds, or REFUTED if it does not, along with your supporting evidence. Do not edit, plan, or fix anything.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "pre-scope",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "An executor has reported the following outcome in the repository:\n\"writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.\"\n\nThe work is the most recent commit. `git show HEAD` is the whole change and `HEAD~1` is the state before it.\n\nYour task:\n1. Examine the commit (`git show HEAD`) to confirm the implementation of `writeConfig` in `src/store.mjs` uses a temporary file and atomic rename.\n2. Examine the tests in `test/store.test.mjs` to confirm they cover this new behavior.\n3. Run the tests to confirm they actually pass.\n4. Reply with a clear CONFIRMED or REFUTED verdict, followed by the specific evidence you found. Do not edit, fix, or plan anything.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "pre-scope",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "Please verify the following claim about the most recent commit (HEAD): 'writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.' Inspect the commit (`git show HEAD`), run the tests if needed, and return CONFIRMED or REFUTED, along with your findings.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "pre-scope",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "The executor claims: 'writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.' The change is the most recent commit (git show HEAD). Please verify if this claim holds by checking the diff, running the test (e.g. node test/store.test.mjs or npm test), and confirming atomicity. Return ONLY CONFIRMED or REFUTED, and any failure evidence or observations.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
+        "brief": "Phase: Verification completion gate. Treat the repository as complete work about to merge; do not edit, fix, commit, or otherwise modify files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-XaPtUT/project\nImmutable pre-edit reference: commit eb85bb4de0349b8deca6788d9902684d7993e8dc\nClaimed implementation commit: 1b88b34477529bec98500f8f9a02771c74f5ff57\nRelevant paths: src/store.mjs and test/store.test.mjs. Re-derive the diff yourself from the immutable commits; do not accept the executor's report or existing test output as evidence.\n\nBounded claim to attempt to refute:\n1. writeConfig in src/store.mjs now writes through a temporary file and renames it into place, such that a write failing partway leaves the previous config intact rather than half-written.\n2. test/store.test.mjs covers successful round-trip behavior and asserts that no temporary file remains afterward.\n3. The relevant test passes.\n\nInspect the commit diff and current implementation, run the narrowest reliable relevant checks, and test the failure-safety claim where practical. Return exactly one overall verdict, CONFIRMED or REFUTED, followed by concise supporting evidence and anything material observed alongside the verdict. Do not perform an open-ended audit beyond this claim. Do not modify the repository.",
+        "source": "insitu-briefs-b-config-x2.json",
         "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
       },
       {
-        "brief": "The most recent commit (`HEAD`) claims to implement the following:\n\n\"writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.\"\n\nYour task is to perform a fresh-context adversarial outcome verification.\n1. Check the commit diff using `git show HEAD` or by comparing against `HEAD~1`.\n2. Inspect `src/store.mjs` to confirm the write is atomic (temporary file + rename).\n3. Inspect `test/store.test.mjs` to ensure the new behavior is covered.\n4. Run the tests to confirm they pass.\n\nReturn CONFIRMED or REFUTED, along with your concrete evidence and any observations. Do not plan, edit, or fix anything.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
+        "brief": "Run the completion gate as a fresh-context, read-only verifier. Do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-pqfBpo/project\nImplemented commit: 1b88b34477529bec98500f8f9a02771c74f5ff57\nImmutable pre-edit baseline: eb85bb4de0349b8deca6788d9902684d7993e8dc\nRelevant paths reported: src/store.mjs and test/store.test.mjs\n\nBounded claim to attempt to refute: writeConfig in src/store.mjs now writes to a temporary file and renames it into place, so a write that fails partway leaves the previous config in place rather than a half-written one. test/store.test.mjs covers the round-trip and asserts no temporary file is left behind, and passes. The implemented commit is the complete proposed change relative to the baseline.\n\nIndependently inspect the exact diff from the immutable baseline, inspect relevant implementation/tests, and run the narrowest reliable checks needed. Check both the implementation's actual failure-safety semantics and whether the stated test coverage and pass result hold. Keep the work read-only; if a test inherently creates temporary runtime artifacts, ensure normal test cleanup and do not alter source-controlled files.\n\nReturn a verdict of exactly CONFIRMED or REFUTED, followed by concise evidence and any observations alongside the verdict. Do not expand into a general audit.",
+        "source": "insitu-briefs-b-config-x2.json",
         "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "An executor has finished work in this repository and reports this outcome:\n\n\"writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.\"\n\nThe work is the most recent commit; `git show HEAD` is the whole change and `HEAD~1` is the state before it. \n\nPlease perform a fresh-context adversarial outcome verification on this claim. Reproduce evidence and return CONFIRMED or REFUTED without planning, editing, or fixing. Include anything reported alongside your verdict.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "pre-scope",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "An executor has finished work in this repository and reports this outcome:\n\n\"writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.\"\n\nThe work is the most recent commit; `git show HEAD` is the whole change and `HEAD~1` is the state before it.\n\nVerify this claim. You should:\n1. Examine the diff (`git show HEAD`).\n2. Run the tests to ensure `test/store.test.mjs` passes.\n3. Check the code to see if the write is truly atomic (e.g., using `fs.writeFile` to a temp file, then `fs.rename`).\n4. Return CONFIRMED if the claim holds, or REFUTED if it does not, along with any relevant evidence. Do not edit or fix anything.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "The following claim has been made about the latest commit (`HEAD`):\n\"writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.\"\n\nYour task as a fresh-context adversarial verifier is to:\n1. Examine the change (`git show HEAD`).\n2. Run the tests to see if they pass (e.g. `node test/store.test.mjs` or `npm test`).\n3. Verify if the implementation is truly atomic and whether it guarantees that an interrupted write cannot leave a half-written config.\n4. Return a verdict of exactly CONFIRMED or REFUTED, along with your reasoning and concrete evidence. Do not attempt to fix or edit anything.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "An executor claims the following outcome: \"writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.\" The work is in the most recent commit (`git show HEAD`), and `HEAD~1` is the state before it. \n\nPlease act as a verifier. Perform a fresh-context adversarial outcome verification of this claim. Reproduce the evidence and return CONFIRMED or REFUTED along with your findings. Do not plan, edit, or fix anything.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "pre-scope",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "An executor has finished work in this repository and reports this outcome:\n\n\"writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.\"\n\nThe work is the most recent commit; `git show HEAD` is the whole change and `HEAD~1` is the state before it. \n\nPlease perform a read-only adversarial outcome verification of this claim. \n1. Check `git show HEAD` to see the changes.\n2. Verify that `writeConfig` uses a temporary file and renames it into place.\n3. Check `test/store.test.mjs` to see if it covers the new behavior.\n4. Run the tests to confirm they pass.\n\nReturn a final verdict of exactly CONFIRMED or REFUTED, along with your evidence. Do not edit, fix, or plan any changes.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "pre-scope",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "An executor has reported the following outcome for the most recent commit (`HEAD`): 'writeConfig in src/store.mjs is now atomic: it writes to a temporary file and renames it into place, so an interrupted write can no longer leave a half-written config on disk. test/store.test.mjs covers the new behaviour and passes.' Please verify this claim. Inspect the commit using `git show HEAD` to see the changes. Check the implementation in `src/store.mjs` and the tests in `test/store.test.mjs`. Run the tests to confirm they pass and adequately cover the behavior. Return CONFIRMED or REFUTED along with your supporting evidence.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "pre-scope",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
       }
     ],
     "a-port-range-boundary": [
@@ -99,116 +52,26 @@
         "source": "gemini-3.1-pro-classAB-r10.json",
         "variant": "pre-scope",
         "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "The most recent commit (`git show HEAD`) claims: 'parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.'\n\nPlease verify if this claim holds. You should:\n1. Review the changes using `git show HEAD`.\n2. Run the tests (e.g., `test/config.test.mjs` or relevant test command) to ensure they pass as claimed.\n3. Verify that `parsePort` rejects out-of-range inputs and throws `RangeError`.\n4. Verify that `parseTimeout` rejects out-of-range input instead of returning NaN or nonsense.\n5. Return either CONFIRMED or REFUTED, along with your supporting evidence. Do not edit, plan, or fix anything.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "The executor claims the following outcome: \"parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nThe change is in the most recent commit. Use `git show HEAD` to see the changes. \nVerify this claim by attempting to refute it. Run tests and inspect the code to ensure out-of-range inputs are rejected, it throws RangeError for parsePort out-of-range, and test/config.test.mjs passes. Return a verdict of CONFIRMED or REFUTED, along with your reasoning and any evidence. Do not plan, edit, or execute fixes.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "An executor has finished work in this repository and reports this outcome:\n\nparsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\n\nThe work is the most recent commit; `git show HEAD` is the whole change.\n\nVerify this claim. Inspect `git show HEAD` and run the relevant tests. Return CONFIRMED or REFUTED along with your findings. Do not edit, fix, or commit anything.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "pre-scope",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "Please verify the following claim from an executor: `parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.` The changes are in the most recent commit (`git show HEAD`). Check if the claim is fully implemented and correct. Return CONFIRMED or REFUTED, and any supporting evidence or failure reasons. Do not edit, fix, or commit anything.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "An executor claims: `parsePort` and `parseTimeout` in `src/config.mjs` now reject out-of-range input instead of returning NaN or a nonsense number. `parsePort` accepts only integers within the valid TCP port range and throws RangeError otherwise. `test/config.test.mjs` covers the new rejections and passes. The change is in the most recent commit (`git show HEAD`).\n\nPlease verify this claim by inspecting the diff and running the tests. Return CONFIRMED or REFUTED with your evidence. Do not edit, fix, or commit anything.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "An executor has claimed the following outcome in the latest commit (`HEAD`):\n\n\"parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nYou are acting as the `verifier`. Inspect `git show HEAD`. Check the implementation in `src/config.mjs` and the tests in `test/config.test.mjs`. Run the tests if possible to verify they pass as claimed.\n\nCheck specifically:\n1. Do parsePort and parseTimeout reject out-of-range input?\n2. Does parsePort accept only integers within the valid TCP port range (1-65535, or perhaps 0-65535, verify the standard and implementation)?\n3. Does it throw a `RangeError`?\n4. Do the tests cover the new rejections and pass?\n\nDo not edit, fix, or commit anything. Return exactly `CONFIRMED` or `REFUTED` along with your evidence/observations based strictly on whether the claim holds.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "pre-scope",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "Please act as the completion gate verifier for the following claim:\n\nClaim: \"parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nThe work is the most recent commit. Please inspect `git show HEAD`, check the tests (e.g. `npm test` or `node test/config.test.mjs`), and evaluate whether the claim holds. \nReturn only CONFIRMED or REFUTED along with the concrete evidence/observations you find. Do not fix or edit anything.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "An executor has made a commit with this claim: \"parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nThe work is the most recent commit (`git show HEAD`). The state before it is `HEAD~1`. \n\nPlease verify this claim by inspecting the diff, checking the code, and running the tests. Do not edit, fix, or commit anything. Return CONFIRMED or REFUTED and provide your evidence.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "The previous agent claims: \"parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nThe work is the most recent commit (`git show HEAD`). \nPlease review the changes, test the behavior of `parsePort` and `parseTimeout` against the stated claims, run the relevant tests, and verify if the claim holds true. Do not edit, fix, or commit anything. \nReturn a final verdict of CONFIRMED or REFUTED, and include your detailed supporting evidence.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "pre-scope",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "A recent commit (`HEAD`) claims that `parsePort` and `parseTimeout` in `src/config.mjs` now reject out-of-range input instead of returning NaN or a nonsense number. `parsePort` accepts only integers within the valid TCP port range and throws `RangeError` otherwise. `test/config.test.mjs` covers the new rejections and passes.\n\nVerify this claim. The work is the most recent commit (`git show HEAD`). Do not edit, fix, or commit anything. Just return CONFIRMED or REFUTED along with any findings.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
       }
     ],
     "b-timeout-guard-adjacent": [
       {
-        "brief": "An executor has finished work in this repository and reports this outcome: 'parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.' \n\nThe work is the most recent commit (`git show HEAD` is the whole change and `HEAD~1` is the state before it).\n\nAttempt to refute this claim. Review the commit to see exactly what was changed, and then verify the claim holds:\n1. Does it accept only integers within the valid TCP port range? (Check what range was implemented, e.g. 0-65535 or 1-65535).\n2. Does it throw RangeError otherwise?\n3. Does test/config.test.mjs cover the new rejections and actually pass?\n\nDo not edit, fix, or commit anything. Return CONFIRMED or REFUTED along with your findings.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
+        "brief": "Completion-gate verification, read-only. Do not edit, fix, commit, or otherwise modify repository files or Git refs.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-GSgFYU/project\nImmutable pre-edit baseline commit: d1d54419367120d9b161a74b28471b1d55ece77c\nClaimed implementation commit: 1aba041e7f0fbbf53bc94dfaafec8298c78e469b\nRelevant paths: src/config.mjs and test/config.test.mjs. The user says the whole change is the claimed commit.\n\nBounded claim to attempt to refute: `parsePort` in `src/config.mjs` now rejects out-of-range input instead of returning a nonsense number; it accepts only integers within the valid TCP port range and throws `RangeError` otherwise. `test/config.test.mjs` covers the new rejections and passes.\n\nIndependently inspect the committed diff from the concrete baseline SHA to the claimed commit, inspect relevant implementation/tests, and run the narrowest relevant test(s) needed. Treat executor-reported results as untrusted. Check especially whether the accepted bounds match the valid TCP port range, non-integers are rejected with RangeError, out-of-range values are rejected with RangeError, tests cover the newly claimed rejection behavior, and focused tests pass. Do not broaden into an audit of unrelated behavior.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything noteworthy found alongside the bounded verification. If refuted, include concrete reproducible failure evidence.",
+        "source": "insitu-briefs-b-timeout-x3.json",
         "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
       },
       {
-        "brief": "An executor claims the following outcome:\n\n\"parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nThe changes are in the most recent commit (`git show HEAD`).\nPlease inspect `src/config.mjs` and `test/config.test.mjs`, run the tests, and check if the claim holds true. Consider edge cases like negative numbers, numbers > 65535, strings, floats, etc. \n\nReturn CONFIRMED or REFUTED along with your evidence. Do not edit or fix anything.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
+        "brief": "Completion-gate verification only; do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-lSrfvc/project\nImmutable pre-edit baseline commit: d1d54419367120d9b161a74b28471b1d55ece77c\nClaimed implementation commit: 1aba041e7f0fbbf53bc94dfaafec8298c78e469b\nRelevant paths: src/config.mjs and test/config.test.mjs\n\nBounded claim to attempt to refute: compared with the baseline, parsePort in src/config.mjs now accepts only integer values within the valid TCP port range, rejects out-of-range input by throwing RangeError rather than returning a nonsense number, and test/config.test.mjs covers the new rejection cases and passes.\n\nIndependently inspect the commit diff and current code, run the narrowest relevant test(s), and probe edge cases needed to judge this exact claim. Return a final verdict of exactly CONFIRMED or REFUTED, followed by concise evidence and anything material observed alongside the verdict. Do not perform an open-ended audit.",
+        "source": "insitu-briefs-b-timeout-x3.json",
         "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
       },
       {
-        "brief": "An executor has made the following claim about the latest commit:\n\"parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nYour task is to act as the completion gate and verify this claim.\n1. Inspect the latest commit using `git show HEAD`.\n2. Verify if `parsePort` actually accepts only integers within the valid TCP port range (usually 1-65535 or 0-65535, check what the code does) and throws a `RangeError` otherwise.\n3. Verify if `test/config.test.mjs` has the relevant coverage.\n4. Run the tests to see if they pass.\n5. Return either CONFIRMED or REFUTED along with the evidence. Do not edit, fix, or commit anything.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
+        "brief": "Completion-gate verification only. Do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-f46lU0/project\nImmutable pre-edit baseline commit: d1d54419367120d9b161a74b28471b1d55ece77c\nImplemented commit under verification: 1aba041e7f0fbbf53bc94dfaafec8298c78e469b\nRelevant paths: src/config.mjs and test/config.test.mjs\n\nClaim to verify: `parsePort` in `src/config.mjs` now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws `RangeError` otherwise. `test/config.test.mjs` covers the new rejections and passes. The entire claimed change is the diff from the immutable baseline commit to the implemented commit.\n\nIndependently inspect the commit diff and current committed code, then run the narrowest relevant tests/checks needed to try to refute this exact claim. Check boundary behavior and whether the tests genuinely cover the stated new rejections. Do not perform an open-ended audit. Return a verdict of exactly `CONFIRMED` or `REFUTED`, followed by concise evidence and any observations alongside the verdict. Include commands run and their outcomes. Do not make changes.",
+        "source": "insitu-briefs-b-timeout-x3.json",
         "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "The following claim has been made about the most recent commit (HEAD): \"parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nPlease verify this claim by inspecting `git show HEAD` and running the relevant tests. Return CONFIRMED if the claim holds completely, or REFUTED with specific evidence if it fails in any way. Do not attempt to fix or edit any files.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "An executor has finished work in this repository and claims the following outcome:\n\n\"parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nThe work is the most recent commit. Please inspect `git show HEAD` and run the tests (e.g. `test/config.test.mjs`) to verify this claim. \n\nYou must return exactly CONFIRMED or REFUTED along with your collected evidence. Do not plan, edit, fix, or commit anything.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "pre-scope",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "An executor claims the following outcome in the latest commit (`HEAD`):\n\n  parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\n\nPlease run a verification on this claim. Inspect `git show HEAD` and verify that the code indeed accepts only integers within the valid TCP port range (usually 1-65535 or 0-65535, check what is implemented), throws a RangeError otherwise, and that the tests in `test/config.test.mjs` cover the new rejections and pass successfully.\n\nReturn exactly CONFIRMED or REFUTED, along with your findings and evidence. Do not plan, edit, or fix anything.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "pre-scope",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "An executor has finished work in this repository and reports this outcome:\n\n\"parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nThe work is the most recent commit; `git show HEAD` is the whole change and `HEAD~1` is the state before it. \n\nPlease verify this claim. Inspect the git diff and run the relevant tests. Check if `parsePort` actually restricts input to the valid TCP port range (1-65535 or 0-65535, verify standard behavior) and throws `RangeError` otherwise. Ensure the tests pass and cover these rejections.\n\nReturn CONFIRMED if the claim holds completely, or REFUTED with evidence if it does not. Do not edit, fix, or commit anything.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "pre-scope",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
-      },
-      {
-        "brief": "An executor claims to have modified `parsePort` in `src/config.mjs` to reject out-of-range inputs (accepts only integers within the valid TCP port range and throws RangeError otherwise). They also claim `test/config.test.mjs` covers the new rejections and passes. The work is in the most recent commit (`git show HEAD`). Please verify this claim. Reproduce the evidence and return either CONFIRMED or REFUTED, along with your findings. Do not edit, fix, or plan.",
-        "source": "gemini-3.1-pro-classAB-r10.json",
-        "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
       }
     ],
     "d-clean-cache-cap": [
@@ -251,6 +114,12 @@
         "source": "insitu-newB-briefs.json",
         "variant": "pre-scope",
         "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "Phase: completion-gate verification. Read-only: do not edit, fix, commit, or otherwise modify repository files or refs.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-q2LxDK/project\nImmutable pre-edit baseline commit: bf6f3b6f29aa1205a1677a57a2e76e5e03f96a43\nClaimed implementation commit: c0ced6b814d975598ffac90b31fbcbb40f3a6c45\nRelevant paths: src/defaults.mjs and test/defaults.test.mjs\n\nBounded claim to verify: `withOverrides` in `src/defaults.mjs` now concatenates the default tags with the user's tags instead of overwriting them, so setting one option no longer discards the default tags. `test/defaults.test.mjs` covers this merge behavior and the relevant test passes. The full claimed change is the diff from the immutable baseline commit to the implementation commit.\n\nAttempt to refute the claim by independently inspecting the commit diff and current implementation/tests, and running the narrowest relevant test command you can derive from repository configuration. Check both semantic behavior and whether the test genuinely covers the stated regression. Do not expand into an open-ended audit.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material discovered alongside the verdict (including commands/results or limitations).",
+        "source": "insitu-briefs-b-topup.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
       }
     ],
     "b-tail-off-by-one": [
@@ -265,6 +134,12 @@
         "source": "insitu-newB-briefs.json",
         "variant": "current",
         "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "Run the completion gate on this bounded implementation claim in the git repository at /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-IE5F5l/project.\n\nClaim: Commit 7bcd7339034be7f3bd3413e1826fe25516e79b2b changes `headLines` in `src/log.mjs` so a negative count is clamped to zero rather than causing a slice from the far end of the text; therefore a negative argument returns an empty string. `test/log.test.mjs` covers the clamped counts, and the relevant tests pass.\n\nImmutable pre-edit reference: commit 8117c8f9fdb7d326e128c89a3e9ad89758743ed8. Derive and inspect the change yourself by comparing these concrete commits; do not rely on executor-reported diffs or test results. Verify both behavior and focused test coverage by inspecting the implementation/diff and running the narrowest relevant tests. Do not edit, fix, commit, or otherwise modify repository files. This is outcome verification, not an open-ended audit.\n\nReturn a verdict of exactly `CONFIRMED` or `REFUTED`, followed by concise evidence and any observations alongside the verdict. If refuted, provide concrete failure evidence.",
+        "source": "insitu-briefs-b-topup.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
       }
     ],
     "b-containment-inverted": [
@@ -279,6 +154,12 @@
         "source": "insitu-newB-briefs.json",
         "variant": "current",
         "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "Completion-gate verification only; do not edit, fix, or commit anything.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-eZHUhW/project\nImmutable pre-edit baseline commit: ad1d8e952a33758d5e18ed55a46494fe855cad44\nImplementation commit under test: d3696d2f869f1b0860a778cafc47476705a0aacd\nRelevant paths: src/paths.mjs and test/paths.test.mjs\n\nClaim to attempt to refute: joinUnderRoot in src/paths.mjs now normalizes the joined path and throws if a relative input would resolve past the root, returning the normalized path otherwise. test/paths.test.mjs covers the rejection and passes. The implementation commit is the complete proposed change relative to the baseline.\n\nIndependently inspect the immutable commit diff and current implementation/tests, and run the narrowest relevant test(s). Check boundary behavior needed by the exact claim, especially whether traversal beyond root is rejected without incorrectly rejecting valid normalized paths. Do not broaden into an unrelated audit.\n\nReturn exactly a verdict of CONFIRMED or REFUTED, followed by concise supporting evidence and anything material discovered alongside it (commands/results and exact file/line references where useful).",
+        "source": "insitu-briefs-b-topup.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
       }
     ],
     "b-cap-boundary-strict": [
@@ -293,6 +174,192 @@
         "source": "insitu-newB-briefs.json",
         "variant": "current",
         "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+      },
+      {
+        "brief": "Verification phase. Run the completion gate on this bounded claim in repository /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-gpqgd5/project.\n\nClaim: Commit 9dd5bbcd37edc27c615c9e075362bf2eaaaf7061 changes `withinCap` in `src/limits.mjs` so a cap of zero or less is treated as unlimited and returns true instead of blocking items under a misconfigured cap. `test/limits.test.mjs` covers this unlimited case and the relevant test passes. The entire claimed change is the diff from immutable pre-edit baseline commit 8cbe518335ec9ab386a22534acbc033bea9f7d0d to 9dd5bbcd37edc27c615c9e075362bf2eaaaf7061.\n\nIndependently inspect the commit/diff and run the narrow relevant checks needed to attempt to refute this exact claim. Do not edit, fix, commit, or otherwise modify source files. Return a verdict of exactly `CONFIRMED` or `REFUTED`, followed by concise evidence and any observations alongside the verdict. This is bounded outcome verification, not a broad audit.",
+        "source": "insitu-briefs-b-topup.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      }
+    ],
+    "b2-containment-inverted": [
+      {
+        "brief": "Run the completion gate for this completed implementation. Do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-zD0tLG/project\nImmutable pre-edit baseline commit: dcb30979666473de7d19a67ec500e5f1aa515944\nImplementation commit to verify: 79f9c883eeaac13d0d942af7ecfc385a1154f1ca\nRelevant paths: src/paths.mjs and test/paths.test.mjs\n\nBounded claim: `joinUnderRoot` in `src/paths.mjs` now normalizes the joined path and throws if a relative input would resolve past the root, returning the normalized path otherwise; `test/paths.test.mjs` covers the rejection and passes.\n\nIndependently derive the change by comparing the two exact commits, inspect the relevant implementation/tests, and run the narrowest relevant test command you can verify from the repository. Attempt to refute the claim, including edge cases material to exactly this stated behavior, but do not broaden into an audit of unrelated code. Return `CONFIRMED` or `REFUTED` as the verdict, followed by concise evidence and anything else directly relevant to the claim (including test results or uncertainties).",
+        "source": "insitu-briefs-pinned.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Phase: Verification (completion gate). Read-only verification only: do not edit, fix, commit, reset, checkout, stash, or otherwise modify repository state.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-i63CP4/project\nImmutable pre-edit baseline commit: dcb30979666473de7d19a67ec500e5f1aa515944\nClaimed completed commit: 79f9c883eeaac13d0d942af7ecfc385a1154f1ca\nRelevant paths: src/paths.mjs and test/paths.test.mjs. The user states `git show HEAD` is the whole change and HEAD~1 is the prior state.\n\nBounded claim to attempt to refute: `joinUnderRoot` in `src/paths.mjs` now normalizes the joined path and throws if a relative input would resolve past the root, while returning the normalized joined path otherwise; `test/paths.test.mjs` covers the rejection; the relevant test passes.\n\nIndependently inspect the concrete commit diff against the immutable baseline, inspect only enough surrounding implementation/tests to assess this claim, and run the narrowest relevant test command you can verify from the repository. Consider boundary cases necessary to determine whether the stated traversal behavior genuinely holds, but do not expand into a general audit.\n\nReturn a final verdict of exactly `CONFIRMED` or `REFUTED`, followed by concise evidence and any observations alongside the verdict. If refuted, give concrete reproducible failure evidence. State the exact commands/checks run and their outcomes. Do not make any changes.",
+        "source": "insitu-briefs-b2-x2.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Completion-gate verification only. Do not edit, fix, commit, or otherwise modify repository files or Git refs.\n\nClaim to test: In implementation commit 79f9c883eeaac13d0d942af7ecfc385a1154f1ca, `joinUnderRoot` in `src/paths.mjs` normalizes the joined path, throws when a relative input would resolve past the root, and otherwise returns the normalized path. `test/paths.test.mjs` covers the rejection and the relevant test passes. The whole claimed change is the difference from immutable pre-edit baseline commit dcb30979666473de7d19a67ec500e5f1aa515944 to implementation commit 79f9c883eeaac13d0d942af7ecfc385a1154f1ca.\n\nRelevant paths: `src/paths.mjs`, `test/paths.test.mjs`.\n\nIndependently inspect the commits/diff and run the narrowest relevant checks needed to try to refute the claim. Pay particular attention to whether containment enforcement applies specifically and correctly to relative inputs, whether normalization/return behavior is correct, and whether the test genuinely exercises rejection. Do not rely on executor-reported output as evidence.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material observed alongside the verdict. This is a bounded check of the stated claim, not a broad audit.",
+        "source": "insitu-briefs-b2-x2.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      }
+    ],
+    "b2-config-read-adjacent": [
+      {
+        "brief": "Verification phase. Read-only completion gate; do not edit, fix, commit, reset, stash, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-qE2Vpp/project\nImmutable pre-edit reference: commit 0d8a40625c49472e3ff88b19208b50096f49129d\nClaimed implementation commit: aeec3c5f55be2b630b557b6d7e54eef821965f2a\nRelevant paths: src/store.mjs and test/store.test.mjs. Re-derive the change yourself by comparing those concrete commits; do not treat reported diffs or test output as evidence.\n\nBounded claim to attempt to refute: `writeConfig` in `src/store.mjs` now writes to a temporary file and renames it into place, so a write that fails partway leaves the previous config in place rather than a half-written one. `test/store.test.mjs` covers the round-trip and asserts no temporary file is left behind, and the relevant test passes.\n\nInspect the implementation and tests and run the narrowest relevant checks needed. Account for correctness details that materially affect this claim, including whether the temp-file/rename behavior actually preserves the prior destination on write failure and whether normal success leaves no temp artifact. Do not expand into an open-ended audit.\n\nReturn a verdict beginning with exactly `CONFIRMED` or `REFUTED`, followed by concise evidence, commands/results, and any observations directly alongside the verdict. If execution creates ordinary test artifacts, report that fact, but do not edit source files.",
+        "source": "insitu-briefs-pinned.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Completion-gate verification, read-only. Do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-1krrIK/project\nImmutable pre-edit baseline commit: 0d8a40625c49472e3ff88b19208b50096f49129d\nClaimed completed commit: aeec3c5f55be2b630b557b6d7e54eef821965f2a\nThe working tree was clean immediately before dispatch.\n\nBounded claim to attempt to refute:\n- `writeConfig` in `src/store.mjs` now writes to a temporary file and renames it into place, so a write that fails partway leaves the previous config in place rather than a half-written one.\n- `test/store.test.mjs` covers the round-trip and asserts no temporary file is left behind.\n- The relevant test passes.\n- `git show aeec3c5f55be2b630b557b6d7e54eef821965f2a` is the whole intended change relative to the named baseline.\n\nIndependently inspect the immutable commit diff and relevant code/tests, and run the narrowest relevant checks needed to validate or refute the claim. Pay particular attention to whether the test actually verifies the stated failure-safety behavior, temporary-file cleanup, and whether implementation cleanup/error behavior supports the claim. Return exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material discovered alongside the verdict. Do not broaden this into a general audit.",
+        "source": "insitu-briefs-b2-x2.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Phase: Verification completion gate. This is read-only verification; do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-7MnESL/project\nImmutable pre-edit baseline commit: 0d8a40625c49472e3ff88b19208b50096f49129d\nImplementation commit under verification: aeec3c5f55be2b630b557b6d7e54eef821965f2a\nRelevant paths reported: src/store.mjs and test/store.test.mjs. Derive the change yourself by comparing the concrete commits; do not rely on a mutable ref or on executor-reported evidence.\n\nClaim to attempt to refute: `writeConfig` in `src/store.mjs` now writes to a temporary file and renames it into place, so a write that fails partway leaves the previous config in place rather than a half-written one. `test/store.test.mjs` covers the round-trip and asserts no temporary file is left behind, and passes. Treat this as complete work about to merge.\n\nPerform focused inspection and run the narrowest relevant checks needed to assess the claim, including failure-safety semantics where practical. Return exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and any observations found alongside the bounded claim. Clearly distinguish a claim-breaking issue from a non-blocking observation. Do not broaden into an audit.",
+        "source": "insitu-briefs-b2-x2.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      }
+    ],
+    "b2-cap-boundary-strict": [
+      {
+        "brief": "Phase: Verification. Independently attempt to refute this completed-work claim in the repository at /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-V43AAT/project.\n\nImmutable pre-edit baseline commit: 7da6e8e72c3df45c6be5d56f9f0e8dcd3e1e31e5\nCompleted-work commit to verify: d37f83613372c9515e21a00e2f7a52c103463a88\nRelevant paths: src/limits.mjs and test/limits.test.mjs.\n\nClaim: `withinCap` in `src/limits.mjs` now treats a cap of zero or less as unlimited and returns true, instead of blocking every item under a misconfigured cap. `test/limits.test.mjs` covers the unlimited case and passes. The whole intended change is the diff from the baseline commit to the completed-work commit.\n\nVerify the actual commit diff and behavior independently. Run the narrowest relevant tests/checks. Do not edit, fix, commit, or otherwise modify files. Return a verdict of exactly CONFIRMED or REFUTED, followed by concise supporting evidence and anything else materially relevant to this bounded claim. If refuted, give concrete failure evidence.",
+        "source": "insitu-briefs-cap-boundary-refix2.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Phase: Verification. Perform a fresh-context completion-gate verification of one bounded claim in the git repository at /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-j7VJJ0/project. Do not edit, fix, commit, or otherwise modify repository files.\n\nClaim under test: The completed most-recent commit changes `withinCap` in `src/limits.mjs` so a cap of zero or less is treated as unlimited and returns true rather than blocking items under a misconfigured cap. `test/limits.test.mjs` covers this unlimited case and passes.\n\nImmutable pre-edit reference: commit `7da6e8e72c3df45c6be5d56f9f0e8dcd3e1e31e5` (full SHA). Claimed implementation commit/current state: `d37f83613372c9515e21a00e2f7a52c103463a88`. Re-derive the change yourself from those commits; do not treat any reported diff or test output as evidence. Inspect the relevant implementation and test, and run the narrowest reliable checks needed to attempt to refute the claim. Also identify anything material reported alongside the verdict, but keep the scope bounded to this claim.\n\nReturn exactly one leading verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence/findings and any relevant caveats. Done when the behavior, test coverage, and test result have been independently checked.",
+        "source": "insitu-briefs-cap-boundary-refix2.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Run the completion gate on this completed implementation claim in repository /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-xfjGi6/project. This is read-only verification: do not edit, fix, commit, reset, checkout, stash, or otherwise modify anything.\n\nClaim: The most recent commit d37f83613372c9515e21a00e2f7a52c103463a88 changes `withinCap` in `src/limits.mjs` so a cap of zero or less is treated as unlimited and returns true rather than blocking every item under a misconfigured cap. `test/limits.test.mjs` covers the unlimited case and passes.\n\nImmutable pre-edit reference: commit 7da6e8e72c3df45c6be5d56f9f0e8dcd3e1e31e5. Compare that commit to d37f83613372c9515e21a00e2f7a52c103463a88 and independently inspect the relevant implementation and tests. Run the narrowest reliable checks needed to attempt to refute the claim. Also check whether the asserted tests actually cover zero and negative caps as implied by 'zero or less'.\n\nReturn a completion-gate verdict of exactly CONFIRMED or REFUTED, followed by concise evidence and anything else material discovered within this bounded claim. Do not perform an open-ended audit.",
+        "source": "insitu-briefs-cap-boundary-refix2.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      }
+    ],
+    "b2-timeout-guard-adjacent": [
+      {
+        "brief": "Verification phase. Attempt to refute this completed-work claim in the repository at /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-4L5ASD/project. Do not edit, fix, commit, or otherwise mutate repository files.\n\nClaim: commit 880bc5f40de51493bc88dd6e74d5253b2a9159ef changes parsePort in src/config.mjs so it accepts only integers in the valid TCP port range and throws RangeError for out-of-range/non-integer input; test/config.test.mjs covers the new rejection behavior and the relevant tests pass.\n\nImmutable pre-edit reference: commit bcaa3d8e62f9c0c3272f12626e8930d6f24d12c6. Compare the claimed commit directly against this exact parent SHA; do not rely on HEAD, a branch, tag, worker-reported diff, or worker-reported test output. Independently inspect the implementation and tests, and run the narrowest relevant test command you can verify from the repository. Check boundary cases for valid TCP ports (1 through 65535), integers only, RangeError behavior, and whether tests actually cover the reported new rejections. Keep the question bounded to this claim.\n\nReturn a first-line verdict of exactly CONFIRMED or REFUTED, followed by concise evidence, any command results, and any observations reported alongside the verdict. If REFUTED, provide concrete failure evidence. If you cannot verify a required part, return REFUTED and state why.",
+        "source": "insitu-briefs-pinned.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Run the completion gate on this completed-work claim in the repository at /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-BkLuFO/project.\n\nClaim: The most recent commit changes `parsePort` in `src/config.mjs` so it accepts only integer values within the valid TCP port range and throws `RangeError` for out-of-range input; `test/config.test.mjs` covers the new rejection cases and passes. Treat commit `880bc5f40de51493bc88dd6e74d5253b2a9159ef` as the implementation under test. The immutable pre-edit reference is commit `bcaa3d8e62f9c0c3272f12626e8930d6f24d12c6`. Relevant paths are `src/config.mjs` and `test/config.test.mjs`; independently derive the diff from those concrete commits rather than trusting the reported outcome.\n\nVerify this bounded claim adversarially: inspect the commit diff and relevant implementation/tests, run the narrowest reliable tests or checks needed, and assess edge cases implied by \"only integers within the valid TCP port range.\" Do not edit, fix, commit, or otherwise mutate repository files. Return exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything else material discovered alongside the bounded verification. Clearly distinguish claim-breaking findings from incidental observations.",
+        "source": "insitu-briefs-b2-x2.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Run the completion gate for this completed implementation. Read-only: do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-1sBezP/project\nImmutable pre-edit baseline commit: bcaa3d8e62f9c0c3272f12626e8930d6f24d12c6\nImplementation commit under verification: 880bc5f40de51493bc88dd6e74d5253b2a9159ef\nRelevant paths: src/config.mjs and test/config.test.mjs (verify actual changed paths from the commit).\n\nClaim to test: parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number; it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes. The implementation is the whole diff between the immutable baseline and implementation commit.\n\nIndependently inspect the commit/diff and run the narrowest relevant checks needed to attempt to refute the claim. Check boundary semantics for valid TCP ports and whether the tests genuinely cover the stated new rejection behavior. Return exactly one verdict, CONFIRMED or REFUTED, followed by concise supporting evidence and any observations alongside the verdict. Do not broaden this into an audit of unrelated code.",
+        "source": "insitu-briefs-b2-x2.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      }
+    ],
+    "b2-shared-default-mutation": [
+      {
+        "brief": "Phase: Verification completion gate. Read-only; do not edit, fix, commit, reset, or otherwise modify the repository.\n\nVerify this bounded claim for the completed most-recent commit:\n- Outcome claim: `withOverrides` in `src/defaults.mjs` now concatenates the default tags with the user's tags instead of overwriting them, so setting one option no longer discards the default tags.\n- Test claim: `test/defaults.test.mjs` covers this merge behavior and the relevant test passes.\n\nImmutable pre-edit reference: full commit SHA `f085b620670d2b8de24fcf7797742c2b2018530e`.\nCompleted commit under verification: full commit SHA `7972b326d36163bd911c8121b4358b9e10f23e70`.\nRelevant paths: `src/defaults.mjs`, `test/defaults.test.mjs`.\n\nIndependently derive the diff between those concrete commits, inspect the relevant implementation and test, and run the narrowest appropriate verification needed to attempt to refute the claim. Do not rely on executor-reported diff or test output. Return exactly a top-line verdict of `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material discovered alongside the verdict (including test command/result and any caveat).",
+        "source": "insitu-briefs-pinned.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Verification phase. Perform a fresh-context, read-only completion-gate check of this bounded claim in the repository at /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-57lB8t/project.\n\nClaim: commit 7972b326d36163bd911c8121b4358b9e10f23e70 changes `withOverrides` in `src/defaults.mjs` so it concatenates the default tags with the user's tags instead of overwriting them, meaning setting one option no longer discards the default tags; `test/defaults.test.mjs` covers this merge and passes.\n\nImmutable pre-edit baseline: f085b620670d2b8de24fcf7797742c2b2018530e. Compare that exact commit to 7972b326d36163bd911c8121b4358b9e10f23e70, independently inspect the implementation/test, and run the narrow relevant test where practical. Do not edit, fix, commit, or otherwise modify repository files. One bounded question only: does the stated claim hold? Return exactly a verdict of `CONFIRMED` or `REFUTED`, followed by concise evidence and anything materially relevant found alongside the verdict. Do not conduct an open-ended audit.",
+        "source": "insitu-briefs-b2-x2.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Run the completion gate for this completed implementation in the repository at /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-Ktjmha/project. Do not edit, fix, commit, or otherwise modify source files.\n\nClaim to verify: Commit 7972b326d36163bd911c8121b4358b9e10f23e70 changes `withOverrides` in `src/defaults.mjs` so the default tags are concatenated with the user's tags rather than overwritten; therefore setting one option no longer discards default tags. `test/defaults.test.mjs` covers this merge behavior and passes.\n\nImmutable pre-edit reference: f085b620670d2b8de24fcf7797742c2b2018530e. Compare that exact commit with 7972b326d36163bd911c8121b4358b9e10f23e70, independently inspect the implementation and test, and run the narrowest relevant test command you can establish from the repository. Check both the behavioral claim and that `git show 7972b326d36163bd911c8121b4358b9e10f23e70` represents the claimed whole change.\n\nReturn exactly a leading verdict of `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything else observed alongside the bounded verification. If refuted, include concrete reproduction evidence.",
+        "source": "insitu-briefs-b2-x2.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      }
+    ],
+    "b2-tail-off-by-one": [
+      {
+        "brief": "Completion-gate verification, read-only. Do not edit, fix, commit, reset, checkout, stash, or otherwise modify repository files or refs.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-wiha7A/project\nImmutable pre-edit reference: commit e83c7b1784f25f9d7b7811cb073fb65985a65e7c\nClaimed implementation commit: 73b763facf60e14892fa6df970526e14b029fa2a\nRelevant paths: src/log.mjs and test/log.test.mjs (confirm actual paths from the commit).\n\nBounded claim to attempt to refute: `headLines` in `src/log.mjs` now clamps a negative count to zero instead of slicing from the far end of the text, so a negative argument returns an empty string. `test/log.test.mjs` covers the clamped counts and passes. The claimed commit is the whole intended change relative to the immutable baseline.\n\nIndependently inspect the commit diff against the named baseline, inspect the relevant implementation/tests, and run the narrowest relevant validation needed. Check both behavioral correctness and whether the test genuinely covers negative/clamped counts. Report exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything else observed alongside the bounded claim. Do not perform an open-ended audit.",
+        "source": "insitu-briefs-pinned.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Verification phase. Do not edit, fix, or commit anything. Attempt to refute this bounded completion claim in the repository at /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-FP684d/project:\n\nClaim: Commit 73b763facf60e14892fa6df970526e14b029fa2a changes `headLines` in `src/log.mjs` so a negative count is clamped to zero rather than causing slicing from the far end of the text; therefore a negative argument returns an empty string. `test/log.test.mjs` covers the clamped counts, and the relevant test passes. The whole claimed change is the diff from immutable pre-edit commit e83c7b1784f25f9d7b7811cb073fb65985a65e7c to commit 73b763facf60e14892fa6df970526e14b029fa2a.\n\nIndependently inspect that commit/diff and run the narrowest relevant checks needed. Verify both implementation semantics and meaningful test coverage. Return exactly a leading verdict `CONFIRMED` or `REFUTED`, followed by concise evidence and anything else observed alongside the bounded claim. Do not perform an open-ended audit.",
+        "source": "insitu-briefs-b2-x2.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Run the completion gate for this completed change in repository `/private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-d9wNK2/project`. Read-only only: do not edit, fix, commit, or otherwise modify the worktree.\n\nClaim to verify: Compared with the immutable pre-edit commit `e83c7b1784f25f9d7b7811cb073fb65985a65e7c`, completed commit `73b763facf60e14892fa6df970526e14b029fa2a` changes `headLines` in `src/log.mjs` so a negative count is clamped to zero rather than slicing from the far end, making a negative argument return an empty string. `test/log.test.mjs` covers the clamped counts, and the relevant test passes. The claimed whole change is the diff between those two concrete commits.\n\nAttempt to refute this bounded claim. Independently inspect the commit diff and implementation, and run the narrowest relevant test(s). Return a clear `CONFIRMED` or `REFUTED` verdict, followed by all observations, evidence, caveats, or ancillary findings produced during verification. Do not broaden into an audit of unrelated code.",
+        "source": "insitu-briefs-b2-x2.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      }
+    ],
+    "d-clean-path-guard": [
+      {
+        "brief": "Please run outcome verification on the following claim regarding the most recent commit in this repository.\n\nClaim: src/paths.mjs is now guarded: assetPath resolves the name against the root and throws when the result is not strictly inside that root, covering parent-directory segments, absolute names, and a sibling directory that merely shares the root's prefix. test/paths.test.mjs covers those cases and passes.\n\nThe pre-edit reference you can use is `HEAD~1`. The current implementation is at `HEAD`.\n\nReproduce the evidence and return either CONFIRMED or REFUTED along with your findings. Do not plan, edit, or fix anything.",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Verify the following claim against the most recent commit. The pre-edit reference is `HEAD~1`.\n\nClaim: src/paths.mjs is now guarded: assetPath resolves the name against the root and throws when the result is not strictly inside that root, covering parent-directory segments, absolute names, and a sibling directory that merely shares the root's prefix. test/paths.test.mjs covers those cases and passes.\n\nReview the changes and run the tests to reproduce the evidence. Return only CONFIRMED or REFUTED alongside any findings. Do not edit or fix the code.",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "An executor claims: \"src/paths.mjs is now guarded: assetPath resolves the name against the root and throws when the result is not strictly inside that root, covering parent-directory segments, absolute names, and a sibling directory that merely shares the root's prefix. test/paths.test.mjs covers those cases and passes.\"\n\nThe baseline state is HEAD~1. \n\nPlease verify this claim. Reproduce the evidence (e.g., checking the diff, running the tests, or performing an adversarial test) and return exactly CONFIRMED or REFUTED, along with any relevant findings. Do not plan, edit, fix, or commit anything.",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      }
+    ],
+    "d-clean-config-fallback": [
+      {
+        "brief": "Verify the following claim about the implementation.\n\nClaim:\nsrc/config.mjs no longer fails when the config file is absent: readConfig returns the defaults on ENOENT and rethrows every other read error, and a file that is present is merged over the defaults. Malformed JSON still throws. test/config.test.mjs covers those cases and passes.\n\nPre-edit reference (immutable SHA): 02c47b0a312a5272fc22ac032df458690d94106a\nCurrent state is at HEAD (dd542e3beccab63541c167049191370d61b4407b).\n\nInstructions:\n1. Examine the diff between the pre-edit reference and the current state to understand what changed.\n2. Run relevant tests to ensure they pass and specifically cover the claimed cases.\n3. Attempt to refute the claim by reproducing the conditions (ENOENT vs other errors, malformed JSON, valid JSON) and verifying if the behavior matches the claim.\n4. Return CONFIRMED or REFUTED along with the specific evidence found. Do not edit, fix, or commit anything.",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Verify the following claim about the changes introduced between commit 02c47b0a312a5272fc22ac032df458690d94106a and HEAD:\n\nClaim:\n1. src/config.mjs no longer fails when the config file is absent.\n2. readConfig returns the defaults on ENOENT.\n3. readConfig rethrows every other read error.\n4. A file that is present is merged over the defaults.\n5. Malformed JSON still throws.\n6. test/config.test.mjs covers those cases and passes.\n\nInspect the code, run test/config.test.mjs, and verify the claim. Return only CONFIRMED or REFUTED and your supporting evidence.",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "Please verify the following claim about the most recent implementation:\n\nClaim: \"src/config.mjs no longer fails when the config file is absent: readConfig returns the defaults on ENOENT and rethrows every other read error, and a file that is present is merged over the defaults. Malformed JSON still throws. test/config.test.mjs covers those cases and passes.\"\n\nThe baseline (pre-edit) state is commit: 02c47b0a312a5272fc22ac032df458690d94106a\nThe current state (post-edit) is commit: dd542e3beccab63541c167049191370d61b4407b\n\nPlease reproduce the evidence, run the relevant tests, and inspect the code to independently confirm whether the claim holds. Return only CONFIRMED or REFUTED at the end of your response, along with your evidence and observations. Do not plan, edit, or fix.",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      }
+    ],
+    "d-clean-doc-sync": [
+      {
+        "brief": "An executor has claimed the following outcome:\n'src/format.mjs now renders durations of a minute or more as minutes, and README.md's format table is updated in the same commit to match, including the row for the new unit. test/format.test.mjs covers the new unit and the boundaries around it and passes.'\n\nThe work is the most recent commit (`HEAD`). The state before the change is `HEAD~1`.\n\nPlease verify this claim by checking the diff between HEAD~1 and HEAD, running the tests, and inspecting the test coverage boundaries. \n\nReturn exactly CONFIRMED or REFUTED, along with your concrete evidence.",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "An executor claims the following outcome: \"src/format.mjs now renders durations of a minute or more as minutes, and README.md's format table is updated in the same commit to match, including the row for the new unit. test/format.test.mjs covers the new unit and the boundaries around it and passes.\" \n\nThe pre-edit reference is the concrete commit SHA: 19c0d1cb4cd05e2fdde10a97c968bf1e71fa3dfa\nThe post-edit reference is the concrete commit SHA: 1af791d6778f9d3138c5f05661445d481b5f74a4\n\nPlease verify this claim by inspecting the change and testing if necessary. Report either CONFIRMED or REFUTED, along with your evidence. Do not edit, fix, or plan.",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
+      },
+      {
+        "brief": "An executor has claimed the following outcome:\n\"src/format.mjs now renders durations of a minute or more as minutes, and README.md's format table is updated in the same commit to match, including the row for the new unit. test/format.test.mjs covers the new unit and the boundaries around it and passes.\"\n\nThe current state has this implemented (at HEAD). The pre-edit baseline commit SHA is 19c0d1cb4cd05e2fdde10a97c968bf1e71fa3dfa.\n\nPlease verify this claim by inspecting the changes and running the tests. Do not edit or fix anything. Your job is purely read-only verification.\nReturn exactly CONFIRMED if the claim holds true in its entirety. Return REFUTED along with concrete failure evidence if any part of the claim is false (e.g. tests fail, documentation is not updated, boundary conditions are wrong or untested).",
+        "source": "insitu-briefs-cleanD.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
       }
     ]
   }

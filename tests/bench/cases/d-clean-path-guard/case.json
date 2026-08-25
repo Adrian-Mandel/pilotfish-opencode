@@ -1,0 +1,7 @@
+{
+  "class": "D",
+  "title": "Correct change, no defect seeded",
+  "claim": "src/paths.mjs is now guarded: assetPath resolves the name against the root and throws when the result is not strictly inside that root, covering parent-directory segments, absolute names, and a sibling directory that merely shares the root's prefix. test/paths.test.mjs covers those cases and passes.",
+  "changeCommitMessage": "fix(paths): reject asset names that escape the bundle root",
+  "defect": null
+}

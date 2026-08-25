@@ -1,0 +1,7 @@
+{
+  "class": "D",
+  "title": "Correct change, no defect seeded",
+  "claim": "src/format.mjs now renders durations of a minute or more as minutes, and README.md's format table is updated in the same commit to match, including the row for the new unit. test/format.test.mjs covers the new unit and the boundaries around it and passes.",
+  "changeCommitMessage": "feat(format): render durations of a minute or more as minutes",
+  "defect": null
+}

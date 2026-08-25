@@ -1,0 +1,1444 @@
+{
+  "exportedAt": "2026-08-25T17:31:04.999Z",
+  "source": "~/.local/share/opencode/opencode.db",
+  "query": "session.agent = verifier, part.type = text",
+  "why": "The 44 historical REFUTED verifier sessions #53 and #16 P1 are derived from. The data directory was recreated once on 2026-08-14 and these were believed permanently lost; they are present again. Exported so a second reset cannot lose them.",
+  "identification": {
+    "seat": "openai/gpt-5.6-sol on all 62",
+    "window": [
+      "2026-07-14T21:43:27.289Z",
+      "2026-08-10T06:08:12.025Z"
+    ],
+    "matchesCalibrationReview": "44 REFUTED, window, and seat all match issue #15 comment 5361704033"
+  },
+  "counts": {
+    "REFUTED": 44,
+    "unparsed": 6,
+    "CONFIRMED": 12
+  },
+  "sessionCount": 62,
+  "sessions": [
+    {
+      "sessionId": "ses_09d6a46c6ffex9mE049uTiBmyL",
+      "parentId": "ses_09d7577abffeTzKLf3G28vb47H",
+      "title": "Verify QR Maker app (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/Sandbox/OpenCode_Test-04",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1784065407289,
+      "parts": [
+        {
+          "partId": "prt_f6295b942001xnnmNPOw3puGdI",
+          "timeCreated": 1784065407299,
+          "text": "<task>\n  <goal>Independently and adversarially verify the completed native macOS QR Maker implementation. Return CONFIRMED or REFUTED.</goal>\n  <workspace>/Users/adrian/Documents/Sandbox/OpenCode_Test-04</workspace>\n  <claimed_outcome>A simple GUI-based executable QR code maker exists as a native macOS AppKit application. It accepts multiline text/URL input, generates a standards-usable QR code via Core Image, previews it crisply, saves PNG, copies the image, validates empty input, and builds into dist/QR Maker.app without Xcode.</claimed_outcome>\n  <relevant_paths>\n    <path>Package.swift</path>\n    <path>Sources/QRCodeKit/QRCodeGenerator.swift</path>\n    <path>Sources/QRMaker/main.swift</path>\n    <path>Sources/QRCodeSmokeTests/main.swift</path>\n    <path>Tests/QRCodeKitTests/QRCodeGeneratorTests.swift</path>\n    <path>build-app.sh</path>\n    <path>test-smoke.sh</path>\n    <path>README.md</path>\n    <path>dist/QR Maker.app</path>\n  </relevant_paths>\n  <verification_evidence>\n    <item>./test-smoke.sh reported 6 checks across 2 cases passed.</item>\n    <item>build-app.sh created the app; Info.plist lint and strict deep codesign verification passed.</item>\n    <item>open launched the bundle, pgrep found QRMaker alive after 2 seconds, and AppleScript quit it cleanly.</item>\n  </verification_evidence>\n  <instructions>\n    <instruction>Read only the relevant files and run the narrowest useful checks.</instruction>\n    <instruction>Do not edit files.</instruction>\n    <instruction>Check functional correctness, QR output quality/scannability concerns such as scaling and quiet zone, UI layout/runtime hazards, save/copy behavior, packaging validity, and whether documentation is accurate.</instruction>\n    <instruction>Distinguish material failures from minor suggestions.</instruction>\n  </instructions>\n  <done_criteria>Return exactly one verdict section beginning with CONFIRMED or REFUTED, followed by concise evidence and any material issues with exact file/line references.</done_criteria>\n</task>"
+        },
+        {
+          "partId": "prt_f62981821001ECbSzNDtWkZXT7",
+          "timeCreated": 1784065562657,
+          "text": "REFUTED\n\n- Input `https://example.com/qr-maker` at scale 10 produced a 310×310 PNG with dark bounds `10...299` on both axes: only a 10px/one-module quiet zone. QR standards require four modules (40px here). `QRCodeGenerator.swift:67-70` scales Core Image output edge-to-edge without adding padding. Vision decoded it under ideal conditions, but the saved/copied QR is not standards-compliant and may fail against surrounding content.\n- A valid 2,300-byte payload generates a 1,790×1,790 image. In the default 800×700 window, `main.swift:159-165` forces preview scale to at least 1, so the image is centered and heavily clipped instead of fitted.\n\nReproduced:\n- `./test-smoke.sh`: 6 checks passed.\n- `swift test`: built successfully; no XCTest tests ran.\n- `./build-app.sh`, `plutil`, strict deep `codesign`: passed.\n- Bundle launched, remained alive, and quit cleanly.\n- Build succeeded using Command Line Tools only."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-07-14T21:43:27.289Z"
+    },
+    {
+      "sessionId": "ses_09d63e5b3ffe7Q8GUEQoRn8Xh2",
+      "parentId": "ses_09d7577abffeTzKLf3G28vb47H",
+      "title": "Reverify fixed QR app (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/Sandbox/OpenCode_Test-04",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1784065825356,
+      "parts": [
+        {
+          "partId": "prt_f629c1a530011y1s1hym6flGUX",
+          "timeCreated": 1784065825364,
+          "text": "<task>\n  <goal>Fresh-context verification of the completed QR Maker after fixes. Return CONFIRMED or REFUTED.</goal>\n  <workspace>/Users/adrian/Documents/Sandbox/OpenCode_Test-04</workspace>\n  <claimed_outcome>A simple native macOS GUI executable accepts text/URLs, generates standards-usable crisp QR codes with at least a four-module white quiet zone, aspect-fits previews including large payloads, saves PNG, copies images, validates input, and packages without full Xcode as dist/QR Maker.app.</claimed_outcome>\n  <prior_material_findings_and_claimed_fixes>\n    <item>Insufficient one-module quiet zone: generator now adds four explicit modules around the Core Image output, and smoke tests inspect all four borders in both CGImage and decoded PNG.</item>\n    <item>Large payload preview clipped because scale was clamped to at least 1: preview now uses fractional aspect-fit downscaling when needed and integer upscale otherwise, with interpolation disabled.</item>\n  </prior_material_findings_and_claimed_fixes>\n  <relevant_paths>\n    <path>Package.swift</path>\n    <path>Sources/QRCodeKit/QRCodeGenerator.swift</path>\n    <path>Sources/QRMaker/main.swift</path>\n    <path>Sources/QRCodeSmokeTests/main.swift</path>\n    <path>Tests/QRCodeKitTests/QRCodeGeneratorTests.swift</path>\n    <path>build-app.sh</path>\n    <path>test-smoke.sh</path>\n    <path>README.md</path>\n    <path>dist/QR Maker.app</path>\n  </relevant_paths>\n  <evidence>Local checks passed: 8 smoke checks, release bundle build, executable check, Info.plist lint, strict deep code-sign verification, and app launch/process/clean quit.</evidence>\n  <instructions>\n    <instruction>Do not edit files.</instruction>\n    <instruction>Reproduce relevant checks and inspect exact implementation.</instruction>\n    <instruction>Specifically confirm quiet zone sufficiency, preview fit math for an image larger than bounds, generated PNG validity/scannability, GUI runtime viability, and bundle packaging.</instruction>\n    <instruction>Only REFUTE for material failure; list minor non-blocking suggestions separately.</instruction>\n  </instructions>\n  <done_criteria>Return a verdict beginning CONFIRMED or REFUTED, concise evidence, and exact file/line references for any material issue.</done_criteria>\n</task>"
+        }
+      ],
+      "verdict": null,
+      "verdictTextIndex": 0,
+      "note": "no parseable verdict; stored text is an echoed brief",
+      "timeCreatedISO": "2026-07-14T21:50:25.356Z"
+    },
+    {
+      "sessionId": "ses_09613eb14ffeen4wEqXbBjGxhx",
+      "parentId": "ses_0a80a1a61ffehcGpUtL3VVj41B",
+      "title": "Verify upstream sync (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1784188507371,
+      "parts": [
+        {
+          "partId": "prt_f69ec14f9001ISCv4Cm1Qx9dnr",
+          "timeCreated": 1784188507388,
+          "text": "Independently verify the uncommitted Pilotfish OpenCode v0.1.0 upstream-sync changes in /Users/adrian/Documents/GitHub/pilotfish-opencode. Claimed outcome: the fork semantically ports original Pilotfish changes from upstream v1.1.4 through commit 125146508587d69eab1265b00210a59d1e5b375f, expanding from one primary plus six workers to one primary plus eight workers; adds capability-enforced read-only plan-verifier and security-reviewer; implements Discovery/Plan/Approval/Execution/Verification gates; restricts security-executor to approved stable contracts; adapts long-running process behavior to stable OpenCode; extends both presets and installer lifecycle to nine agents/prompts; adds regression tests; updates docs, VERSION to 0.1.0, and UPSTREAM_VERSION. Inspect git diff and relevant files, run python3 -m unittest discover -s tests -v and git diff --check, and reproduce focused JSON/OpenCode config checks where useful. Do not edit or fix anything. Return CONFIRMED or REFUTED first, with exact evidence and any residual risks."
+        },
+        {
+          "partId": "prt_f69eeadc3001GGC53lloj9MyiL",
+          "timeCreated": 1784188677571,
+          "text": "REFUTED\n\nConcrete installer lifecycle failure:\n\n- **Input/state:** upgrade a managed v0.0.1 installation whose `previousAgents` and `previousPrompts` contain the original seven entries.\n- **Expected:** v0.1.0 records pre-update state for the newly touched `plan-verifier` and `security-reviewer` entries/prompts so uninstall can restore them.\n- **Actual:** `install/OPENCODE-INSTALL.md:167` says updates preserve those maps and only prepare updated `version`, `preset`, and `installedAgents`. The new keys are never added. Uninstall then accesses every nine-key entry at lines 223–228.\n- **Reproduction:** comparing the prior committed graph with the new graph produced:\n  - missing agents: `plan-verifier`, `security-reviewer`\n  - missing prompts: `plan-verifier.md`, `security-reviewer.md`\n  - simulated uninstall lookup: `KeyError('plan-verifier')`\n- This can also permanently lose a user’s pre-existing definitions if either new name is overridden during upgrade. The regression test at `tests/test_policy.py:122-130` checks prose/counts only and misses state migration.\n\nOther evidence reproduced:\n\n- `python3 -m unittest discover -s tests -v`: 9 tests passed.\n- `git diff --check`: no output.\n- `VERSION` is `0.1.0`; `UPSTREAM_VERSION` resolves to upstream commit `125146508587d69eab1265b00210a59d1e5b375f`.\n- Both presets parse and merge to nine modeled agents.\n- OpenCode `1.17.18` accepted both resolved configurations.\n- `opencode debug agent` showed `plan-verifier` without bash/edit/task/webfetch and `security-reviewer` without bash/edit/task but with webfetch.\n- No destructive live install/uninstall was run; the deterministic upgrade-state defect is sufficient to refute the installer-lifecycle claim."
+        },
+        {
+          "partId": "prt_f69ef708b001c38aUHVgMXOOWX",
+          "timeCreated": 1784188727436,
+          "text": "Reverify after the installer lifecycle fix. The runbook now preserves every existing previousAgents/previousPrompts entry but, after approval and before writes, appends exact current pre-update state for required names absent from those maps, including durable prompt backups; failure to capture state stops before writes. Tests assert the migration contract. Inspect the new diff, reproduce the prior seven-to-nine upgrade/uninstall scenario against the written procedure, rerun focused checks as needed, and return CONFIRMED or REFUTED. Do not edit files."
+        },
+        {
+          "partId": "prt_f69f04308001KprNQmUDbJw1XG",
+          "timeCreated": 1784188781320,
+          "text": "CONFIRMED\n\n- Inspected the updated installer procedure at `install/OPENCODE-INSTALL.md:55,167-173,229-234`.\n- Reproduced a seven-to-nine upgrade in memory with:\n  - pre-existing custom `plan-verifier` agent and prompt,\n  - absent `security-reviewer`,\n  - seven existing lifecycle records.\n- Observed old records remained unchanged, exact new state and prompt bytes were captured, uninstall restored the custom entries, and removed initially absent entries.\n- `python3 -m unittest discover -s tests -v`: all 9 tests passed, including migration-contract assertions.\n- `git diff --check`: passed with no output.\n- No files were edited and no destructive live installation was performed."
+        }
+      ],
+      "verdict": "CONFIRMED",
+      "verdictTextIndex": 3,
+      "timeCreatedISO": "2026-07-16T07:55:07.371Z"
+    },
+    {
+      "sessionId": "ses_09608869cffe7MlEeesLkiHhzO",
+      "parentId": "ses_0961fb485ffewXRiopHAH8sUfg",
+      "title": "Verify fresh-session handoff (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1784189253987,
+      "parts": [
+        {
+          "partId": "prt_f69f77969001HkHY7jHnTGmoHY",
+          "timeCreated": 1784189253995,
+          "text": "Fresh-context handoff test; read-only. Act as a newly opened OpenCode agent with no chat history. Using only repository files, git history/status, and GitHub issue access if available, determine: (1) current active feature and exact latest user feedback, (2) the next concrete implementation chunk in priority order, (3) files likely involved, (4) required validation and user playtest instructions, (5) any contradictions that could cause unsafe or duplicate work. Then judge whether the repository is ready for immediate handoff as-is. Do not edit anything. Return `CONFIRMED` only if the handoff is unambiguous and safe; otherwise return `REFUTED`, followed by exact blocking evidence and the smallest documentation fixes required."
+        },
+        {
+          "partId": "prt_f69f9078d001X2Wahi1SlnyXIV",
+          "timeCreated": 1784189355918,
+          "text": "REFUTED\n\n### Blocking counterexample\n\nA fresh agent following `AGENTS.md` reads `CURRENT_STATE.md` first and concludes:\n\n- User playtest is still pending (`CURRENT_STATE.md:12-14`).\n- Next work is B2.3, then B2.4, then Stage C (`CURRENT_STATE.md:15-16`).\n\nBut issue #14’s latest owner comment, dated 2026-07-15 23:56 UTC, already contains that playtest and changes the priority:\n\n1. Pacing pass first.\n2. Dolly path, hard-cut consistency, and melee dash gap.\n3. Stage C entry ceremony.\n4. Stage D impact vocabulary.\n\nThus a new agent could request a duplicate playtest or begin B2.4 before the explicitly prioritized pacing pass. `CURRENT_STATE.md` has not been updated since `6c3a08d` on 2026-07-14.\n\n### Actual current state and latest feedback\n\n- **Active feature:** issue #14, Zoids Saga DS battle-flow parity.\n- **Completed:** B2.1/B2.2, real 3D camera and billboards.\n- **Latest verdict:** overall structure now matches the DS.\n- **Remaining defects:** slow ready/impact/post-pullback pacing; empty-scenery dolly; inconsistent crossfade versus hard cut; missing entry ceremony; weak projectile/impact FX; empty melee dash frames; kill-pillar/UI retunes; damage-number placement/color; deferred victory-results expansion.\n\n### Likely next implementation targets\n\nPrimary file:\n\n- `rpgmz-test-01/js/plugins/MechBattle.js`\n  - `_phAttackZoomIn`\n  - `_phAttackAnim`\n  - `_endAttackStage` / `_phWhipCut`\n  - reaction timing methods\n  - `_updateDmgPop`\n  - `_afterAttackAnim` / `_finishAttackTurn`\n  - melee dash rendering\n\nNo `src/` combat-core change should be necessary for presentation-only work.\n\n### Required validation and playtest\n\nReproduced now:\n\n- `npm test`: **56/56 passed**\n- `node --check rpgmz-test-01/js/plugins/MechBattle.js`: passed\n- `git diff --check`: passed\n- Working tree: clean, `main` synchronized with `origin/main`\n\nAfter implementation, the user should F5, press T, and test player and enemy ranged attacks, melee, miss, and kill flow—checking ≤0.6s dolly with the attacker always visible, consistent hard cuts, shorter holds, no empty dialogue beat, and no mech-less melee dash.\n\n### Additional contradictions\n\n- `battle-flow.md:150-156` still describes mini/large-art swapping and retained Type B backdrops, contradicting its B2 restaging and `battle-flow.md:176-182`, which say billboards replaced minis and Type B was removed.\n- `battle-flow.md:53` permits “cut/fast pan,” while the newer B2 grammar requires a hard cut.\n- `.claude/DEVELOPMENT_GUIDE.md:37` says 57 tests; the actual suite and other documentation say 56.\n\n### Smallest documentation fixes required\n\n1. Update and shorten `CURRENT_STATE.md` with the completed video playtest and new priority order.\n2. Replace the obsolete Stage B/status text in `battle-flow.md` with the current B2 state and hard-cut requirement.\n3. Correct `.claude/DEVELOPMENT_GUIDE.md` from 57 tests to 56.\n\nThe repository is not ready for safe immediate handoff as-is."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-07-16T08:07:33.987Z"
+    },
+    {
+      "sessionId": "ses_0870ad1cbffeiYRpCPLNlxOT0V",
+      "parentId": "ses_0961fb485ffewXRiopHAH8sUfg",
+      "title": "Review handoff plan (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1784440761908,
+      "parts": [
+        {
+          "partId": "prt_f78f52e40001HOaxC1HC0s4fHk",
+          "timeCreated": 1784440761921,
+          "text": "Read-only independent peer review of `/Users/adrian/Documents/GitHub/rpgmz-test-01/HANDOFF_HARDENING_PLAN.md`. The plan was edited by another model after prior review. Evaluate whether it safely and efficiently supports abrupt model-credit exhaustion, switching between Claude Code/OpenCode, switching machines, user-owned pushes (agents must never push), dirty-worktree safety, local WIP commits, GitHub issue journaling, CURRENT_STATE.md max 100 lines, and low token overhead. Look for contradictions, impossible guarantees, excessive process, git hazards, permission conflicts, missing failure modes, and ambiguous triggers. Do not modify files. Return:\n## Verdict\nAPPROVE / APPROVE WITH CHANGES / REJECT\n## Strong Improvements\n## Required Changes\n## Optional Improvements\n## Specific Wording Suggestions\nUse exact section/line references."
+        },
+        {
+          "partId": "prt_f78f8255300127vumrmkk4XB0M",
+          "timeCreated": 1784440956243,
+          "text": "## Verdict\n\nREFUTED\n\nThe plan is not safe to implement as written.\n\nConcrete counterexamples reproduced:\n\n- `git status` currently shows `main` ahead of `origin/main`, an unexplained modified `rpgmz-test-01/package.json`, and the untracked plan. Sections 5.1 and 5.4 require checkpoint commits, while §4.1 forbids staging unexplained work and §4.2 forbids switching branches with a dirty tree. No safe path is specified.\n- §8 lines 369–381 would restore stale issue #14 priorities. `CURRENT_STATE.md` lines 3–15 and the latest issue #14 comment show commit `c1eb6bb` already completed the framing/depth/spacing work; the next work is hard-cut handoff and FX polish.\n- This explicitly read-only review would, under §5.1 lines 150–162 and §6 lines 256–278, require file edits, an issue comment, and a commit—directly contradicting the user’s instruction.\n- The proposed verification commands are viable: `npm test` passed 56/56 and `node --check rpgmz-test-01/js/plugins/MechBattle.js` passed.\n\n## Strong Improvements\n\n- **§2 lines 50–80:** Clearly establishes user-owned pushes, local commits, issue closure limits, and reporting expectations.\n- **§4 lines 108–135:** Inspecting status, staged/unstaged diffs, branch, and remote history before editing is sound.\n- **§3 lines 83–100:** Correctly preserves actionable conclusions rather than private reasoning.\n- **§5.3 lines 185–201:** Remote issue notes for expensive discoveries are the best available cross-machine fallback.\n- **§7 lines 293–323:** Honestly states that dirty files and unpushed commits cannot be recovered from another machine.\n- **§8 lines 353–365:** The 100-line ceiling, retention policy, and prohibition on self-referential commit hashes are sensible.\n- **§10 lines 445–475:** Removing drifting test counts and adding `npm run verify` is appropriate.\n- **§11 lines 479–504:** One canonical policy with links from supporting documents avoids duplication.\n\n## Required Changes\n\n1. **Remove the stale operational snapshot in §8 lines 367–381.**  \n   It is already obsolete and would regress `CURRENT_STATE.md`. Require reconstruction from the latest issue comments and Git history at implementation time instead.\n\n2. **Add explicit instruction-precedence handling before §4.**  \n   State that read-only requests and higher-level harness restrictions override checkpoint writes. No file, branch, commit, or GitHub write should occur during a read-only task.\n\n3. **Close the remote-write bypass in §2 lines 61–70.**  \n   Banning `git push` alone does not prohibit GitHub Contents/Refs APIs that directly create commits or modify repository files. Ban all remote repository-content/history writes by agents, with issue bodies/comments as the explicit exception.\n\n4. **Specify safe staging before every commit, not only session arrival.**  \n   Require:\n   - rerunning status and staged/unstaged diffs;\n   - recording the pre-existing dirty baseline;\n   - staging only named agent-owned paths;\n   - inspecting `git diff --cached`;\n   - never using `git add -A`, `git add .`, or `git commit -a`;\n   - stopping if agent and user edits overlap in the same file.\n\n   Also replace `.claude/DEVELOPMENT_GUIDE.md` line 100, which currently says to sweep editor changes into a related commit.\n\n5. **Resolve the dirty-tree/branch dead end in §4–§5.**  \n   Define what happens when unrelated dirt exists and a WIP branch is needed: remain read-only, ask the user, or use a separately authorized worktree. Do not silently branch-switch, stash, or commit on `main`.\n\n6. **Reduce §5 checkpoint frequency.**  \n   Lines 150–162 and 203–218 mandate excessive state-only and per-file commits. “Validation produces a useful result” may have no file change and conflicts with the empty-commit ban at line 518. Commit coherent recoverable tracked changes—not every file, discovery, or validation run.\n\n7. **Reconcile validation ordering.**  \n   §6 validates before committing, while §13 lines 538–543 and 555–561 validate after committing. Define:\n   - completed commit: validate first;\n   - emergency WIP commit: may be unvalidated, clearly labeled;\n   - after either: inspect committed paths and worktree status.\n\n8. **Define synchronization precisely in §4.2 lines 117–124.**  \n   `git fetch` mutates local metadata, though not the worktree. Specify handling for failed fetch/authentication, no upstream, detached HEAD, deleted upstream, local-ahead, and divergent histories. Never pull, rebase, reset, or force; fast-forward only after confirming a clean tree and exact upstream.\n\n9. **Clarify authority in §8.**  \n   `CURRENT_STATE.md` is authoritative only for its checked-out branch/worktree. A newer issue journal may supersede a stale user-pushed state file. Require comparing branch, base hash, remote availability, and issue timestamp rather than silently trusting one source.\n\n10. **State the unavoidable cross-machine limitation as a non-guarantee.**  \n    If credits expire before an issue note or user push, cross-machine recovery is impossible. The plan can minimize this window but cannot guarantee §15 lines 590–604.\n\n11. **Reduce auto-loaded token cost.**  \n    §11 line 500 (“complete policy in `AGENTS.md`”) conflicts with §12. Keep a concise mandatory checklist in `AGENTS.md`; put uncommon divergence/recovery procedures in one linked document.\n\n## Optional Improvements\n\n- Keep `CURRENT_STATE.md` normally below 30 lines, with at most one or two recent checkpoints; Git and issues already retain history.\n- Add failure handling for unavailable GitHub, failed issue writes, failed hooks, and hooks that modify files.\n- Mark known-broken WIP commits explicitly and never place them directly on `main`.\n- Generate a user push command only after verifying the intended branch and remote; never suggest force options.\n- Offer a user-controlled `git bundle` or patch transfer as an alternative when switching machines without pushing.\n- Define “substantive handoff” as any pause after edits, decisions, blockers, or reusable research—not routine Q&A.\n\n## Specific Wording Suggestions\n\n**Before §4:**\n\n> Explicit user instructions and higher-level harness policies override this workflow. For a read-only task, do not edit files, create branches or commits, or write to GitHub. Return findings only through the permitted response channel.\n\n**Replace §2’s remote prohibition:**\n\n> Agents must not publish or mutate repository content or history by any mechanism, including `git push`, GitHub file/commit/ref APIs, remote branch or tag creation, PR merge, or update-branch operations. Only authorized GitHub issue-body and issue-comment writes are exempt.\n\n**Replace §4.2 lines 119–124:**\n\n> Fetching updates local remote-tracking metadata but does not alter the worktree or index. If fetch fails, continue only with local state and report that remote information may be stale. Fast-forward only a clean, attached branch with a verified upstream using an explicit `--ff-only` operation. If local and remote histories diverge, stop and report; never pull, rebase, reset, or force.\n\n**Replace §5.1 lines 150–164:**\n\n> Before substantial work, identify the objective, active issue, current branch, and first coherent step. Update `CURRENT_STATE.md` only when writes are permitted. Do not create a dedicated starting commit unless it contains meaningful tracked state that another session would need.\n\n**Replace §5.4 lines 203–218:**\n\n> Create a WIP commit when meaningful tracked changes form a coherent recoverable unit, before a risky or long operation, or before handing off. Research-only conclusions and validation-only results belong in the issue journal or state file and must not cause empty commits.\n\n**Add before every commit:**\n\n> Re-run `git status`, inspect unstaged and staged diffs, stage only explicitly owned paths, and inspect the complete staged diff. Never use broad staging or commit flags. If a target file contains unexplained user edits, do not commit it without user direction.\n\n**Replace §8’s heading:**\n\n> `# Current checked-out state — authoritative for this branch/worktree`\n\n**Replace §8 lines 367–381:**\n\n> At implementation time, reconstruct active issue state from the latest user-visible issue updates, `CURRENT_STATE.md`, and local/remote commit history. Do not copy a hard-coded feature snapshot from this plan.\n\n**Add to §7:**\n\n> Cross-machine continuity for code begins only after the user confirms that the relevant branch was pushed. Before that, issue notes preserve conclusions but not file contents. No agent-only workflow can remove this limitation."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-07-19T05:59:21.908Z"
+    },
+    {
+      "sessionId": "ses_08259cbb2ffeN0w8tYFEhieIjq",
+      "parentId": "ses_0961fb485ffewXRiopHAH8sUfg",
+      "title": "Verify handoff migration (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1784519472205,
+      "parts": [
+        {
+          "partId": "prt_f7da63469001s7mHpZWqqi6Irl",
+          "timeCreated": 1784519472234,
+          "text": "Fresh-context adversarial verification of completed local work in `/Users/adrian/Documents/GitHub/rpgmz-test-01`. Claimed outcome: commits `3670127`, `fa1df83`, and `a65142e` implement the user-approved simple cross-agent recovery system and docs cleanup without pushing. Verify repository state and these commits. Specifically check:\n- `plan.md` remains combat constitution and was not repurposed.\n- `AGENTS.md` is concise/canonical, source hierarchy is clear, read-only tasks write nothing, user-only pushes, dirty-worktree protection, material-only issue updates, local coherent commits, final reporting.\n- `docs/session-recovery.md` matches the simplified information model: Git changes, issue work order/durable progress, CURRENT lightweight interpretation; 5-15 lines; optional notes; safe staging; same-machine/cross-machine honesty; no remote repo writes except issue updates.\n- `CURRENT_STATE.md` is concise and matches the latest issue #14/commit 4c05f28 state.\n- root `npm run verify` exists and passes; operational hard-coded test counts are removed except historical plan.md.\n- README Player Deploy guidance is corrected.\n- `battle-flow.md` is stable reference only, with no mutable status/work plan and no stale Type B/mini-swap/hard-cut work claim; CUSTOM_SYSTEMS matches current code lifecycle.\n- unrelated `.DS_Store` remains uncommitted; no push occurred; branch/local-ahead state is reported honestly.\nRun relevant checks yourself. Do not edit, commit, push, or write GitHub. Return exactly `CONFIRMED` or `REFUTED`, followed by concise evidence and any concrete blocker."
+        },
+        {
+          "partId": "prt_f7da850b9001DtIuGKQChf31VJ",
+          "timeCreated": 1784519610553,
+          "text": "CONFIRMED\n\n- Inspected all three commits and current documentation; `plan.md` remains the combat/schema constitution.\n- `npm run verify` passed: 56/56 tests plus plugin syntax check.\n- Operational test-count search found only the frozen historical count in `plan.md`.\n- `CURRENT_STATE.md` is 12 lines and matches issue #14’s post-`4c05f28` state.\n- Recovery, staging, read-only, local-commit, user-push, issue-update, and final-reporting rules are present and consistent.\n- `battle-flow.md`, README, and CUSTOM_SYSTEMS reflect current behavior.\n- GitHub `main` remains at `992d6f9`; local `main` is `a65142e`, eight commits ahead.\n- Worktree remains unchanged with only untracked `.DS_Store`; no staged changes.\n\nBlockers: none."
+        }
+      ],
+      "verdict": "CONFIRMED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-07-20T03:51:12.205Z"
+    },
+    {
+      "sessionId": "ses_081f3cbfcffekT5V9ECMluezcZ",
+      "parentId": "ses_0961fb485ffewXRiopHAH8sUfg",
+      "title": "Audit protocol adherence (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1784526156803,
+      "parts": [
+        {
+          "partId": "prt_f7e0c34090014RAQuP57saxBxG",
+          "timeCreated": 1784526156811,
+          "text": "Read-only fresh-context audit of recent work in `/Users/adrian/Documents/GitHub/rpgmz-test-01` against `docs/session-recovery.md` and `AGENTS.md`. Determine which commits/actions occurred after `a65142e`, inspect current status/diffs, CURRENT_STATE.md, relevant GitHub issue comments, commit scope/messages, validation evidence, branch/push state, and preservation of unexplained files. Judge whether the recent Fable session adhered to: startup dirt awareness, lightweight CURRENT updates only when needed, coherent local commits, no agent push, material-only issue comment, user-owned pushes, final reporting/recoverability, and read-only behavior where applicable. Do not modify files or GitHub. Return:\n## Verdict\nADHERED / MOSTLY ADHERED / VIOLATED\n## Evidence by Rule\n## Gaps\n## Recovery Test\nCould a new agent continue now, and exact next step?"
+        }
+      ],
+      "verdict": null,
+      "verdictTextIndex": 0,
+      "note": "no parseable verdict; stored text is an echoed brief",
+      "timeCreatedISO": "2026-07-20T05:42:36.803Z"
+    },
+    {
+      "sessionId": "ses_06a1fd288ffesl14gK77cWyWv3",
+      "parentId": "ses_06d809567ffemAvqgTzLu2PyOS",
+      "title": "Verify Claude forensics (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1784925924727,
+      "parts": [
+        {
+          "partId": "prt_f95e02d7e0018bGkiFF4Tv40Ku",
+          "timeCreated": 1784925924735,
+          "text": "<task>\n  <goal>Independently verify or refute the forensic reconstruction of the interrupted Claude session and its missing cross-agent handoff.</goal>\n  <constraints>\n    <item>Read-only. Do not edit files, git state, issues, or session artifacts.</item>\n    <item>Do not expose credentials or unrelated personal data.</item>\n    <item>Use exact timestamps, paths, and code lines where possible.</item>\n  </constraints>\n  <evidence_paths>\n    <repo>/Users/adrian/Documents/GitHub/rpgmz-test-01</repo>\n    <transcript>/Users/adrian/.claude/projects/-Users-adrian-Documents-GitHub-rpgmz-test-01/a0e57653-05b5-4ea4-8399-b1bfffaed573.jsonl</transcript>\n    <scratch>/private/tmp/claude-501/-Users-adrian-Documents-GitHub-rpgmz-test-01/a0e57653-05b5-4ea4-8399-b1bfffaed573/scratchpad/v13</scratch>\n    <plugin>/Users/adrian/Documents/GitHub/rpgmz-test-01/rpgmz-test-01/js/plugins/MechBattle.js</plugin>\n  </evidence_paths>\n  <claims>\n    <claim>No repository code, commit, branch, stash, worktree, issue comment, or CURRENT_STATE update was created after commit 01c5969 for the new 2026-07-24 video analysis.</claim>\n    <claim>The new video prompt arrived at 2026-07-24T20:24:46Z; Claude probed it as 1920x1080, 60fps, 18.733s; extracted 15fps every-four-frame windows and native 60fps bursts; then stopped at 20:34:06Z on a rate-limit/spend-limit error before a final answer or handoff.</claim>\n    <claim>The transcript is about 105MB and the final analysis ran inside a huge reused session. From 20:24 onward, unique successful requests report roughly 3.73M cache-read tokens plus 2.88M cache-creation tokens and 25.3k output tokens, which plausibly exhausted the usage window.</claim>\n    <claim>Recoverable artifacts remain: original video, transcript, and scratch contact sheets nat2/nat3 and w1-w3.</claim>\n    <claim>The prior handoff misclassifies the new jolts as mainly menu-framing choice B. The recovered video analysis instead identifies abrupt billboard/cut-art handoffs at attacker arrival, defender arrival, and react-to-pullback. Code update order supports one-frame fade/overlap/swap defects around _updateBillboards, _phAttackAnim, _phReactAnim, and _endAttackAnim.</claim>\n    <claim>The process gap is that substantial video analysis was done directly in a giant primary session rather than delegated fresh, and the read-only no-checkpoint rule left no durable handoff when the hard limit hit.</claim>\n  </claims>\n  <done_criteria>Return CONFIRMED or REFUTED for each claim, with concise evidence and any corrections. Do not propose or implement fixes beyond identifying the process and recoverable technical findings.</done_criteria>\n</task>"
+        },
+        {
+          "partId": "prt_f95e4ee71001vmcazOHou4hV2b",
+          "timeCreated": 1784926236273,
+          "text": "REFUTED\n\n1. **Supported.** `HEAD` remains `01c59690238b...`; tracked and staged diffs against it are empty. Only `main` exists locally and remotely, one worktree exists, and no stash ref exists. `CURRENT_STATE.md` matches its committed blob exactly. Issue #14’s latest comment is `5071572546`, created `2026-07-24T15:32:39Z`, before the video prompt. The only untracked item is `.DS_Store`.\n\n2. **Supported.** Transcript line 3273 records the prompt at `2026-07-24T20:24:46.049Z`. Lines 3275 and 3279 show probing and 15fps extraction; line 3349 shows two native-60fps bursts. Independent `ffprobe` returned 1920×1080, 60fps, 1124 frames, `18.733333s`. Line 3372 records the final event at `20:34:06.303Z`: HTTP 429 `rate_limit`, explicitly saying the monthly spend limit was reached. No final answer or handoff follows.\n\n3. **Partially supported, with a material correction.** The transcript is 105,396,385 bytes and spans `2026-07-13T05:42:57.975Z` through `2026-07-24T20:34:06.303Z` under one session ID. Deduplicating successful requests from 20:24 onward produced exactly:\n   - 13 requests\n   - 3,731,567 cache-read tokens\n   - 2,883,217 cache-creation tokens\n   - 25,280 output tokens\n\n   However, these totals cannot establish causation. The recorded failure is specifically a **monthly spend limit**, not evidence that this analysis itself exhausted a generic usage window.\n\n4. **Supported.** The original video remains at `/Users/adrian/Movies/2026-07-24 13-18-58.mov`; the transcript remains at the supplied path. Scratch directory `.../scratchpad/v13/` contains `nat2_01.jpg`, `nat3_01.jpg`, and all three sheets for each of `w1`, `w2`, and `w3`.\n\n5. **Refuted as worded, although the recovered technical finding is supported.** The alleged “prior handoff” cannot have misclassified the new video: its latest issue comment was written at `15:32:39Z`, while the new prompt arrived at `20:24:46.049Z`, 4h52m later. It explicitly analyzes `2026-07-23 21-53-36.mov`, not the new July 24 recording.\n\n   The replacement technical diagnosis is nevertheless well supported:\n   - `w1_02`: attacker arrival shifts and briefly ghosts.\n   - `nat3_01`: defender arrival contains a one-frame double image.\n   - `nat2_01`: react art abruptly swaps before pullback.\n   - Update order runs `_updateBillboards()` before `_updatePhase()` (`MechBattle.js:2076-2089`).\n   - Attacker art becomes visible/fades after billboard processing (`3820-3851`).\n   - Defender art is enabled during react initialization after billboard processing (`4106-4118`).\n   - `_endAttackAnim()` manually reveals the billboard and then cleanup hides cut art (`4274-4298`, `4309-4324`).\n\n   These lines directly support one-frame fade, overlap, and swap seams.\n\n6. **Supported as a process reconstruction.** All post-prompt work occurred in the same long-lived primary session; no `Task`, `Agent`, or `Explore` delegation appears after the prompt. The repository’s read-only-request rule prohibited checkpoint writes, and the hard limit arrived before any durable handoff was produced."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-07-24T20:45:24.727Z"
+    },
+    {
+      "sessionId": "ses_05e7f7216ffedlFJMIqbcX0hn9",
+      "parentId": "ses_05eceba79ffeXMQRVXxi57hutm",
+      "title": "Verify artifact routing implementation (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1785120984553,
+      "parts": [
+        {
+          "partId": "prt_fa1808def001GBUg0mbU26xIiK",
+          "timeCreated": 1785120984560,
+          "text": "Adversarially verify the completed uncommitted implementation in /Users/adrian/Documents/GitHub/pilotfish-opencode. Do not edit or fix. Claimed outcome: Pilotfish now delegates repeated context-heavy artifact inspection to a new, not-resumed, role-generic read-only reconnaissance worker while keeping small work direct and primary synthesis/selective verification; evaluated Explore is eligible for accessible project-local artifacts; no role, permission, plugin, telemetry, URL/external-path access, or native-video capability was added. An authoritative all-intentional-differences upstream ledger and sanitized ongoing evaluation record were added, with release gating for Pending provenance. Static tests and both preset resolved-config checks pass.\n\nReview every changed/untracked file from git status/diff, especially templates/pilotfish/prompts/pilotfish.md, templates/pilotfish/prompts/Explore.md, templates/opencode.base.jsonc, tests/test_policy.py, docs/upstream-deviations.md, docs/artifact-routing-evaluation.md, README.md, docs/design.md, docs/research.md, docs/upstream-sync.md, RELEASING.md, and CHANGELOG.md. Try to refute:\n- The new rule will not force simple/single-artifact delegation or dilute existing dispatch brakes.\n- Fresh means a new Task child, not task-ID reuse.\n- Primary rule remains generic while Explore is an eligible tested implementation.\n- Existing access/read-only boundaries remain unchanged and denied paths do not trigger permission expansion.\n- Media claims match actual model metadata (image/PDF yes, video no) and contact sheets are examples only.\n- Evaluation evidence honestly distinguishes the ChatGPT child test from the AntiGravity direct Explore run and does not claim end-to-end success.\n- Deviation ledger is materially complete and accurate for intentional differences, sources are plausible, Pending handling is releasable, and tests will still pass after replacing Pending.\n- Tests are meaningful and not internally contradictory.\n\nRun focused checks as useful, including python3 -m unittest discover -s tests -v and git diff --check. Return exactly `CONFIRMED` if no material defect remains, otherwise `REFUTED` with concrete evidence and smallest required corrections."
+        },
+        {
+          "partId": "prt_fa18493020017unvU0y5kW2j4O",
+          "timeCreated": 1785121248002,
+          "text": "CONFIRMED"
+        }
+      ],
+      "verdict": "CONFIRMED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-07-27T02:56:24.553Z"
+    },
+    {
+      "sessionId": "ses_05e639cd3ffeCAgoK4tTYclIoq",
+      "parentId": "ses_05e8869f6ffe2pSoKAev5nUQ0R",
+      "title": "Verify issue 14 plan facts (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1785122808620,
+      "parts": [
+        {
+          "partId": "prt_fa19c63320013qSxuksemBCkoU",
+          "timeCreated": 1785122808627,
+          "text": "Read-only adversarial verification. Check the following proposed CURRENT-state claims against HEAD c5003ba and the authoritative final #14 comment 5086471706. Do not fix anything.\nClaims:\n1) Historical A footprint leak must be excluded from the plan.\n2) B is active because playerAction uses centered ~0.42 `_camFocusCell`, weaponSelect uses right-side 0.56 `_showFocusArt`; user chose right-side continuity. Focus feet at 0.78H overlap the bottom dialogue window and should be constrained above its top. No feet bracket should be added. The existing weapon mount marker must remain because it is unrelated.\n3) C is active because `_endAttackAnim`/`_cutCleanup` releases subject-only suppression before `_afterAttackAnim` holds the camera on defender; neighbors then fade in during zoomed settle.\n4) D is active because floor source is downsampled with smoothing to 256 and default linear sampling; mesh geometry resolution is not the primary cause.\n5) E is active because old per-strip far-depth tint vanished in the single-mesh rewrite; solution must preserve one mesh and floor rigidity.\n6) F is unresolved: no explicit battle-entry fade, green is likely prior Map001/loading frame; reproduce before selecting implementation.\n7) Optional DOF is new user-requested scope: in-game Options, default off, blur only supporting mechs in menu/inspect focus, not cuts/subject/UI/floor; integrate after OptionEx without editing generated plugins.js.\nReturn CONFIRMED or REFUTED per claim with exact file/line evidence and flag any plan-risk or incorrect assumption."
+        }
+      ],
+      "verdict": null,
+      "verdictTextIndex": 0,
+      "note": "no parseable verdict; stored text is an echoed brief",
+      "timeCreatedISO": "2026-07-27T03:26:48.620Z"
+    },
+    {
+      "sessionId": "ses_05e37cfa2ffe0p96PHzXf95UrL",
+      "parentId": "ses_05eceba79ffeXMQRVXxi57hutm",
+      "title": "Verify lifecycle instruction alignment (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1785125679197,
+      "parts": [
+        {
+          "partId": "prt_fa1c83064001JIjJjTnkNy1Va1",
+          "timeCreated": 1785125679205,
+          "text": "Adversarially verify the uncommitted update/uninstall instruction alignment in /Users/adrian/Documents/GitHub/pilotfish-opencode. Do not edit. Claimed outcome: README, local walkthrough, and install runbook now align with current upstream trunk's simple idempotent update and target-reversal uninstall UX while preserving OpenCode-specific key-level restoration, layered config checks, customizations, approval, backups, rollback, and state-last semantics. No install-state schema, role, model, permission, VERSION, UPSTREAM_VERSION, template, or global installed config changed.\n\nReview git diff and all changed files: install/OPENCODE-INSTALL.md, README.md, docs/local-install.md, docs/upstream-sync.md, docs/upstream-deviations.md, CHANGELOG.md, tests/test_policy.py. Try to refute:\n- Same-version update stops with no writes and no preset prompt.\n- Real updates use the recorded preset by default, skip identical content, and do not overwrite custom agents/prompts without shown diff and approval.\n- Existing first-install restoration maps are never replaced; first-touch migration/state-last/rollback remain intact.\n- Preserved custom agent values are represented consistently in installedAgents without inventing prompt hashes.\n- Uninstall has read-only inspection, one approval plan, backup before writes, agent removal/restoration before prompt handling, validation rollback before state cleanup, unrelated config preservation, retained backups, and no automatic config deletion.\n- Missing state cannot reconstruct overwritten pre-install values and does not invite unsafe inference.\n- User-facing README instructions are practical, pinned/same-ref, and match the runbook.\n- Upstream source provenance is reproducible without falsely advancing UPSTREAM_VERSION or claiming full sync.\n- Tests meaningfully protect these contracts and have no contradictory release/Pending requirement.\n\nRun `python3 -m unittest discover -s tests -v` and `git diff --check`. Return exactly `CONFIRMED` if no material defect remains; otherwise `REFUTED` with concrete evidence and smallest corrections."
+        },
+        {
+          "partId": "prt_fa1cac1fa00195KXiz9bY1VPrf",
+          "timeCreated": 1785125847546,
+          "text": "CONFIRMED\n\n- `python3 -m unittest discover -s tests -v`: all 16 tests passed.\n- `git diff --check`: clean.\n- Inspected all seven changed files and full diff; no other tracked/untracked changes found.\n- Confirmed `VERSION`, `UPSTREAM_VERSION`, templates, roles, models, permissions, and installed-config artifacts are unchanged.\n- Verified update/uninstall ordering, restoration, approval, backup, rollback, and state-last contracts.\n- Confirmed upstream `main` installer currently has documented blob SHA `f10f9f332fd22d4487f7d29c2f7b084d4579385b`; provenance does not claim a full sync or advance the baseline."
+        }
+      ],
+      "verdict": "CONFIRMED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-07-27T04:14:39.197Z"
+    },
+    {
+      "sessionId": "ses_0419009bdffeFkARJDeVMEoSB8",
+      "parentId": "ses_05e025416ffe243S4FhHqlUJDX",
+      "title": "Verify Pilotfish runtime (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1785606436418,
+      "parts": [
+        {
+          "partId": "prt_fbe6ff64f001YjzodqKkv8jypG",
+          "timeCreated": 1785606436433,
+          "text": "Independently verify the completed Pilotfish OpenCode update after restart. Claimed outcome: the global managed installation at /Users/adrian/.config/opencode is version 0.1.0 using the chatgpt preset from checkout /Users/adrian/Documents/GitHub/pilotfish-opencode; all nine agents resolve with intended models, variants, permissions, and prompts; install-state matches config; OpenCode config is valid. Do not edit anything. Run focused checks from the neutral directory /var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/opencode with OPENCODE_DISABLE_PROJECT_CONFIG=1, inspect only Pilotfish-relevant config/state without exposing credentials, and return exactly CONFIRMED or REFUTED with evidence."
+        },
+        {
+          "partId": "prt_fbe72c9eb001SrBPZxiHGY7I47",
+          "timeCreated": 1785606621675,
+          "text": "CONFIRMED\n\n- OpenCode `1.18.10`; `debug config` succeeded with project config disabled.\n- Version `0.1.0`, `chatgpt` preset, nine agent definitions, nine prompts, config, and install-state exactly match the checkout templates.\n- All nine runtime agents resolved with intended models, variants, modes, expanded prompts, and permission boundaries.\n- Required OpenAI models are available.\n- No conflicting global Pilotfish agent definitions found.\n- All 16 policy tests passed.\n- Checks ran from the neutral directory with `OPENCODE_DISABLE_PROJECT_CONFIG=1`; no credentials were exposed."
+        }
+      ],
+      "verdict": "CONFIRMED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-01T17:47:16.418Z"
+    },
+    {
+      "sessionId": "ses_041866f6fffebiShgkU68iYi4Y",
+      "parentId": "ses_04c3c6f2cffe2nLyluprWNGd1h",
+      "title": "Verify worktree workflow changes (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1785607065744,
+      "parts": [
+        {
+          "partId": "prt_fbe799097001nBWrmPHfrWLUDm",
+          "timeCreated": 1785607065752,
+          "text": "<verification_contract>\n  <phase>Verification</phase>\n  <repository>/Users/adrian/Documents/GitHub/rpgmz-test-01</repository>\n  <claim>Main now contains documented branch/worktree isolation rules, CURRENT_STATE.md is a neutral integration template, issue #14 retains its populated CURRENT_STATE.md in /Users/adrian/Documents/GitHub/rpgmz-test-01-issue-14 on branch issue-14, and tools/serve-mz.js supports --issue N as port 18000+N plus --port PORT with port-specific screenshot filenames.</claim>\n  <relevant_paths>\n    <path>AGENTS.md</path>\n    <path>CURRENT_STATE.md</path>\n    <path>docs/session-recovery.md</path>\n    <path>tools/serve-mz.js</path>\n    <path>/Users/adrian/Documents/GitHub/rpgmz-test-01-issue-14/CURRENT_STATE.md</path>\n  </relevant_paths>\n  <commits>\n    <main>e2eeb4f</main>\n    <issue_14>c1340db</issue_14>\n  </commits>\n  <already_run>\n    <check>npm run verify: 56/56 passed and plugin syntax clean</check>\n    <check>node --check tools/serve-mz.js</check>\n    <check>live child-process test: --issue 20 listened on 18020 and wrote mz-live-shot-18020.png</check>\n    <check>conflicting --issue and --port options rejected</check>\n  </already_run>\n  <instructions>Independently inspect and attempt to refute the claim. Check git branch/worktree state, both CURRENT_STATE copies, documentation consistency, argument handling, and focused executable behavior. Do not edit files. Return only CONFIRMED or REFUTED followed by concise evidence.</instructions>\n</verification_contract>"
+        },
+        {
+          "partId": "prt_fbe7add27001AnoXXCLeK9xuSG",
+          "timeCreated": 1785607150887,
+          "text": "REFUTED — `node tools/serve-mz.js --port 8137` writes `$TMPDIR/mz-live-shot.png`, not the documented port-specific `$TMPDIR/mz-live-shot-8137.png`. `tools/serve-mz.js:54-57` selects filenames solely by numeric port, contradicting `AGENTS.md:183-185`, which promises port-specific names for explicit ports. Other checks passed: clean expected branches/commits, isolated CURRENT_STATE copies, 56/56 tests, syntax check, issue/custom-port behavior, and invalid-option rejection."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-01T17:57:45.744Z"
+    },
+    {
+      "sessionId": "ses_04183e2a9ffetWUbBDluoTwn0k",
+      "parentId": "ses_04c3c6f2cffe2nLyluprWNGd1h",
+      "title": "Reverify worktree workflow changes (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1785607232854,
+      "parts": [
+        {
+          "partId": "prt_fbe7c1d5f001lDKNJ7jt2FjHcA",
+          "timeCreated": 1785607232865,
+          "text": "<verification_contract>\n  <phase>Verification</phase>\n  <repository>/Users/adrian/Documents/GitHub/rpgmz-test-01</repository>\n  <claim>Main at 7d0af9c contains documented branch/worktree isolation rules, CURRENT_STATE.md is a neutral integration template, issue #14 retains its populated 231-line CURRENT_STATE.md in /Users/adrian/Documents/GitHub/rpgmz-test-01-issue-14 on branch issue-14 at c1340db, and tools/serve-mz.js supports --issue N as port 18000+N plus --port PORT. Any explicit port or issue invocation writes mz-live-shot-PORT.png; invocation without arguments preserves legacy mz-live-shot.png.</claim>\n  <relevant_paths>\n    <path>AGENTS.md</path>\n    <path>CURRENT_STATE.md</path>\n    <path>docs/session-recovery.md</path>\n    <path>tools/serve-mz.js</path>\n    <path>/Users/adrian/Documents/GitHub/rpgmz-test-01-issue-14/CURRENT_STATE.md</path>\n  </relevant_paths>\n  <already_run>\n    <check>npm run verify: 56/56 passed and plugin syntax clean</check>\n    <check>node --check tools/serve-mz.js</check>\n    <check>--issue 20 listened on 18020 and wrote mz-live-shot-18020.png</check>\n    <check>--port 8137 wrote mz-live-shot-8137.png while no arguments wrote legacy mz-live-shot.png</check>\n    <check>conflicting --issue and --port options rejected</check>\n  </already_run>\n  <instructions>Independently inspect and attempt to refute the full claim. Do not edit files. Return only CONFIRMED or REFUTED followed by concise evidence.</instructions>\n</verification_contract>"
+        },
+        {
+          "partId": "prt_fbe7d6fc0001ukWeGolpM1V4fY",
+          "timeCreated": 1785607319488,
+          "text": "CONFIRMED — `main` is clean at `7d0af9c`; isolation rules and neutral 8-line integration template are present. Issue-14 worktree is clean on `issue-14` at `c1340db`, with its committed 231-line populated state preserved. `npm run verify` passed 56/56 and syntax checks passed. Runtime POST tests confirmed `--issue 14003`→port 32003, explicit `--port 8137`→`mz-live-shot-8137.png`, and no arguments→legacy `mz-live-shot.png`. Invalid, conflicting, and out-of-range arguments were rejected."
+        }
+      ],
+      "verdict": "CONFIRMED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-01T18:00:32.854Z"
+    },
+    {
+      "sessionId": "ses_041819e50ffeu55Wa2m4Xbr14V",
+      "parentId": "ses_04c3c6f2cffe2nLyluprWNGd1h",
+      "title": "Verify final parallel setup (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1785607381423,
+      "parts": [
+        {
+          "partId": "prt_fbe7e61b6001ZbPbrTHZYMq5YZ",
+          "timeCreated": 1785607381431,
+          "text": "<verification_contract>\n  <phase>Verification</phase>\n  <repository>/Users/adrian/Documents/GitHub/rpgmz-test-01</repository>\n  <claim>The final setup is usable for parallel work: the primary worktree is clean on main at 7d0af9c with neutral CURRENT_STATE.md and workflow/server changes; a clean sibling worktree exists at /Users/adrian/Documents/GitHub/rpgmz-test-01-issue-14 on issue-14 at merge commit 9969e96, retaining the populated issue #14 CURRENT_STATE.md while also containing the new workflow rules and server behavior. Server option and screenshot behavior are consistent with documentation.</claim>\n  <relevant_paths>\n    <path>/Users/adrian/Documents/GitHub/rpgmz-test-01</path>\n    <path>/Users/adrian/Documents/GitHub/rpgmz-test-01-issue-14</path>\n  </relevant_paths>\n  <already_run>\n    <check>npm run verify on main: 56/56 passed and plugin syntax clean</check>\n    <check>server runtime tests covered issue port, explicit 8137 screenshot suffix, legacy default filename, conflicting options</check>\n    <check>node --check tools/serve-mz.js passed in issue-14 worktree</check>\n  </already_run>\n  <instructions>Independently inspect and attempt to refute all stated outcomes, including both worktree cleanliness, branch identity, commit ancestry, CURRENT_STATE separation, presence of rules on issue-14, and server behavior/docs consistency. Do not edit files. Return only CONFIRMED or REFUTED followed by concise evidence.</instructions>\n</verification_contract>"
+        },
+        {
+          "partId": "prt_fbe805ae6001C1KcZZ4nePiZ6F",
+          "timeCreated": 1785607510758,
+          "text": "CONFIRMED\n\n- Both worktrees are clean with exact branches/HEADs: `main` at `7d0af9c`, `issue-14` at `9969e96`.\n- `9969e96` has two parents, including `7d0af9c`; only `CURRENT_STATE.md` differs from main.\n- Issue-14’s populated CURRENT blob exactly matches its pre-merge version; main has the neutral template.\n- Workflow docs and `tools/serve-mz.js` are identical across worktrees.\n- `npm run verify`: 56/56 passed; plugin syntax clean. Issue-14 server syntax also passed.\n- Runtime checks confirmed `--issue 14` → port 18014, explicit `--port 8137` uses `mz-live-shot-8137.png`, default uses legacy `mz-live-shot.png`, POSTed PNG bytes were exact, and invalid/conflicting options exited with errors.\n- Final status recheck remained clean in both worktrees."
+        }
+      ],
+      "verdict": "CONFIRMED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-01T18:03:01.423Z"
+    },
+    {
+      "sessionId": "ses_02c08ade6ffeunysVK9rFT3h2W",
+      "parentId": "ses_04127969affeVa80GPQR4IWYh4",
+      "title": "Verify presentation implementation (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01-issue-14",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1785967628825,
+      "parts": [
+        {
+          "partId": "prt_fd3f7521e001iRjKuWGZ4U7pEz",
+          "timeCreated": 1785967628831,
+          "text": "Verification phase, fresh context. Attempt to refute the uncommitted Issue #14 implementation in /Users/adrian/Documents/GitHub/rpgmz-test-01-issue-14. User outcome: replace awkward extreme-perspective 6v6 formation with Zoids Saga DS-like compact three ranks, up to two paired units per rank, subtle scale depth (identical-art near/far <=1.35), consistent spacing, no tiny isolated far mechs or giant clumped near mechs, clear center lane. Also implement alpha-visible bounds and optional fieldScale without breaking cuts/handoffs/mounts. Intro lattice is intentionally deferred.\n\nInspect git diff and relevant code. Run focused checks as useful. Specifically test/review: pure helper correctness; inline parity; fieldScale parser/composition; bitmap load/error lifecycle; visible anchors under flips; all call sites; reticles; melee culling; kill pillar; focus/cut/settle registration; camera clamp and field background invariants after CAM_H/horizon changes; whether the claimed layout ratio and positions are actually meaningful; and any soft-lock/null crashes. Existing .DS_Store dirt is user-owned. Return CONFIRMED or REFUTED first, then severity-ordered concrete evidence with exact lines/symbols and commands. Do not edit or fix."
+        },
+        {
+          "partId": "prt_fd40a5e79001ieRksEFOZhWxw6",
+          "timeCreated": 1785968877177,
+          "text": "REFUTED\n\n### High — camera clamp breaks close framing and cut→settle handoffs\n\nAt 1280×720:\n\n- `_camFocusCell()` targets feet at `0.68H = 489.6` (`MechBattle.js:2589-2604`).\n- `_clampCamTarget()` limits the horizon to `-0.25H = -180` (`:2561-2574`).\n- The dialogue box begins at `720 - 188 = 532` (`:1150`, `:1966`).\n- With the new `CAM_H = 450` (`:1182`), a normal `fieldScale: 1` unit in near-rank cell 2 lands at **y=542**, behind the dialogue box.\n- Accepted `fieldScale: 0.75` (`:588-605`) puts feet at **586–618** across all ranks.\n- Attack cuts correctly land at y=504, but `_afterAttackAnim()` switches to `_camFocusCell()` for the settle (`:5559`), causing an **82–114px downward handoff jump** for `fieldScale: 0.75`.\n\nReproduction output:\n\n```text\nfieldScale=1.00 cell=2 requestedH=-232.4 clampedH=-180.0 menuFeet=542.0 cutFeet=504.0 handoffDelta=+38.0 boxTop=532\nfieldScale=0.75 cell=0 ... menuFeet=618.4 cutFeet=504.0 handoffDelta=+114.4\nfieldScale=0.75 cell=1 ... menuFeet=599.9 cutFeet=504.0 handoffDelta=+95.9\nfieldScale=0.75 cell=2 ... menuFeet=586.2 cutFeet=504.0 handoffDelta=+82.2\n```\n\nThis contradicts the claimed preserved cut/settle registration and optional `fieldScale` behavior.\n\n### Other checks\n\n- `npm run verify`: **60/60 passed**\n- `node --check rpgmz-test-01/js/plugins/MechBattle.js`: passed\n- `git diff --check`: passed\n- Pure alpha-bound, anchor, signed-flip mount helpers passed focused probes; inline implementations match `src/PresentationModel.js`.\n- Real-art layout calculation produced:\n  - identical-art near/far ratio: **1.3416**\n  - center-lane visible gap: **442.3px**\n  - worst same-team overlap: **24.9%**\n  \nThus the neutral field formation itself meets the stated ratio/lane constraints, but close-camera behavior is materially regressed."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-05T22:07:08.825Z"
+    },
+    {
+      "sessionId": "ses_02b28552cffeQTZvsXO30JVq5f",
+      "parentId": "ses_0413da33bffe17y7hsKKdbhCXu",
+      "title": "Verify issue 11 outcome (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1785982331604,
+      "parts": [
+        {
+          "partId": "prt_fd4d7aade0016oZ4cmAf8iau0d",
+          "timeCreated": 1785982331615,
+          "text": "Fresh-context outcome verification. Work read-only in `/Users/adrian/Documents/GitHub/rpgmz-test-01-issue-11` on branch `issue-11`. Do not edit, commit, or fix. Attempt to refute the implementation. Return only `CONFIRMED` or `REFUTED`, followed by concise concrete evidence if refuted.\n\nClaimed outcome: Issue #11 now implements unified Equipment. Built-In `innate1-4` accepts permanent Weapons/Devices; shared Optional `slot1-4` accepts removable Weapons/Devices/Upgrades; factory defaults remain removable; no separate Parts tab. Strict `<mechUpgrade>` and `<mechDevice>` Armor parsing, typed refs, legacy numeric save migration, Upgrade composition before pilots, mixed Equipment UI/inventory economy, Device battle command/self buffs/EN/duration, and deterministic no-RNG Device AI are implemented. Generated DB has Light/Heavy/EN Upgrades, E-Shield/Booster Devices, Liger built-in E-Shield, Rev Raptor removable factory Light Plating. Docs are updated.\n\nRelevant diff paths:\n- `src/EquipmentSystem.js`, `src/AIController.js`\n- `test/equipment.js`, `test/phase0.js`, `package.json`\n- `rpgmz-test-01/js/plugins/MechBattle.js`\n- `tools/setup-database.js`\n- generated `rpgmz-test-01/data/{Armors,Enemies,System,Troops}.json`\n- `plan.md`, `README.md`, `.claude/{CUSTOM_SYSTEMS,PROJECT_NOTES,FUTURE_AGENT_GUIDE}.md`, `CURRENT_STATE.md`\n\nRequired checks:\n1. Verify worktree/branch/status and inspect the actual diff, especially plugin-vs-pure helper/AI parity.\n2. Run `npm run verify`, `node --check tools/setup-database.js`, and `git diff --check`.\n3. Check strict parsing, typed ref/storage migration/no-backfill/idempotence, compatibility matrix, factory defaults, Upgrade composition/clamps/order, inventory gain/lose object resolution, Built-In nonselectability, all five unit-action handlers, Device affordability/replacement/duration-1 next-initiative behavior, Deck-vs-Device source replacement, and enemy Device RNG preservation.\n4. Inspect generated JSON against setup source and ensure only intended generated DB semantics changed.\n5. Check docs do not still present the old separate `partSlots`/Parts-tab/current four-action model.\n6. Treat missing user visual playtest as expected; verify implementation readiness, not subjective UI signoff.\n\nPrimary-session runtime evidence already obtained in headless Chrome using issue server: New Game grants Armor 1/5; Liger composed E-Shield+optional Booster; Rev Raptor armor became 10 from factory Light Plating; action commands were attack/device/skill/item/wait; Booster consumed 3 EN and duration-1 survived one tick then expired; Scene_Equipment offered weapon/upgrade/device, swapped Device->Upgrade with correct inventory return/consume; legacy numeric slot migrated to typed Weapon without backfilling slot2. Independently inspect code/tests rather than trusting this evidence."
+        },
+        {
+          "partId": "prt_fd4da0ec0001JpPM20fedBfIoi",
+          "timeCreated": 1785982488256,
+          "text": "REFUTED — `.claude/PROJECT_NOTES.md:90-93,131-133` still says the Equipment fixtures are pending regeneration and the checked-in Armors DB predates them, but `data/Armors.json` already contains all five generated Upgrades/Devices. Documentation therefore contradicts the implemented database state."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-06T02:12:11.604Z"
+    },
+    {
+      "sessionId": "ses_02b252d0fffeN73BrpQZIlCmoZ",
+      "parentId": "ses_0413da33bffe17y7hsKKdbhCXu",
+      "title": "Reverify issue 11 (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1785982538480,
+      "parts": [
+        {
+          "partId": "prt_fd4dad2f5001gSX8ogLCEWD0Em",
+          "timeCreated": 1785982538486,
+          "text": "Fresh-context final outcome verification after a documentation correction. Read-only in `/Users/adrian/Documents/GitHub/rpgmz-test-01-issue-11`, branch `issue-11`; do not edit/commit. Return only `CONFIRMED` or `REFUTED` with concise concrete failure evidence.\n\nClaim: issue #11 unified Equipment implementation is complete and ready for user playtest. Weapon=attack, Device=active self-buff, Upgrade=passive. Built-In innate1-4 allows permanent Weapons/Devices; shared Optional slot1-4 allows removable Weapons/Devices/Upgrades; typed refs and legacy numeric migration; strict tags; composition; generalized existing Equipment UI and inventory economy; Device command/duration/EN and deterministic no-RNG enemy AI; generated DB fixtures; docs aligned. User visual playtest is intentionally still pending.\n\nInspect actual diff and rerun `npm run verify`, `node --check tools/setup-database.js`, `git diff --check`. Check plugin/source parity, migration/no-backfill, inventory object resolution, Device timing/Deck replacement/RNG, generated JSON, and stale docs. Prior verifier found PROJECT_NOTES falsely said regen pending; that text was corrected, so ensure no equivalent contradiction remains.\n\nRuntime evidence from primary headless Chrome smoke: boot to Scene_Title with no game error; New Game grants Armor 1/5; Liger composed E-Shield plus optional Booster; Raptor factory Upgrade yielded armor 10; action list and handlers are attack/device/skill/item/wait; Booster cost 3 EN and duration-1 survived one tick then expired; Scene_Equipment offered weapon/upgrade/device, Built-In disabled, Optional enabled, swapped Device->Upgrade with correct inventory consume/return; plugin migrated legacy numeric slot to typed Weapon without slot backfill; battle scene initialized."
+        },
+        {
+          "partId": "prt_fd4dd857d001t07CVvM1F7Nhek",
+          "timeCreated": 1785982715261,
+          "text": "REFUTED\n\n- Strict-tag bypass: an Armor note containing one valid `<mechUpgrade>` block followed by a second unclosed `<mechUpgrade>` is silently accepted; `strictNoteTagBody()` returns the first body instead of failing. Breaks at `MechBattle.js:561-569`, where missing-close detection only runs when zero complete matches exist.\n- Stale documentation remains: `.claude/CUSTOM_SYSTEMS.md:327` directs agents to `weaponFitsSlot`, a deleted function replaced by `equipmentFitsSlot`."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-06T02:15:38.480Z"
+    },
+    {
+      "sessionId": "ses_02abd1a97ffe7qZGAqFdINuIZ8",
+      "parentId": "ses_04127969affeVa80GPQR4IWYh4",
+      "title": "Reverify DS formation (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01-issue-14",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1785989358952,
+      "parts": [
+        {
+          "partId": "prt_fd542e56d001jGK4Z36tIzT4dY",
+          "timeCreated": 1785989358958,
+          "text": "Fresh verification after fixes. Attempt to refute the current uncommitted Issue #14 implementation in /Users/adrian/Documents/GitHub/rpgmz-test-01-issue-14. Prior refutation was CAM_H close-framing regression and 24.9% mixed overlap. Verify outcomes now:\n- compact Zoids Saga DS-like three-rank/two-unit formation, centers .21/.79, center lane >=15%, near/far identical-art <=1.35, mixed same-party overlap <15%, no isolated units;\n- fieldScale .75/1/1.25 every cell keeps menu/settle feet above dialogue UI, no downward cut-to-settle jump, clamp remains -0.25H;\n- visible alpha bounds/anchors/mount flips; async bitmap errors do not soft-lock;\n- reticles, melee culling, kill-pillar geometry, _placeWorldArt null handling;\n- no combat/mirroring/attack grammar regression;\n- automated probe fidelity to actual plugin constants/formulas/current art.\nRun npm run verify and any focused probes. Return CONFIRMED or REFUTED first, severity findings with exact evidence. Do not edit."
+        },
+        {
+          "partId": "prt_fd5490d4e0013GYqDDYxAX0HUW",
+          "timeCreated": 1785989762382,
+          "text": "REFUTED\n\n- **HIGH — the approved enemy-introduction lattice is entirely absent.**\n  - Reproduce: start the `Y` 6v6 battle and wait past `AT(48)` in `enemyIntro`.\n  - Expected per Issue #14’s approved plan: six projected enemy plates with rail/cross-links, a pulsing declared cell, and the player party dimmed.\n  - Actual:\n    - `_phEnemyIntro()` only sets a normal cursor highlight (`MechBattle.js:4863-4865`).\n    - Reticle drawing is restricted to `playerTarget`/`itemTarget` (`:3216-3218`), so the intro highlight is not drawn.\n    - No intro-cue/lattice layer or symbols exist.\n    - `_updateBillboards()` has no `enemyIntro` opacity branch; both parties remain at opacity 255 (`:3314`).\n  - Focused source probe observed:\n    - `intro sets cursor highlight: true`\n    - `reticle phase gate: playerTarget || itemTarget`\n    - `dedicated intro cue/lattice symbols: 0`\n    - `enemyIntro opacity branch: false`\n\nOther verification:\n- `npm run verify`: passed, 60/60.\n- Presentation probe: center lane 29.4%, worst overlap player 13.2%/enemy 10.9%, near/far 1.342, all fieldScale feet checks passed.\n- Independent AppKit alpha scans matched the probe’s current-art aspect ratios.\n- Extracted plugin constants matched the probe: CAM_H 450, FRAMING_CAM_H 200, ROW_GAP 1.25, RANK_DRIFT 0.68, ROW_DZ 0, MECH_WORLD_H 78, centers .21/.79, horizon −0.25H."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-06T04:09:18.952Z"
+    },
+    {
+      "sessionId": "ses_02aaf2b84ffe4a3W8cGStmz202",
+      "parentId": "ses_04127969affeVa80GPQR4IWYh4",
+      "title": "Final verify issue 14 (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01-issue-14",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1785990272123,
+      "parts": [
+        {
+          "partId": "prt_fd550d489001Pnnpj3DutTbRge",
+          "timeCreated": 1785990272140,
+          "text": "Final fresh-context verification. Attempt to refute the complete uncommitted Issue #14 implementation in /Users/adrian/Documents/GitHub/rpgmz-test-01-issue-14. Outcome contract:\n- Zoids Saga DS-like compact paired three-rank 6v6 layout; centers .21/.79, center lane >=15%, identical-art near/far <=1.35, mixed overlap <15%, no tiny isolated far unit/giant clump.\n- Alpha-visible bounds and optional <zoid> fieldScale .75..1.25 correctly propagate through billboards, focuses/cuts/handoffs, mount flips, reticles, melee culling, and kill pillars; malformed values/art fail with identity and do not silently hang.\n- All cells/scales keep settle feet above UI and no downward cut-to-settle jump; -0.25H clamp retained; settled attack grammar/combat/mirroring unchanged.\n- EnemyIntro has dedicated floor-projected lattice under units, actual declared cell pulse, player dim, same synchronous cleanup for natural and all skip timings, targeting reticles untouched.\n- Docs/schema/handoff and generator support are accurate; data files were not regenerated.\n- Existing .DS_Store modification is preserved user dirt.\n\nRun npm run verify, diff checks, inspect relevant code and probes for fidelity rather than trusting them. Consider live evidence from primary session: fresh browser reached enemyIntro with active cell 4, 4,963 cue alpha pixels, player opacities all 85, enemies all 255, no error; natural completion reached teamChoice with cue null/hidden and all player opacities 255.\n\nReturn CONFIRMED or REFUTED first, then concise evidence/findings. Do not edit."
+        },
+        {
+          "partId": "prt_fd5558308001oBqpVWdjPwADid",
+          "timeCreated": 1785990578952,
+          "text": "CONFIRMED\n\n- Ran `npm run verify`: 60/60 tests, layout/scale probe, intro lifecycle probe, and plugin syntax check passed.\n- Independently measured alpha-visible bounds for all eight battler images via FFmpeg; ratios match the probe. Observed 29.4% center lane, 1.342 near/far ratio, and worst overlap 13.2%.\n- Inspected propagation through billboards, cuts/handoffs, mounts/flips, reticles, melee culling, and kill pillars. Invalid `fieldScale` and transparent/failed art paths fail loudly with identifying context.\n- Confirmed all cells at scales 0.75/1/1.25 settle above UI without downward cut-to-settle movement; `-0.25H` clamp remains.\n- Confirmed intro lattice layering, actual-cell pulse, player dimming, and shared synchronous natural/skip cleanup. Supplied live evidence corroborates runtime behavior.\n- Docs/schema/generator changes agree. `rpgmz-test-01/data` has no diff.\n- `.DS_Store` remains modified and otherwise untouched as existing dirt.\n- `git diff --check` and syntax checks for all new scripts passed."
+        }
+      ],
+      "verdict": "CONFIRMED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-06T04:24:32.123Z"
+    },
+    {
+      "sessionId": "ses_0281e8676ffeJEwTZ0VMAoE1Ht",
+      "parentId": "ses_02833c66dffeY4EYJM4WpYXFa9",
+      "title": "Verify battlefield spacing fix (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01-issue-14",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786033305993,
+      "parts": [
+        {
+          "partId": "prt_fd7e1798f00102xBBYgCdPRyFz",
+          "timeCreated": 1786033306000,
+          "text": "Verification phase. Attempt to refute this completed claim in the existing issue-14 worktree without editing files: the latest changes broaden the 6v6 battlefield, eliminate the uneven visible row spacing caused by perspective, preserve the center lane and close/cut framing, and do not regress the existing alpha-bounds/intro-cue work. Relevant changed paths for this follow-up are `rpgmz-test-01/js/plugins/MechBattle.js`, `tools/presentation-probe.js`, `.claude/CUSTOM_SYSTEMS.md`, and `CURRENT_STATE.md`; they sit atop an already-dirty but understood issue-14 implementation. Inspect the current diff, run the narrow reliable checks (at minimum `npm run verify` and `git diff --check`), and independently assess the live evidence at `/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/opencode/mz-layout-after.png` if accessible. Key claimed metrics: center lane 24.3% W, mixed-roster overlap 0%, visible rank clearances 9.0/10.1px, paired-cell gaps 192.5px, near/far ratio 1.392; all 12 live silhouettes inside the play area. Return only `CONFIRMED` or `REFUTED`, followed by concise evidence. Do not edit, commit, or comment on GitHub."
+        }
+      ],
+      "verdict": null,
+      "verdictTextIndex": 0,
+      "note": "no parseable verdict; stored text is an echoed brief",
+      "timeCreatedISO": "2026-08-06T16:21:45.993Z"
+    },
+    {
+      "sessionId": "ses_022d137f8ffe3BPPnCv58dWNpZ",
+      "parentId": "ses_02833c66dffeY4EYJM4WpYXFa9",
+      "title": "Verify battlefield spacing fix (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01-issue-14",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786122258440,
+      "parts": [
+        {
+          "partId": "prt_fdd2ec80f001hBC9phmp2LsvbS",
+          "timeCreated": 1786122258449,
+          "text": "Verification phase. Attempt to refute this completed claim in the existing issue-14 worktree without editing files: the latest changes broaden the 6v6 battlefield, eliminate the uneven visible row spacing caused by perspective, preserve the center lane and close/cut framing, and do not regress the existing alpha-bounds/intro-cue work. Relevant follow-up paths are `rpgmz-test-01/js/plugins/MechBattle.js`, `tools/presentation-probe.js`, `.claude/CUSTOM_SYSTEMS.md`, and `CURRENT_STATE.md`; they sit atop an already-dirty but understood issue-14 implementation. Inspect the current diff, run at minimum `npm run verify` and `git diff --check`, and independently assess `/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/opencode/mz-layout-after.png` if accessible. Claimed metrics: center lane 24.3% W, mixed-roster overlap 0%, visible rank clearances 9.0/10.1px, paired-cell gaps 192.5px, near/far ratio 1.392; all 12 live silhouettes inside the play area. Return only `CONFIRMED` or `REFUTED`, followed by concise evidence. Do not edit, commit, or comment on GitHub."
+        },
+        {
+          "partId": "prt_fdd34c2d4001wxzX9gUM49Pr45",
+          "timeCreated": 1786122650325,
+          "text": "CONFIRMED\n\n- `npm run verify`: 60/60 tests passed, both presentation probes passed, plugin syntax valid.\n- `git diff --check`: clean.\n- Independent reconstruction confirmed: center lane 24.23%, overlap 0%, rank clearances 8.98/10.13px, pair gaps 192.5px, near/far ratio 1.3916.\n- Pixel inspection of `mz-layout-after.png` found all 12 silhouettes separated and within the play area.\n- Close/menu feet remain 489.6px and cut feet 504px across cells/scales; alpha-bound and intro cleanup paths remain covered and passing."
+        }
+      ],
+      "verdict": "CONFIRMED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-07T17:04:18.440Z"
+    },
+    {
+      "sessionId": "ses_022bb8f83ffegq1CbYlLIIPQ3d",
+      "parentId": "ses_022c38e0dffe9ao5bYqMeLa15M",
+      "title": "Verify intro materialization (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01-issue-14",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786123677820,
+      "parts": [
+        {
+          "partId": "prt_fdd447084001TX50qOgADD0l5R",
+          "timeCreated": 1786123677830,
+          "text": "Verification phase. Fresh-context adversarially verify this claimed outcome in /Users/adrian/Documents/GitHub/rpgmz-test-01-issue-14 on branch issue-14: the enemy intro no longer uses the low team-focus camera or floor lattice/glow; it keeps the high neutral field camera, begins enemies hidden, materializes each declared enemy one-by-one with a short cyan-white mech-local flash, and both natural completion and every skip path synchronously restore all opacity and clear blend state. Relevant paths: rpgmz-test-01/js/plugins/MechBattle.js, tools/intro-cue-lifecycle-probe.js, .claude/CUSTOM_SYSTEMS.md, CURRENT_STATE.md. Inspect the actual diff/code, run the narrowest useful checks (npm run verify is acceptable), and look especially for phase/order bugs, stale blend/opacity, unrevealed/revealed transition errors, and non-dynamic-camera regressions. Do not edit files. Return only CONFIRMED or REFUTED, followed by concise concrete evidence."
+        },
+        {
+          "partId": "prt_fdd4a8364001O0LHuKJZQoPfh0",
+          "timeCreated": 1786124075876,
+          "text": "CONFIRMED\n\n- Inspected branch `issue-14` diff: low enemy-team focus and cursor highlight were removed; neutral `_camReset()` and per-enemy reveal tracking added.\n- `npm run verify`: 60/60 tests passed, presentation/lifecycle probes passed, plugin syntax valid.\n- Live 6v6 CDP probe observed enemies initially `[0,0,0,0,0,0]`; sequential reveals showed only the declared enemy with cyan-white blend.\n- Natural completion and OK/cancel/touch skips all synchronously produced `roundStart`, full opacity, cleared blend colors/reveal state, and neutral camera.\n- Dynamic-camera OFF bypassed the intro with all enemies fully visible. No intro floor-cue property or methods remained."
+        }
+      ],
+      "verdict": "CONFIRMED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-07T17:27:57.820Z"
+    },
+    {
+      "sessionId": "ses_0229a8d29ffe828i4hpgvoHweL",
+      "parentId": "ses_0413da33bffe17y7hsKKdbhCXu",
+      "title": "Verify unified action picker (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786125841110,
+      "parts": [
+        {
+          "partId": "prt_fdd6572dd001ljvHzcoHUftv74",
+          "timeCreated": 1786125841118,
+          "text": "Fresh-context outcome verification of a playtest-driven adjustment. Read-only in `/Users/adrian/Documents/GitHub/rpgmz-test-01-issue-11`, branch `issue-11`; do not edit/commit. Return only CONFIRMED or REFUTED with concise concrete evidence.\n\nClaim: separate Attack and Device unit commands were replaced by one Action command. Unit menu is Action/Skill/Item/Wait. Unified close-up Action picker lists every equipped actionable item in Equipment order (Built-In authored order, then Optional slot order): Weapons and Devices, excluding passive Upgrades. Weapon entries use pilot-adjusted values and dispatch to existing target/attack flow; Device entries activate immediately with existing EN/buff/turn behavior. Both categories show mount/category/details and use mount marker. Cancel from Action returns unit menu; target cancel returns unified Action picker. Separate Device picker/UI paths are removed. Enemy AI and combat RNG/math unchanged. Docs/current state aligned.\n\nInspect actual diff and relevant plugin paths. Run `npm run verify`, `git diff --check`, plugin/setup syntax. Search for stale separate handlers/windows/current docs. Check composition ordering and pilot-adjusted weapon mapping carefully, action affordability, close-up cleanup, history modal active-window handling, focus display, target-cancel return. Treat `.DS_Store` as unrelated user dirt and do not modify it.\n\nPrimary runtime evidence: headless browser booted and confirmed menu symbols action/skill/item/wait; unified order weapon Strike Claw, device E-Shield, optional device Booster, optional weapon Ion Cannon; Weapon dispatch entered playerTarget and reopened Action; Booster dispatch consumed 3 EN and duration behavior passed; Equipment scene/migration checks remained green."
+        },
+        {
+          "partId": "prt_fdd6bee82001vNucPxHayDO42r",
+          "timeCreated": 1786126265986,
+          "text": "REFUTED\n\n- Headless runtime with the mech bitmap fully loaded: `_openEquipmentActionSelect(unit)` throws `TypeError: this._updateMountMarker is not a function`; phase remains `idle` and Action window stays hidden.\n- Breaks at `MechBattle.js:2703`: `_showFocusArt()` calls removed `_updateMountMarker()` instead of `_updateActionPicker()`.\n- `npm run verify`, syntax checks, and `git diff --check` pass but do not cover this loaded-image path. Browser/server cleanup succeeded."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-07T18:04:01.110Z"
+    },
+    {
+      "sessionId": "ses_022931dd0ffeFZRt7hMWw4m4TF",
+      "parentId": "ses_0413da33bffe17y7hsKKdbhCXu",
+      "title": "Reverify action picker (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/rpgmz-test-01",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786126328367,
+      "parts": [
+        {
+          "partId": "prt_fdd6ce23d001eek5MU1TAwgoC3",
+          "timeCreated": 1786126328382,
+          "text": "Fresh-context re-verification after fixing the loaded-bitmap Action crash found by the prior verifier. Read-only in `/Users/adrian/Documents/GitHub/rpgmz-test-01-issue-11`, branch `issue-11`; do not edit/commit. Return only CONFIRMED or REFUTED with concise evidence.\n\nClaim: unified Action picker now works in loaded-image runtime. Unit menu Action/Skill/Item/Wait; picker combines Built-In then Optional Weapons/Devices, excludes Upgrades; pilot-adjusted weapons; category/mount/details/marker; Weapon -> targeting, Device -> immediate existing activation; cancels return correctly; separate Device picker removed; docs aligned; AI/math unchanged.\n\nPrior concrete failure: `_showFocusArt()` still called deleted `_updateMountMarker()` at old line 2703. It now calls `_updateActionPicker()`, and repository searches show no stale `_updateMountMarker`, `_winWeapon`, `_winDevice`, or separate attack/device handlers. Primary headless runtime smoke after fix passed unified order, Weapon dispatch into targeting/reopen, Device dispatch/EN/duration, and existing Equipment/migration checks.\n\nInspect actual code/diff and run `npm run verify`, syntax checks, `git diff --check`. Specifically reproduce or inspect the bitmap-ready path, marker callback, closeup cleanup, history modal handling, and target-cancel return. Ignore/preserve unrelated `.DS_Store` dirt."
+        },
+        {
+          "partId": "prt_fdd79fec7001mxZXjviiybmqZA",
+          "timeCreated": 1786127187656,
+          "text": "REFUTED — `AGENTS.md:186` still documents the removed `_openWeaponSelect(unit)` runtime helper. The plugin only defines `_openEquipmentActionSelect` (`MechBattle.js:5536`), so following the documented command causes a `TypeError`; therefore docs/searches are not fully aligned. `npm run verify` passed (60/60 + 14/14), syntax checks and `git diff --check` passed. Browser/server cleanup succeeded."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-07T18:12:08.367Z"
+    },
+    {
+      "sessionId": "ses_021f18815ffe5G17HJT48yu8NY",
+      "parentId": "ses_021fb6643ffeQBv2dheGL15osA",
+      "title": "Verify OpenCode vertical slice (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786136917994,
+      "parts": [
+        {
+          "partId": "prt_fde0e77fd001FrQ5rA8orjU4H5",
+          "timeCreated": 1786136918015,
+          "text": "Verification phase; fresh read-only adversarial check in /Users/adrian/Documents/GitHub/opencode-video-vision. Claimed outcome: the current uncommitted diff establishes a minimal OpenCode-runnable frame-only vertical slice by (a) renaming maintained product/package/MCP identity and runtime storage paths to opencode-video-vision while preserving upstream attribution and legacy .mcp.json, (b) adding examples/opencode.jsonc, .opencode/commands/watch-video.md using $ARGUMENTS, and .opencode/skills/video-perception/SKILL.md, (c) setting defaults backend none, images, png, 512, auto, max 60, indexing true, 7-day sessions, (d) ensuring video_watch skips audio for backend none, and (e) adding focused tests. OPENCODE_PORT_PLAN.md is pre-existing untracked user content and must not be considered part of the implementation or modified.\n\nInspect the diff and relevant call paths. Run focused tests/build if useful. Attempt to refute correctness, especially accidental audio work with backend none, invalid OpenCode resource/config shape, missing runtime storage renames, loss of attribution, and scope regressions. Do not edit or commit. Return only one verdict: CONFIRMED or REFUTED, followed by concise concrete evidence. If refuted, identify exact blocking fixes with paths/lines."
+        },
+        {
+          "partId": "prt_fdea96559001Wwmc4MBQP4OF5q",
+          "timeCreated": 1786147071321,
+          "text": "REFUTED\n\nReproduction with fresh `HOME`/`TMPDIR` and `tests/fixtures/test-3s.mp4` confirmed audio was skipped (`backend: \"none\"`), but left three extracted PNGs in `TMPDIR/cvv-*/frames/` after the response.\n\nCause: default indexing is now enabled (`mcp-server/src/config.ts:17`), while cleanup only runs when indexing is disabled (`mcp-server/src/tools/video-watch.ts:263-266`). These untracked temporary frames evade seven-day session cleanup and contradict `PRIVACY.md:18,53`.\n\nBlocking fixes:\n- `mcp-server/src/tools/video-watch.ts:263-266`: always clean `workDir`, preferably via `finally`.\n- `PRIVACY.md:18,46-53`: disclose indexed session-frame retention separately from temporary extraction cleanup.\n\nFocused tests passed (15/15), TypeScript build passed, and OpenCode 1.18.10 accepted the config, command, and skill shapes."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-07T21:08:37.994Z"
+    },
+    {
+      "sessionId": "ses_021537773ffeFtqu541YH8BAtk",
+      "parentId": "ses_021fb6643ffeQBv2dheGL15osA",
+      "title": "Reverify cleanup and port (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786147276940,
+      "parts": [
+        {
+          "partId": "prt_fdeac8893001DqgHbCudBBbzBC",
+          "timeCreated": 1786147276949,
+          "text": "Verification phase, fresh read-only adversarial re-check of /Users/adrian/Documents/GitHub/opencode-video-vision after the prior verifier's cleanup refutation was addressed. Claimed outcome remains the minimal OpenCode-runnable frame-only vertical slice, now additionally guaranteeing that per-call TMPDIR work files are deleted on success/failure while indexed session PNG copies persist, with privacy documentation and regression coverage. Inspect the complete current diff and relevant paths; run tests/build or reproduce cleanup if useful. OPENCODE_PORT_PLAN.md is pre-existing untracked user content and excluded. Do not edit or commit. Return only CONFIRMED or REFUTED followed by concise concrete evidence. Refute only for blockers to the approved outcome."
+        },
+        {
+          "partId": "prt_fdeb07b90001QrLbWNjoT41hRe",
+          "timeCreated": 1786147535760,
+          "text": "REFUTED — Concurrent `video_watch` calls sharing the same `Date.now()` millisecond use the identical `tmp/cvv-<timestamp>` directory (`video-watch.ts:140`). Reproducing two valid frame-only calls with a fixed clock yielded one fulfilled and one rejected with `ENOENT .../cvv-123456789/frames`; one call’s `finally` cleanup at line 325 deletes the other call’s workspace. Thus work directories are not reliably per-call and parallel OpenCode calls can fail or mix frame data."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-08T00:01:16.940Z"
+    },
+    {
+      "sessionId": "ses_0214d8ba0ffeh9bY6afYU9S8df",
+      "parentId": "ses_021fb6643ffeQBv2dheGL15osA",
+      "title": "Final verify OpenCode slice (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786147664991,
+      "parts": [
+        {
+          "partId": "prt_fdeb2746b001Bo0aynsjWnQ0LW",
+          "timeCreated": 1786147665005,
+          "text": "Final verification phase, fresh read-only adversarial check of /Users/adrian/Documents/GitHub/opencode-video-vision. Two prior blockers were fixed: temporary work directories now clean via finally, and OS mkdtempSync gives each concurrent video_watch call a unique workspace; indexed copies persist and privacy docs/tests were updated. Verify the complete approved OpenCode frame-only vertical slice and these fixes. Inspect current diff and relevant behavior, run tests/build/reproductions if useful. OPENCODE_PORT_PLAN.md is pre-existing untracked user content and excluded. Do not edit or commit. Return only CONFIRMED or REFUTED with concise blocker-level evidence. Avoid expanding into roadmap items explicitly deferred from this minimal first milestone."
+        },
+        {
+          "partId": "prt_fdeb4bd810019YctfG23WbZSJc",
+          "timeCreated": 1786147814785,
+          "text": "REFUTED — Concurrent `video_watch` calls still race on the shared session manifest. From `mcp-server`, two fulfilled calls for `00:00:00–01` and `00:00:02–03` left both PNGs on disk, but `manifest.json` indexed only `00:00:02`. Each invocation loads the same initial manifest and `saveManifest` performs an unsynchronized last-writer-wins overwrite (`video-watch.ts:114-117,255-258`). Temp cleanup succeeded, and all 152 tests/build passed, but concurrent indexing remains incomplete."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-08T00:07:44.991Z"
+    },
+    {
+      "sessionId": "ses_02149c9daffeZZgzSAX5W546Ee",
+      "parentId": "ses_021fb6643ffeQBv2dheGL15osA",
+      "title": "Verify manifest race fix (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786147911205,
+      "parts": [
+        {
+          "partId": "prt_fdeb6362f001RnpfPmKFG46jLO",
+          "timeCreated": 1786147911225,
+          "text": "Verification phase, fresh read-only final check of /Users/adrian/Documents/GitHub/opencode-video-vision. Previous verifier found concurrent video_watch calls lost disjoint frame entries due to last-writer-wins manifest saves. The current patch adds serialized updateManifest persistence that reloads the latest manifest and merges pending frame buckets, plus a concurrent disjoint-range regression test. Verify this race fix and the complete approved minimal OpenCode frame-only vertical slice. Reproduce parallel calls if useful; inspect current diff; run tests/build. OPENCODE_PORT_PLAN.md is pre-existing untracked user content and excluded. Do not edit or commit. Return only CONFIRMED or REFUTED with concise blocker-level evidence. Do not expand into deferred roadmap scope."
+        },
+        {
+          "partId": "prt_fdeba04e9001MmMwoIKcm7db2w",
+          "timeCreated": 1786148160745,
+          "text": "REFUTED — Concurrent manifest writers still lose updates. With default config, running `video_detail` (00:00:00–00:00:02, 60 fps, 2048px) 25 ms before `video_watch` (00:00:02–00:00:03, 1 fps, 512px) on `tests/fixtures/test-3s.mp4` fulfilled both calls, but the final manifest contained only `2048/png`; the `512/png` watch bucket was lost. `video-detail.ts:279` still calls `saveManifest` with a stale manifest, bypassing `updateManifest` serialization. `video-analyze.ts:275` has the same bypass. The 152 tests and build pass, but do not cover this shared-writer seam."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-08T00:11:51.205Z"
+    },
+    {
+      "sessionId": "ses_02144a59dffejN0eCkAmdo1V9T",
+      "parentId": "ses_021fb6643ffeQBv2dheGL15osA",
+      "title": "Final verify shared writers (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786148248162,
+      "parts": [
+        {
+          "partId": "prt_fdebb5a71001bYCdb3ILroq0Le",
+          "timeCreated": 1786148248179,
+          "text": "Verification phase, fresh read-only final check of /Users/adrian/Documents/GitHub/opencode-video-vision. Prior verifier found video_detail/video_analyze bypassed serialized manifest updates. Current patch routes all three manifest writers (video_watch, video_detail, video_analyze) through updateManifest, merges frame buckets against latest on-disk state, updates analysis without replacing frames, uses unique temp dirs, and adds a mixed video_watch/video_detail concurrency regression. Verify the complete approved minimal OpenCode frame-only vertical slice and shared-writer correctness. Reproduce concurrency if useful; inspect current diff; run tests/build. OPENCODE_PORT_PLAN.md is pre-existing untracked user content and excluded. Do not edit or commit. Return only CONFIRMED or REFUTED with concise blocker-level evidence. Do not expand into explicitly deferred roadmap scope."
+        },
+        {
+          "partId": "prt_fdebda004001RrOMTqAcIQvmlW",
+          "timeCreated": 1786148397060,
+          "text": "REFUTED — `npm test` (153/153) and `npm run build` pass, but a frame-only `video_watch` with two same-resolution segments (`00:00:00–01` and `00:00:02–03`, 512px PNG) produces two manifest timestamps pointing to the same `frame_0001.png`. The second segment overwrites the first. `video-watch.ts:151` still extracts segmented calls directly into the persistent session directory rather than its unique temp directory, breaking cached-frame correctness."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-08T00:17:28.162Z"
+    },
+    {
+      "sessionId": "ses_021418d5fffeAceHuz0V6wf2ip",
+      "parentId": "ses_021fb6643ffeQBv2dheGL15osA",
+      "title": "Verify segmented cache fix (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786148450976,
+      "parts": [
+        {
+          "partId": "prt_fdebe72af0019asqU1m6fLHz68",
+          "timeCreated": 1786148450993,
+          "text": "Verification phase, fresh read-only completion check of /Users/adrian/Documents/GitHub/opencode-video-vision. Prior blocker: same-resolution segmented video_watch extraction wrote sequential FFmpeg names directly into persistent session storage, overwriting earlier segments. Current patch always extracts segments in a unique temp workspace, copies each frame to timestamp-keyed per-resolution session storage, merges manifests through serialized shared-writer updates, and adds regression coverage. Verify this fix and the complete approved minimal OpenCode frame-only vertical slice. Inspect/reproduce likely blockers, run tests/build. OPENCODE_PORT_PLAN.md is pre-existing untracked user content and excluded. Do not edit or commit. Return only CONFIRMED or REFUTED with concise blocker-level evidence. Do not expand into deferred roadmap scope."
+        },
+        {
+          "partId": "prt_fdebfed42001JyKrWeD6ymO4uj",
+          "timeCreated": 1786148547906,
+          "text": "REFUTED\n\n- `npm test`: 154/154 passed; `npm run build`: passed.\n- Reproduced two same-resolution segments at `00:00:00` and `00:00:02`. Persisted timestamp-keyed PNGs had identical SHA-256 hashes, while direct FFmpeg frames had different MD5 hashes.\n- Cause: `extractFramesBySegments()` reuses `<temp>/512/frame_0001.png`; the later segment overwrites it before `video_watch` copies earlier `sourcePath` entries. Regression coverage checks filenames/existence, not image contents."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-08T00:20:50.976Z"
+    },
+    {
+      "sessionId": "ses_0213ba0e5ffeeKLM67BiCGr16P",
+      "parentId": "ses_021fb6643ffeQBv2dheGL15osA",
+      "title": "Verify segment isolation fix (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786148839194,
+      "parts": [
+        {
+          "partId": "prt_fdec45f26001DjC9sNAdqelIVl",
+          "timeCreated": 1786148839208,
+          "text": "Verification phase, fresh read-only completion check of /Users/adrian/Documents/GitHub/opencode-video-vision. Prior blocker was real path overwrite: extractFramesBySegments reused <temp>/<resolution>/frame_0001 for each same-resolution segment, so video_watch later copied the final file twice. Current fix assigns each segment its own <resolution>/<segmentIndex>/ extraction directory, then video_watch copies those distinct existing source paths to distinct timestamp-keyed session files before temp cleanup. Note: the checked-in test fixture's PNG outputs at 0s and 2s are byte-identical even when extracted independently to separate files; identical content is therefore not evidence of overwrite. Verify path/file isolation, manifest correctness, shared-writer concurrency, cleanup, and the complete approved minimal OpenCode frame-only vertical slice. Run tests/build and reproduce with a synthetic distinguishable video if content-level proof is needed. OPENCODE_PORT_PLAN.md is pre-existing untracked user content and excluded. Do not edit or commit. Return only CONFIRMED or REFUTED with concise blocker-level evidence. Do not expand deferred roadmap scope."
+        },
+        {
+          "partId": "prt_fdec76f980014L57GD6QjzvFzs",
+          "timeCreated": 1786149040024,
+          "text": "REFUTED — With allowed/default `fps: 2`, a synthetic distinguishable video produced two different frames labeled `00:00:00` with distinct hashes. `video_watch` copied both to `00-00-00.png`; the second overwrote the first, and the manifest recorded only 2 of 3 returned frames. This occurs because timestamps are second-granularity and filenames/deduplication use only that timestamp. `npm test` (155 tests) and `npm run build` passed but do not cover this case."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-08T00:27:19.194Z"
+    },
+    {
+      "sessionId": "ses_02136eb48ffehGuqtSRzpFFawA",
+      "parentId": "ses_021fb6643ffeQBv2dheGL15osA",
+      "title": "Verify subsecond indexing (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786149147831,
+      "parts": [
+        {
+          "partId": "prt_fdec914c0001TXT1IpZB1qeA1Y",
+          "timeCreated": 1786149147842,
+          "text": "Verification phase, fresh read-only completion check of /Users/adrian/Documents/GitHub/opencode-video-vision. Prior blocker: multi-frame FPS collapsed frame identity to whole-second timestamps and overwrote timestamp-keyed files. Current patch adds formatMediaTimestamp with fixed microsecond precision for fractional frame times, uses it in frame extraction and segment timestamp generation, retains integral HH:MM:SS values, keeps per-segment source directories, and tests 2 FPS indexing for unique timestamps/files. Verify this fix plus path isolation, manifest shared-writer concurrency, temp cleanup, no-audio default, and the complete approved minimal OpenCode frame-only vertical slice. Use a synthetic distinguishable video if needed. Run tests/build. OPENCODE_PORT_PLAN.md is pre-existing untracked user content and excluded. Do not edit or commit. Return only CONFIRMED or REFUTED with concise blocker-level evidence. Do not expand deferred roadmap scope."
+        },
+        {
+          "partId": "prt_fdece533c001lbn2fpbmW9eqHt",
+          "timeCreated": 1786149491516,
+          "text": "REFUTED\n\n- Synthetic 2 FPS indexing produced distinct `00:00:00` and `00:00:00.500000` files with unique image hashes.\n- The emitted fractional timestamp cannot be passed to `video_detail.view`: schema validation returns `Must be HH:MM:SS format`.\n- Breaks at `mcp-server/src/tools/video-detail.ts:29,175-176`; indexed subsecond frames cannot be retrieved by exact timestamp. `npm test` (159 tests) and `npm run build` passed but do not cover this seam."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-08T00:32:27.831Z"
+    },
+    {
+      "sessionId": "ses_02130a35affe1m1EASCvJDm10P",
+      "parentId": "ses_021fb6643ffeQBv2dheGL15osA",
+      "title": "Verify timestamp retrieval (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786149559461,
+      "parts": [
+        {
+          "partId": "prt_fdecf5cb200185F6cXxreZ93H0",
+          "timeCreated": 1786149559477,
+          "text": "Verification phase, fresh read-only completion check of /Users/adrian/Documents/GitHub/opencode-video-vision. Prior blocker: emitted sub-second frame timestamps could not pass video_detail.view schema. Current patch centralizes MEDIA_TIMESTAMP_REGEX accepting HH:MM:SS and HH:MM:SS.ffffff, applies it to watch/detail range and exact-view schemas, adds schema-level coverage, and retains microsecond frame identity for multi-FPS cache keys/files. Verify exact subsecond retrieval, multi-FPS indexing, segmented path isolation, shared-writer concurrency, cleanup, no-audio default, and the complete approved minimal OpenCode frame-only vertical slice. Run tests/build and synthetic reproduction as useful. OPENCODE_PORT_PLAN.md is pre-existing untracked user content and excluded. Do not edit or commit. Return only CONFIRMED or REFUTED with concise blocker-level evidence. Do not expand deferred roadmap scope."
+        },
+        {
+          "partId": "prt_fded3c713001bT0b0cV0ktJaif",
+          "timeCreated": 1786149848852,
+          "text": "CONFIRMED\n\n- `npm test`: 17 files, 162 tests passed, covering multi-FPS indexing, segment isolation, concurrent writers, cleanup, and audio-disabled defaults.\n- `npm run build` and `git diff --check`: passed.\n- Real MCP client reproduction returned and retrieved `00:00:00.500000` as PNG; cache filenames remained unique and temporary directories were removed.\n- OpenCode 1.18.10 connected to the built MCP server and discovered `/watch-video` plus the `video-perception` skill."
+        }
+      ],
+      "verdict": "CONFIRMED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-08T00:39:19.461Z"
+    },
+    {
+      "sessionId": "ses_0168f91a6ffeMBGeoblJVpWKav",
+      "parentId": "ses_016ce21d6ffe0DvVNA9oRw10QU",
+      "title": "Verify issue fifteen outcome (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786327887449,
+      "parts": [
+        {
+          "partId": "prt_fe9706e5f001UfV7lhQj1Qb7wl",
+          "timeCreated": 1786327887470,
+          "text": "<phase>Verification</phase>\n<request>Attempt to refute the completed implementation of GitHub issue #15. Return only CONFIRMED or REFUTED, followed by concise concrete evidence. Do not edit files.</request>\n<working_directory>/Users/adrian/Documents/GitHub/opencode-video-vision</working_directory>\n<claimed_outcome>A fresh clone now provides a dependency-free Node CLI `scripts/install-video-vision.mjs` with strict install/check/dry-run/uninstall grammar, global user-level OpenCode installation, safe generated plugin registration, maintained command/skill copying, idempotent reinstall, hash/inventory-verified uninstall, stable lock and journaled rollback/recovery, frame-only setup default, deterministic OpenCode 1.18.10 discovery and MCP PNG acceptance, docs, and CI. Root/system/unsupported platforms, unsafe paths/files, unmanaged collisions, drift, forged manifests, active/malformed locks, and uncertain transactions fail closed. No OS packages, credentials, audio backend configuration, global JSON/JSONC, runtime config/cache/session data, or legacy Claude resources are changed.</claimed_outcome>\n<relevant_paths>\n- scripts/install-video-vision.mjs\n- installer/lib/assets.mjs\n- installer/lib/security.mjs\n- installer/lib/lifecycle.mjs\n- installer/tests/*.test.mjs\n- installer/acceptance/verify.mjs\n- installer/acceptance/opencode-1.18.10.json\n- AGENTS.md\n- .opencode/commands/install-video-vision.md\n- .opencode/skills/install-video-vision/SKILL.md\n- .opencode/commands/watch-video.md\n- .opencode/skills/video-perception/SKILL.md\n- mcp-server/src/index.ts\n- mcp-server/src/tools/video-setup.ts\n- mcp-server/src/utils/installer.ts\n- mcp-server/tests/tools/video-setup.test.ts\n- mcp-server/package-lock.json\n- .github/workflows/ci.yml\n- README.md, CONTRIBUTING.md, PRIVACY.md\n</relevant_paths>\n<user_work>OPENCODE_PORT_PLAN.md is unrelated untracked user work and must remain untouched.</user_work>\n<evidence_already_run>\n- `node --test installer/tests/*.test.mjs`: 13 passed.\n- `npm run build && npm test` in mcp-server: build passed, 163 passed.\n- Isolated fresh install/check/reinstall/uninstall passed.\n- Failure injection at install command publication rolled back to no install; uninstall plugin removal failure restored active install.\n- Managed-root unmanaged extra file and drifted plugin both blocked uninstall while retaining server root.\n- Actual local OpenCode 1.18.10 acceptance passed: isolated install into fresh HOME/XDG, unrelated project `opencode mcp list`, `opencode debug config`, `opencode debug skill`, installed stdio MCP video_watch on audio-bearing fixture, timestamp text before PNG, backend none, instrumented ffmpeg log showing frames but no `-vn`/WAV audio extraction, uninstall.\n- `git diff --check` passed.\n</evidence_already_run>\n<verification_focus>\n- Inspect implementation rather than trusting claims.\n- Check plugin API/config shape for OpenCode 1.18.10.\n- Check check/dry-run purity, prerequisite ordering, root/platform enforcement, XDG/symlink/hardlink safety, subprocess termination.\n- Check manifest cannot direct deletion and full managed root inventory prevents recursive deletion of unmanaged additions.\n- Check install/reinstall/uninstall ordering, rollback, stable lock and recovery races.\n- Check acceptance cannot silently skip and CI provisions verified official OpenCode artifact.\n- Check backend none setup behavior and version agreement.\n- Run focused safe checks if useful; never touch actual user global config.\n</verification_focus>"
+        },
+        {
+          "partId": "prt_fe9733d59001t1Ev5RC3O66wbj",
+          "timeCreated": 1786328071513,
+          "text": "REFUTED — In isolated HOME/XDG roots, a hand-forged manifest with self-computed hashes caused `uninstall` to exit 0 and delete the unmanaged server root, plugin, command, and skill. `loadManifest`/`verifyOwned` trust manifest-supplied hashes without authenticating installer ownership, so forged manifests do not fail closed."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T02:11:27.449Z"
+    },
+    {
+      "sessionId": "ses_01689f6e2ffeGSP4SWPbR2VSJ2",
+      "parentId": "ses_016ce21d6ffe0DvVNA9oRw10QU",
+      "title": "Reverify ownership hardening (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786328254749,
+      "parts": [
+        {
+          "partId": "prt_fe9760927001ZAUhwG6rBVdLO0",
+          "timeCreated": 1786328254760,
+          "text": "<phase>Verification</phase>\n<request>Attempt to refute the corrected GitHub issue #15 implementation. Return only CONFIRMED or REFUTED with concise concrete evidence. Read-only; do not edit.</request>\n<working_directory>/Users/adrian/Documents/GitHub/opencode-video-vision</working_directory>\n<prior_refutation>The previous verifier forged a self-hashed manifest and uninstalled unmanaged files.</prior_refutation>\n<correction>An independent fixed-path ownership receipt now exists at `$XDG_DATA_HOME/.opencode-video-vision.owner.json`. It records a random install ID, fixed canonical managed root, and SHA-256 of the complete manifest. `loadManifest` requires a safe regular receipt and verifies receipt identity/install ID/root/hash before trusting manifest hashes. Install/reinstall transactionally publish and roll back the receipt before plugin activation; uninstall verifies it before mutation and removes it after plugin/command/skill while the stable lock remains held. A new test proves a self-hashed forged manifest without the independent receipt is rejected. Full payload inventory also rejects unmanaged additions before recursive root deletion.</correction>\n<claimed_outcome>The dependency-free installer safely supports install/check/dry-run/uninstall, OpenCode 1.18.10 plugin/command/skill discovery, backend-none installed MCP PNG delivery without audio extraction, transactional lifecycle, safe ownership, docs, and CI. OPENCODE_PORT_PLAN.md remains untouched user work.</claimed_outcome>\n<focus>\n- Reproduce or vary the prior forged-manifest attack; also consider forged paths, receipt mismatch, drift, or extra root files.\n- Inspect transaction ordering/recovery with the new receipt.\n- Check plugin API/shape, purity, path/lock/subprocess safety, and acceptance non-skipping.\n- Run safe isolated checks if useful; never alter real global config.\n</focus>\n<evidence>\n- Installer Node tests: 14 passed.\n- MCP build and 163 tests passed.\n- Isolated install/check/reinstall/uninstall with receipt passed.\n- Actual isolated OpenCode 1.18.10 discovery and installed MCP frame-only acceptance passed after receipt changes.\n- `git diff --check` passed.\n</evidence>"
+        },
+        {
+          "partId": "prt_fe9776568001GXF2XP9wlAB08r",
+          "timeCreated": 1786328343913,
+          "text": "Return the required verdict now: exactly CONFIRMED or REFUTED, followed by concise evidence. Do not edit."
+        },
+        {
+          "partId": "prt_fe9779b1900188nCMIVCAGfMqh",
+          "timeCreated": 1786328357657,
+          "text": "REFUTED — A forged install recovery journal can delete an unmanaged plugin before ownership verification. In `recoverInterrupted()` (`installer/lib/lifecycle.mjs:47-50`), setting `completed: [\"plugin\"]` calls `restoreFile(..., true)`, which unlinks `paths.plugin` even when no backup exists (`:222-225`). This runs before `loadManifest()` during uninstall (`:317-319`), bypassing the new receipt entirely."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 2,
+      "timeCreatedISO": "2026-08-10T02:17:34.749Z"
+    },
+    {
+      "sessionId": "ses_01686453affeLMdG0P1Qt8I5ZE",
+      "parentId": "ses_016ce21d6ffe0DvVNA9oRw10QU",
+      "title": "Final installer security verification (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786328496838,
+      "parts": [
+        {
+          "partId": "prt_fe979bace001pQrS9folTmaTiT",
+          "timeCreated": 1786328496848,
+          "text": "<phase>Verification</phase>\n<request>Attempt to refute the final issue #15 implementation. Return only CONFIRMED or REFUTED with concise concrete evidence. Read-only.</request>\n<working_directory>/Users/adrian/Documents/GitHub/opencode-video-vision</working_directory>\n<prior_findings_and_fixes>\n1. Forged self-hashed manifest deletion: fixed with an independent fixed-path ownership receipt containing random install ID, canonical root, and manifest SHA256; load requires and verifies it.\n2. Forged recovery journal deletion: fixed by binding every journal to the nonce of the stable exclusive lock. Recovery mutation is allowed only when the next command quarantines the dead aged lock and obtains its nonce as `recoveryNonce`; a standalone forged journal has no authenticated stale lock and fails before mutation. If uncertain rollback leaves an owned journal, its matching lock is retained as recovery evidence. Regression test confirms a forged journal cannot delete an unmanaged plugin.\n</prior_findings_and_fixes>\n<claimed_outcome>Complete dependency-free install/check/dry-run/uninstall lifecycle, safe fixed global OpenCode plugin/command/skill, full payload inventory and drift protection, transaction rollback/recovery, backend-none setup, exact OpenCode 1.18.10 acceptance, docs and CI. OPENCODE_PORT_PLAN.md remains untouched.</claimed_outcome>\n<evidence>\n- 15 installer tests pass, including forged manifest and forged journal regressions.\n- MCP build and all 163 tests pass.\n- Isolated install/check/reinstall/uninstall with receipt passes.\n- Actual OpenCode 1.18.10 discovery plus installed MCP frame-only timestamp-text-before-PNG acceptance passes, with audio-bearing fixture and no audio ffmpeg invocation.\n- git diff --check passes.\n</evidence>\n<focus>Try variations on untrusted manifest/receipt/journal/lock combinations, recursive-delete ownership, transaction ordering, plugin collision behavior, purity, and acceptance non-skipping. Never alter actual user global state.</focus>"
+        },
+        {
+          "partId": "prt_fe97b3287001fTp26qqPgtfNxa",
+          "timeCreated": 1786328593031,
+          "text": "REFUTED — In isolated HOME/XDG roots, a forged manifest plus forged fixed-path receipt was accepted. `uninstall` exited 0 and deleted the unmanaged server root, plugin, command, and skill. `loadManifest()` treats an attacker-authored receipt/hash as authentication, enabling recursive deletion."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T02:21:36.838Z"
+    },
+    {
+      "sessionId": "ses_01682a640ffewyQaUxss6lIpLO",
+      "parentId": "ses_016ce21d6ffe0DvVNA9oRw10QU",
+      "title": "Verify source-bound ownership (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786328734143,
+      "parts": [
+        {
+          "partId": "prt_fe97d59c7001B26gCdPQkIVITg",
+          "timeCreated": 1786328734152,
+          "text": "<phase>Verification</phase>\n<request>Attempt to refute the corrected issue #15 implementation. Return only CONFIRMED or REFUTED with concise reproducible evidence. Read-only.</request>\n<working_directory>/Users/adrian/Documents/GitHub/opencode-video-vision</working_directory>\n<prior_attack>Forging both manifest and ownership receipt previously allowed unmanaged deletion.</prior_attack>\n<new_correction>Deletion authorization is no longer based only on self-authored metadata. `verifyOwned` binds every destructive uninstall to immutable checked-in installer inputs: all six managed paths must equal fixed destinations; installed package.json and package-lock.json must hash-match committed sources; external and internal command/skill must hash-match maintained `.opencode` sources; plugin must byte-match the constant generated template for the fixed installed entry; the complete installed src tree must hash-match committed source; dist paths must derive from committed TypeScript paths; node_modules package roots must exist in the committed lockfile; and any extra payload path outside those source/lock-derived shapes fails before mutation. The independent receipt/manfiest full-tree inventory and lock-authenticated journal remain additional controls.</new_correction>\n<evidence>15 installer tests pass; 163 MCP tests/build pass; isolated install/check/uninstall passes with source-bound validation; real OpenCode 1.18.10 discovery/MCP acceptance passed before this validation-only hardening and lifecycle passes after it.</evidence>\n<focus>Re-run prior forged-manifest+receipt attack with ordinary unmanaged content, test fixed-path/source-bound enforcement, and inspect any remaining practical deletion route. Same-user replacement of every committed source-equivalent installed artifact is behaviorally an installer payload; report only a concrete safety or outcome failure.</focus>"
+        },
+        {
+          "partId": "prt_fe97f4bbc001a7RvT8YQRUVorW",
+          "timeCreated": 1786328861629,
+          "text": "REFUTED — In an isolated HOME, after a legitimate install, added `server/node_modules/openai/UNMANAGED-VICTIM.txt`, forged its manifest inventory entry, and rehashed the receipt. `uninstall` exited 0 and deleted the unmanaged file and root. Expected refusal. `verifyOwned` accepts arbitrary files beneath any lockfile package-root prefix at `installer/lib/lifecycle.mjs:227-240`."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T02:25:34.143Z"
+    },
+    {
+      "sessionId": "ses_0167e869cffem96kON4PAwwxB2",
+      "parentId": "ses_016ce21d6ffe0DvVNA9oRw10QU",
+      "title": "Verify sealed payload ownership (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786329004387,
+      "parts": [
+        {
+          "partId": "prt_fe981796f001tCC0f7MoJd2jTZ",
+          "timeCreated": 1786329004401,
+          "text": "<phase>Verification</phase>\n<request>Attempt to refute final issue #15 outcome. Return only CONFIRMED or REFUTED with reproducible evidence. Read-only.</request>\n<working_directory>/Users/adrian/Documents/GitHub/opencode-video-vision</working_directory>\n<prior_attack>After legitimate install, an unmanaged file was added under a lockfile package directory; manifest inventory and receipt hash were forged, and uninstall deleted it.</prior_attack>\n<new_correction>At install time the installer now computes a canonical SHA256 seal over the complete payload inventory excluding only the plugin/manifest/recovery metadata. That seal is embedded into the generated active global plugin and copied into the manifest. Before any mutation, verification recomputes the full actual payload seal and requires it to match both the manifest and the byte-exact constant generated plugin template. Therefore changing payload inventory and only forging manifest/receipt no longer works; the independently active plugin retains the original inventory seal. Existing fixed paths, committed-source hashes/shapes, full inventory, ownership receipt, and lock-bound journal controls remain.</new_correction>\n<evidence>15 installer tests and 163 MCP tests pass; isolated sealed install/check/uninstall passes; prior OpenCode 1.18.10 acceptance passes.</evidence>\n<focus>Reproduce the prior unmanaged file attack without modifying every independent installer-owned marker. Check whether ordinary untrusted manifest/receipt/journal data can authorize deletion. Report a concrete practical failure only.</focus>"
+        },
+        {
+          "partId": "prt_fe983cbd0001x1znslixVpjcw4",
+          "timeCreated": 1786329156561,
+          "text": "Return the required verdict now: exactly CONFIRMED or REFUTED followed by concise evidence. Do not edit."
+        }
+      ],
+      "verdict": null,
+      "verdictTextIndex": 1,
+      "note": "no parseable verdict; stored text is an echoed brief",
+      "timeCreatedISO": "2026-08-10T02:30:04.387Z"
+    },
+    {
+      "sessionId": "ses_0167bc2cdffeoIdWlBY406WxCm",
+      "parentId": "ses_016ce21d6ffe0DvVNA9oRw10QU",
+      "title": "Independent final outcome check (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786329185586,
+      "parts": [
+        {
+          "partId": "prt_fe9843d3f001fLZVs8abdAWp7i",
+          "timeCreated": 1786329185601,
+          "text": "Verify the completed issue #15 implementation in /Users/adrian/Documents/GitHub/opencode-video-vision read-only. Prior adversarial findings were fixed with: fixed source-bound managed paths/content, full payload inventory, independent manifest receipt, lock-nonce-authenticated journal, and a canonical payload SHA256 seal embedded in the generated plugin and manifest. Try the prior attacks (forged manifest/receipt, forged journal, unmanaged file beneath node_modules package). Check install/check/dry-run/uninstall, plugin shape, backend none, acceptance non-skip, tests/CI. Do not edit or touch real global state. Return exactly CONFIRMED or REFUTED, then concise reproducible evidence."
+        },
+        {
+          "partId": "prt_fe985a637001KT2d5ihdzAOdCH",
+          "timeCreated": 1786329278007,
+          "text": "REFUTED\n\nForged stale lock + matching forged journal bypasses nonce authentication and deletes an unmanaged plugin.\n\n- Working directory: `/Users/adrian/Documents/GitHub/opencode-video-vision`\n- State: isolated realpath-resolved temporary HOME/XDG roots\n- Input: unmanaged plugin sentinel, attacker-chosen nonce in both an aged dead-PID lock and forged install journal with `completed:[\"plugin\"]`\n- Command: `node scripts/install-video-vision.mjs uninstall`\n- Expected: fail closed; preserve unmanaged plugin\n- Actual: exit `0`, output `not installed; nothing to uninstall`, plugin became `ENOENT`\n\nBreaks because `acquireLock()` trusts the forged stale lock’s nonce as `recoveryNonce` (`installer/lib/security.mjs:148-149`); `recoverInterrupted()` accepts it (`installer/lib/lifecycle.mjs:43`) and removes the plugin through rollback (`lifecycle.mjs:51`, `282-285`)."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T02:33:05.586Z"
+    },
+    {
+      "sessionId": "ses_01677dc59ffenxNL3ybSCVo7Wr",
+      "parentId": "ses_016ce21d6ffe0DvVNA9oRw10QU",
+      "title": "Verify fail-closed recovery (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786329441190,
+      "parts": [
+        {
+          "partId": "prt_fe98823aa001IGBpkGzQ195kJo",
+          "timeCreated": 1786329441195,
+          "text": "Read-only final verification of issue #15 in /Users/adrian/Documents/GitHub/opencode-video-vision. Return exactly CONFIRMED or REFUTED plus concise reproducible evidence. Prior attacks and fixes: (1) forged manifest -> independent receipt + committed-source/fixed-path binding; (2) extra node_modules file + forged manifest/receipt -> canonical full payload seal embedded in unchanged generated plugin and recomputed before mutation; (3) forged aged lock + matching forged journal -> recovery now never follows journal paths or deletes/restores payload. It only clears a lock-authenticated journal when the full current install passes all ownership/source/seal verification, or when an uninstall is fully absent; every partial/unauthenticated state fails closed and retains evidence. Regression test covers matching forged stale lock+journal preserving an unmanaged plugin. Evidence: 15 installer tests, 163 MCP tests/build, actual OpenCode 1.18.10 isolated discovery and frame-only MCP acceptance all pass. Try to refute safely in isolated roots; do not edit repository or real globals."
+        },
+        {
+          "partId": "prt_fe98ba0830018uYpJqHYMHa9ax",
+          "timeCreated": 1786329669763,
+          "text": "REFUTED — In isolated `HOME`/XDG roots, adding unmanaged `managedRoot/recovery.json` was ignored by `check`; `uninstall` then deleted it. Expected fail-closed drift detection/preservation; actual: check and uninstall both exited 0, marker disappeared. `payloadSeal()` and `verifyOwned()` explicitly exclude `recovery.json` (`installer/lib/lifecycle.mjs:102`, `:198`), so the claimed full payload seal is incomplete."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T02:37:21.190Z"
+    },
+    {
+      "sessionId": "ses_016736880ffeLZq0xPhstlc4a0",
+      "parentId": "ses_016ce21d6ffe0DvVNA9oRw10QU",
+      "title": "Final drift safety check (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786329732991,
+      "parts": [
+        {
+          "partId": "prt_fe98c9786001frQJummg1P7hSs",
+          "timeCreated": 1786329732999,
+          "text": "Read-only verify issue #15 in /Users/adrian/Documents/GitHub/opencode-video-vision. Return exactly CONFIRMED or REFUTED plus concise reproducible evidence. Prior refutation: unmanaged managedRoot/recovery.json was excluded and deleted. Fixed: recovery.json is no longer excluded from either full payload inventory or plugin-embedded canonical payload seal. Manual isolated test now shows both check and uninstall refuse while preserving recovery.json; after manual removal, uninstall succeeds. Existing controls: fixed/source-bound paths/content, receipt-authenticated manifest, plugin-embedded full payload seal, lock-bound journal that never follows journal paths, strict drift/unmanaged-file rejection. 15 installer tests and 163 MCP tests/build pass; actual OpenCode 1.18.10 discovery/frame-only MCP acceptance passes. Try safe isolated variations; do not edit repo or real global state."
+        },
+        {
+          "partId": "prt_fe99025d7001pcEHE08MJTcCOV",
+          "timeCreated": 1786329966039,
+          "text": "REFUTED\n\nIn isolated canonical HOME/XDG roots:\n\n1. Install succeeded.\n2. `VIDEO_VISION_FAIL_AT=uninstall-plugin ... uninstall` failed as injected.\n3. Rollback left `managedRoot/recovery.json`.\n4. Subsequent `check` and `uninstall` both refused with “payload ... contains unmanaged files.”\n5. Removing `recovery.json` manually allowed uninstall.\n\nCause: `installer/lib/lifecycle.mjs:361` creates the marker, but rollback at lines 375–380 never removes it, violating complete rollback. The 15 installer tests, 163 MCP tests, typecheck, and OpenCode 1.18.10 acceptance otherwise passed."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T02:42:12.991Z"
+    },
+    {
+      "sessionId": "ses_0166ed0b3ffeZcBr2QdqOP5UQR",
+      "parentId": "ses_016ce21d6ffe0DvVNA9oRw10QU",
+      "title": "Verify rollback marker cleanup (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/opencode-video-vision",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786330033996,
+      "parts": [
+        {
+          "partId": "prt_fe9912f520014ga3ue4hBTsFyi",
+          "timeCreated": 1786330034003,
+          "text": "Read-only final verification in /Users/adrian/Documents/GitHub/opencode-video-vision. Return exactly CONFIRMED or REFUTED plus concise reproducible evidence. Prior issue: injected uninstall rollback left managedRoot/recovery.json, causing permanent drift refusal. Fixed: rollback now removes recovery.json only after restoring root/external leaves and before deleting recovery/journal; failure to remove is treated as uncertain rollback and retains evidence. Manual isolated install -> injected uninstall-plugin failure -> assert no recovery.json -> check -> uninstall now passes. Other adversarial controls remain: source-bound fixed ownership, plugin-embedded full payload seal, independent receipt, journal recovery never follows journal paths. Tests: 15 installer pass, 163 MCP/build pass, OpenCode 1.18.10 actual acceptance passed. Try safe isolated refutation; do not edit repo or real globals."
+        },
+        {
+          "partId": "prt_fe994d1a8001IIiY61LtbT80Gn",
+          "timeCreated": 1786330272168,
+          "text": "CONFIRMED\n\n- `node --test installer/tests/*.test.mjs`: 15/15 passed.\n- `npm test && npm run build`: 163/163 passed; TypeScript build passed.\n- Isolated install → injected `uninstall-plugin` failure: `recovery.json` and journal absent; `check` and subsequent uninstall passed.\n- Simulated `recovery.json` unlink denial retained marker, journal, and owned lock as uncertain rollback evidence.\n- Forged ownership paths, payload resealing, missing receipt, and forged journal attacks failed closed without touching victims.\n- OpenCode 1.18.10 acceptance passed discovery and frame-only MCP execution.\n- `git diff --check` passed; repository status remained unchanged by verification."
+        }
+      ],
+      "verdict": "CONFIRMED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T02:47:13.996Z"
+    },
+    {
+      "sessionId": "ses_0166043daffekuDpJjnVtJSmLu",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Verify runtime profile implementation (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786330987557,
+      "parts": [
+        {
+          "partId": "prt_fe99fbc30001txRrGNNev3mvOX",
+          "timeCreated": 1786330987570,
+          "text": "<phase>Verification</phase>\n<claim>GitHub issue #12 is implemented: one visible Pilotfish primary can select Sol/Terra/Luna worker profiles at runtime without changing primary effort; AntiGravity remains validated passthrough; unsupported/cross-preset models fail before provider execution; installer lifecycle and docs manage the required plugin/runtime files safely.</claim>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<changed_paths>VERSION, CHANGELOG.md, README.md, RELEASING.md, install/OPENCODE-INSTALL.md, docs/design.md, docs/research.md, docs/local-install.md, docs/upstream-deviations.md, templates/pilotfish/prompts/pilotfish.md, templates/pilotfish/profiles.json, templates/pilotfish/profile-router.mjs, tests/profile-router.test.mjs, tests/test_policy.py.</changed_paths>\n<required_review>Read the diff and attempt to refute acceptance criteria and runtime safety. Pay special attention to actual OpenCode 1.18.10 legacy plugin loading/export semantics, tuple options, config-hook error handling, hook ordering, permission checks, hidden clone behavior, exact approved mappings, primary variant immutability, session pinning/resumed Tasks, AntiGravity passthrough, unsupported-model pre-provider failure, and installer update/uninstall ownership. Run focused tests yourself. Check for accidental loss of prior policy/lifecycle contracts and unrelated rewrites.</required_review>\n<existing_evidence>\n- `python3 -m unittest discover -s tests -v`: 26 passed.\n- `node --test tests/profile-router.test.mjs`: 8 passed.\n- `git diff --check`: passed.\n- Isolated inline OpenCode 1.18.10 debug config loaded the plugin, generated 24 hidden clones, retained public Sol/high, and allowed internal Terra Executor.\n- Real ChatGPT smoke with primary Luna/max remapped public scout to `pilotfish-profile-luna-scout`; Task metadata used openai/gpt-5.6-luna and debug agent confirmed hidden subagent variant low; completed ROUTER_SMOKE_OK.\n- Unsupported `openai/gpt-5.6-luna-fast` failed in `chat.message` before any step_start/assistant/provider event; logs showed the router error.\n- Real AntiGravity smoke (with a temporary cleanup overlay solely to neutralize an existing global ChatGPT variant during inline-config merging; file removed afterward) left `subagent_type: scout`, used google/antigravity-gemini-3-flash, and completed ANTIGRAVITY_SMOKE_OK.\n</existing_evidence>\n<constraints>Read-only. Do not edit or fix. Return `CONFIRMED` or `REFUTED` followed by concise concrete evidence. Do not accept claims solely because existing tests pass.</constraints>"
+        },
+        {
+          "partId": "prt_fe9a30efd001xINMCE1riMcMVC",
+          "timeCreated": 1786331205373,
+          "text": "REFUTED\n\nConcrete cross-profile bypass:\n\n- Pin a Luna session, then request `subagent_type: \"pilotfish-profile-sol-executor\"`.\n- Expected: Luna profile `executor` → Luna/high, or rejection.\n- Actual: router leaves the hidden name unchanged, Pilotfish permission is `allow`, and execution resolves to Sol profile `executor` → Terra/high.\n\nReproduced with an inline Node script; output:\n\n```json\n{\n  \"selectedPrimary\": \"luna\",\n  \"postHookSubagent\": \"pilotfish-profile-sol-executor\",\n  \"permission\": \"allow\",\n  \"executedBinding\": {\n    \"model\": \"openai/gpt-5.6-terra\",\n    \"variant\": \"high\"\n  }\n}\n```\n\nCause: `profile-router.mjs:101` grants permission to all 24 clones, while lines 215–217 rewrite only public role names. Exact hidden names therefore bypass session-profile routing. OpenCode 1.18.10 executes this hook before Task permission and agent resolution, so `hidden` is not an authorization boundary.\n\nBoth reported suites passed independently (26 Python, 8 Node), but they do not test direct hidden-clone invocation."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T03:03:07.557Z"
+    },
+    {
+      "sessionId": "ses_016598ca4ffep8T2oYgzLpdM0H",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Reverify secured profile router (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786331427675,
+      "parts": [
+        {
+          "partId": "prt_fe9a67361001AssM697heR6qtE",
+          "timeCreated": 1786331427682,
+          "text": "<phase>Verification</phase>\n<claim>Issue #12 implementation now closes the cross-profile hidden-agent bypass while preserving runtime Sol/Terra/Luna routing, AntiGravity passthrough, primary effort/model immutability, fail-before-provider behavior, and reversible installer lifecycle.</claim>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<prior_refutation>A Luna-pinned session could directly request `pilotfish-profile-sol-executor` because all hidden clones were allowed and the hook remapped only public names.</prior_refutation>\n<fix>profile-router.mjs now rejects every Task whose original subagent_type begins `pilotfish-profile-` before state lookup or mutation. Public names are checked/remapped only afterward. Regression tests cover same-profile, cross-profile, every profile prefix, absent state, non-Pilotfish state, AntiGravity, non-Task calls, and no mutation before rejection. Docs state hidden is not an authorization boundary.</fix>\n<paths>Inspect the full working-tree diff, especially templates/pilotfish/profile-router.mjs, profiles.json, tests/profile-router.test.mjs, tests/test_policy.py, installer and architecture docs.</paths>\n<evidence>Current primary-run checks: 9 Node tests passed; 26 Python tests passed; git diff --check passed. Prior real OpenCode 1.18.10 smokes proved 24 clones, Luna/max public scout remapping to hidden Luna/low, unsupported luna-fast rejection in chat.message before step_start/provider execution, and AntiGravity public scout passthrough to Gemini Flash.</evidence>\n<request>Attempt to refute the completed outcome, including variants of direct/internal-name bypass, malformed arguments, permission ordering, preset crossover, plugin loader exports/options, config-error deferral, session pinning, and installer ownership. Run focused checks yourself. Read-only; do not fix.</request>\n<verdict>Return `CONFIRMED` or `REFUTED` with concise concrete evidence.</verdict>"
+        },
+        {
+          "partId": "prt_fe9a87cc5001AP0qKjhqLmLyw5",
+          "timeCreated": 1786331561157,
+          "text": "REFUTED\n\nCounterexample from `/Users/adrian/Documents/GitHub/pilotfish-opencode`:\n\n```bash\nnode --input-type=module -e 'import plugin from \"./templates/pilotfish/profile-router.mjs\"; const hooks=await plugin({}, {preset:\"chatgpt\"}); const msg=(variant)=>({sessionID:\"variant-bypass\",agent:\"pilotfish\",model:{providerID:\"openai\",modelID:\"gpt-5.6-luna\"},variant}); await hooks[\"chat.message\"](msg(\"bogus-effort\"),{message:{},parts:[]}); await hooks[\"chat.message\"](msg(\"low\"),{message:{},parts:[]}); const task={args:{subagent_type:\"executor\"}}; await hooks[\"tool.execute.before\"]({tool:\"task\",sessionID:\"variant-bypass\",callID:\"c\"},task); console.log(JSON.stringify(task.args));'\n```\n\nExpected: only Luna/`max` is accepted, and same-session effort changes are rejected.\n\nActual: both `bogus-effort` and `low` were accepted, then routed to `pilotfish-profile-luna-executor`.\n\n`profile-router.mjs:186-203` pins and compares only `model`, ignoring `input.variant`. The existing test at `tests/profile-router.test.mjs:103` explicitly permits variant changes, contradicting the claimed primary effort immutability and documented exact Sol/high, Terra/high, Luna/max bindings. Standard checks otherwise reproduced: 9 Node tests, 26 Python tests, and `git diff --check` passed."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T03:10:27.675Z"
+    },
+    {
+      "sessionId": "ses_01655ce6bffesVesFXQ3QJQ0FQ",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Final verify approved profile contract (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786331672980,
+      "parts": [
+        {
+          "partId": "prt_fe9aa319f001tykdLJpIRmXZgC",
+          "timeCreated": 1786331672992,
+          "text": "<phase>Verification</phase>\n<authoritative_contract>For ChatGPT, the selected primary MODEL family (Sol, Terra, or Luna) chooses and pins the worker profile. Sol/high, Terra/high, and Luna/max are tested RECOMMENDATIONS only. Primary effort/variant remains user-controlled, may change within a model-pinned session, and is never rewritten by the plugin. A same-session primary MODEL change is rejected. This distinction is explicitly approved in issue #12 and is now documented.</authoritative_contract>\n<claim>The full issue #12 working-tree implementation meets that contract, exact worker mappings, one visible public primary/eight public workers, hidden clone routing, direct-hidden-name rejection, AntiGravity passthrough, unsupported/cross-preset pre-provider failure, and reversible install/update/uninstall ownership.</claim>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<review>Inspect the complete diff and run focused checks. Attempt to refute actual acceptance criteria, especially any remaining bypass of the pinned model profile, malformed Task inputs, permission ordering, plugin loader behavior, config-error handling, resumed Tasks, preset crossover, and lifecycle restoration. Do not treat non-recommended primary effort as a failure; effort freedom is required. Verify docs consistently describe recommendations rather than gates.</review>\n<known_evidence>OpenCode 1.18.10 real smokes: ChatGPT Luna model remapped public scout to hidden Luna/low; unsupported luna-fast failed in chat.message before assistant/provider; AntiGravity left public scout and used Gemini Flash. Unit/policy suites previously passed after the direct-hidden-name security fix.</known_evidence>\n<constraints>Fresh read-only outcome verification. Do not edit.</constraints>\n<verdict>Return `CONFIRMED` or `REFUTED` with concise concrete evidence.</verdict>"
+        },
+        {
+          "partId": "prt_fe9ad5517001D4MIZcgyAhqGyc",
+          "timeCreated": 1786331878679,
+          "text": "REFUTED\n\n- **Permission-ordering counterexample:** Add `\"pilotfish-profile-*\": \"deny\"` after the required public worker allows. The router accepts the configuration and appends exact hidden-agent `\"allow\"` rules (`profile-router.mjs:90-102,134`). OpenCode 1.18.10 uses the last matching permission, so the appended allow overrides the customized deny. Expected: fail closed rather than weaken customization. Actual: configuration accepted and hidden clone allowed.\n- `python3 -m unittest discover -s tests -v` also fails 1/26 tests because `test_policy.py:58` expects lowercase text while the installer uses sentence-initial `Unsupported`.\n- `node --test tests/profile-router.test.mjs` passed 9/9; non-recommended effort changes and resumed argument routing worked."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T03:14:32.980Z"
+    },
+    {
+      "sessionId": "ses_0164e8d22ffepE66lucJ1wbN0t",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Verify hardened routing outcome (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786332148445,
+      "parts": [
+        {
+          "partId": "prt_fe9b172e7001qHkNRlMkPUG3oh",
+          "timeCreated": 1786332148456,
+          "text": "<phase>Verification</phase>\n<authoritative_contract>Selected Sol/Terra/Luna primary model pins worker profile; primary effort remains user-controlled and variants in table are recommendations only. Router must not weaken customized Task permissions, permit direct internal targets, or allow cross-profile routing. AntiGravity is validated passthrough. Installer lifecycle must be reversible.</authoritative_contract>\n<claim>The complete issue #12 implementation now satisfies this contract.</claim>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<latest_security_fix>Before adding 24 internal exact allows, the config hook now requires the base `*`:deny first, verifies each public worker's effective last match is its explicit allow, rejects any pre-existing exact or `*` wildcard pattern matching an internal clone, and preserves unrelated rules. Direct `pilotfish-profile-*` Task requests are rejected before state lookup/mutation. Rejections are atomic and surfaced on first Pilotfish message because host config errors are ignored.</latest_security_fix>\n<review>Fresh read-only adversarial review of full diff. Reproduce permission order/glob behavior, direct and indirect routing bypasses, malformed args, profile/preset transitions, plugin exports/options, session behavior, exact mappings, docs recommendation semantics, and installer ownership. Run tests independently. Do not reinterpret primary effort recommendations as gates.</review>\n<evidence>Current primary checks: 12 Node tests pass, 26 Python tests pass, git diff --check passes. Real OpenCode 1.18.10 smokes previously verified ChatGPT Luna routing, unsupported pre-provider rejection, and AntiGravity passthrough.</evidence>\n<verdict>Return `CONFIRMED` or `REFUTED` with concise concrete evidence. Do not edit.</verdict>"
+        },
+        {
+          "partId": "prt_fe9b4c8af001TRSL4ZdiFA3pgx",
+          "timeCreated": 1786332367023,
+          "text": "REFUTED\n\nCounterexample: add Task rule `\"pilotfish-profile-sol-executo?\": \"deny\"`.\n\nExpected: configuration is rejected atomically because OpenCode 1.18.10 treats `?` as a wildcard matching `pilotfish-profile-sol-executor`.\n\nActual: the router accepts it, creates the clone, and appends an exact `\"allow\"` after the custom deny. OpenCode’s last-match rule therefore resolves to `allow`, weakening customized permissions.\n\nCause: `profile-router.mjs:90-95` implements only `*` wildcard semantics, unlike OpenCode’s `packages/core/src/util/wildcard.ts`, which supports both `*` and `?`.\n\nThe supplied test suites still pass: 12 Node tests and 26 Python tests."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T03:22:28.445Z"
+    },
+    {
+      "sessionId": "ses_01648c7bbffe3ZuWfAeyqcYefO",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Verify final wildcard hardening (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786332526660,
+      "parts": [
+        {
+          "partId": "prt_fe9b738500013QUuaStIwr8G66",
+          "timeCreated": 1786332526673,
+          "text": "<phase>Verification</phase>\n<authoritative_contract>Primary MODEL selects profile; primary effort is user-controlled/recommended only. Router must preserve customized Task permission restrictions, reject direct internal targets, and route only public roles to pinned-profile clones. AntiGravity passthrough and lifecycle requirements remain.</authoritative_contract>\n<latest_fix>The router's permission matcher now mirrors OpenCode v1.18.10 `packages/core/src/util/wildcard.ts` exactly for relevant semantics: slash normalization, regex escaping, `*`, `?`, trailing ` .*`, anchoring, dotAll, and Windows case-insensitivity. It rejects any pre-existing post-base pattern matching any internal clone before mutation. Regression covers `executo?`, combined wildcards, exact/internal patterns, and unrelated rules.</latest_fix>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<request>Fresh read-only adversarial verification of the complete issue #12 diff. Re-run tests and attempt new routing/permission/plugin/session/lifecycle counterexamples. Respect recommendation-only primary variants. Do not edit.</request>\n<evidence>Current checks reported: 13 Node router tests, 26 Python contracts, git diff check all pass; real OpenCode 1.18.10 profile/passthrough/pre-provider smokes previously passed.</evidence>\n<verdict>Return `CONFIRMED` or `REFUTED` with concise concrete evidence.</verdict>"
+        },
+        {
+          "partId": "prt_fe9ba46c3001iXiH7RHNZqxltr",
+          "timeCreated": 1786332726979,
+          "text": "REFUTED — baseline 13 Node tests, 26 Python tests, and `git diff --check` pass, but a valid OpenCode 1.18.10 path fails:\n\n- `opencode run --agent pilotfish \"...\"` omits the optional model; OpenCode resolves the configured Sol model before invoking `chat.message`.\n- Reproducing that hook shape returns: `Pilotfish ChatGPT profile does not support primary model \"unknown\".`\n- Expected: pin and route the resolved Sol profile.\n- Cause: `profile-router.mjs:222` reads only raw `input.model`, ignoring the resolved `output.message.model`. This also affects other valid API calls that rely on the agent’s configured model."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T03:28:46.660Z"
+    },
+    {
+      "sessionId": "ses_016432edbffeUDcyRUeZCkV3PJ",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Verify resolved-default routing (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786332893476,
+      "parts": [
+        {
+          "partId": "prt_fe9bcd12c001qUBaTFmTs7BTSX",
+          "timeCreated": 1786332893485,
+          "text": "<phase>Verification</phase>\n<authoritative_contract>Primary model family selects profile; effort is recommendation/user-controlled. Routing must work for explicit and configured-default models, preserve custom permissions, reject direct internal targets, and remain reversible.</authoritative_contract>\n<latest_fix>chat.message now derives agent/model from resolved `output.message` first and raw optional input second. Tests cover omitted raw model/agent, configured default Sol, non-Pilotfish output, and conflicting raw/resolved identity. A real OpenCode 1.18.10 `opencode run --agent pilotfish` without --model completed and remapped scout to `pilotfish-profile-sol-scout` using Luna.</latest_fix>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<request>Fresh read-only adversarial verification of complete issue #12 diff after all fixes. Run tests and probe plugin hook shapes, permission matching, routing bypasses, session/preset behavior, and lifecycle. Respect primary-effort recommendation semantics.</request>\n<evidence>Reported current checks: 18 Node tests, 26 Python tests, git diff check pass; real explicit Luna, default Sol, unsupported pre-provider, and AntiGravity smokes passed.</evidence>\n<verdict>Return `CONFIRMED` or `REFUTED` with concise concrete evidence. Do not edit.</verdict>"
+        },
+        {
+          "partId": "prt_fe9c065060015nB9DlNnMBJXyq",
+          "timeCreated": 1786333127942,
+          "text": "REFUTED\n\n- `node --test tests/profile-router.test.mjs`: 18/18 passed.\n- `python3 -m unittest tests.test_policy`: 26/26 passed.\n- `git diff --check`: passed.\n- Counterexample: after pinning `same-session` to Sol, recreating the plugin—as occurs across separate `opencode run` processes—and sending Terra for the same session was accepted and routed to `pilotfish-profile-terra-executor`; expected a model-change rejection.\n- Cause: `templates/pilotfish/profile-router.mjs:202` stores pins only in a process-local `Map` with no session-state recovery. Thus same-session profile pinning is bypassed after lifecycle restart."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T03:34:53.476Z"
+    },
+    {
+      "sessionId": "ses_01637ae71ffeLQfiydPBinsfcB",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Verify persisted profile pinning (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786333647246,
+      "parts": [
+        {
+          "partId": "prt_fe9c8519a001W8huVaHfXXTbqf",
+          "timeCreated": 1786333647260,
+          "text": "<phase>Verification</phase>\n<authoritative_contract>Primary model pins worker profile across turns and process restarts; primary effort remains user-controlled. Direct internal names and permission overrides fail closed. AntiGravity passthrough and reversible lifecycle remain.</authoritative_contract>\n<latest_fix>On in-memory miss, router uses plugin client.session.messages to recover the earliest persisted Pilotfish user model, with deterministic ordering, concurrent recovery dedup/recheck, malformed/error fail-closed handling, and deletion cancellation. New sessions with no prior Pilotfish messages pin current resolved model.</latest_fix>\n<live_evidence>OpenCode 1.18.10: created a Sol-default session in one opencode run process; a second process resumed same session with Terra and failed in chat.message before step_start; a third process resumed same session with Sol/low and successfully remapped public scout to pilotfish-profile-sol-scout. This also validates actual client.session.messages response shape.</live_evidence>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<request>Fresh read-only adversarial review of full issue #12 diff. Run tests and probe history recovery, forks/order/concurrency, plugin API errors, routing/permissions, presets, and lifecycle. Respect recommendation-only effort semantics.</request>\n<evidence>Reported current suites: 26 Node tests, 26 Python tests, git diff check pass.</evidence>\n<verdict>Return `CONFIRMED` or `REFUTED` with concrete evidence. Do not edit.</verdict>"
+        },
+        {
+          "partId": "prt_fe9cc7ce4001PJ4OWEPn6swzsr",
+          "timeCreated": 1786333920484,
+          "text": "REFUTED\n\nConcrete fail-open counterexample:\n\n- Working directory: `/Users/adrian/Documents/GitHub/pilotfish-opencode`\n- Input: history contains an explicitly Pilotfish record missing `info.role`, followed by a Terra resume attempt.\n- Expected: malformed persisted history is rejected fail-closed.\n- Actual: chat is accepted and routes to `pilotfish-profile-terra-executor`.\n\n```json\n{\"chat\":\"accepted\",\"routedTo\":\"pilotfish-profile-terra-executor\"}\n```\n\nCause: `profile-router.mjs:243-246` silently skips malformed records unless both `role === \"user\"` and `agent === \"pilotfish\"`. It therefore never reaches malformed-data validation and pins the current model at lines 339-342.\n\nBaseline verification reproduced:\n\n- `node --test tests/profile-router.test.mjs`: 26/26 passed\n- `python3 -m unittest discover -s tests -p 'test_*.py' -v`: 26/26 passed\n- `git diff --check`: passed\n\nThe existing malformed-history tests do not cover malformed records whose missing discriminator causes them to be silently ignored."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T03:47:27.246Z"
+    },
+    {
+      "sessionId": "ses_016314489ffeECDzJ530q1BZvy",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Verify history parsing hardening (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786334067574,
+      "parts": [
+        {
+          "partId": "prt_fe9cebb7d001ihLqbk51CUAZEo",
+          "timeCreated": 1786334067582,
+          "text": "<phase>Verification</phase>\n<contract>Issue #12 runtime routing with persisted model-profile pinning, user-controlled primary effort, permission-safe hidden clones, AntiGravity passthrough, and reversible lifecycle.</contract>\n<latest_fix>History recovery now treats Pilotfish-tagged role=user as a pin candidate with strict model/time validation, role=assistant as valid non-pin history, and any other/missing role as malformed fail-closed. Unrelated malformed records remain unattributed and skipped.</latest_fix>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<request>Fresh read-only adversarial verification of the complete diff. Probe malformed/history ordering and process restart paths, plugin API failures, permissions/wildcards, direct routing bypass, presets, exact mappings, docs, and lifecycle. Effort variants are recommendations only.</request>\n<evidence>Reported: 28 Node tests, 26 Python tests, git diff check pass. Live OpenCode cross-process Sol pin recovery rejected Terra and accepted Sol/low while routing the Sol worker profile.</evidence>\n<verdict>Return `CONFIRMED` or `REFUTED` with concrete evidence. Do not edit.</verdict>"
+        },
+        {
+          "partId": "prt_fe9d5aff0001U3QUk69TiV93Dl",
+          "timeCreated": 1786334523376,
+          "text": "REFUTED\n\nConcrete documentation counterexample:\n\n- `docs/local-install.md:39-44` claims to list AntiGravity requirements but includes only Opus and Sonnet.\n- Canonical mappings also require:\n  - `google/antigravity-gemini-3-flash` for Scout/Explore (`profiles.json:60-61`)\n  - `google/antigravity-gemini-3.1-pro` for Executor (`profiles.json:65`)\n- The installer correctly lists both at `install/OPENCODE-INSTALL.md:57-58`.\n\nThus a user following the walkthrough can incorrectly conclude AntiGravity prerequisites are satisfied, only for installer preflight to reject them. This contradicts `docs/local-install.md:46`, which promises exact model-and-variant prerequisite checking.\n\nReproduced checks:\n- Node router tests: 28/28 passed.\n- Python policy tests: 26/26 passed.\n- `git diff --check`: passed.\n- OpenCode 1.18.10 loaded sampled hidden clones with expected models, variants, permissions, and extended Task rules.\n\nThe tests do not validate completeness of the AntiGravity list in `docs/local-install.md`."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T03:54:27.574Z"
+    },
+    {
+      "sessionId": "ses_01629ac9dffeOeqBYhoJW1P9co",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Verify complete issue outcome (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786334565218,
+      "parts": [
+        {
+          "partId": "prt_fe9d65368001inCS0mBTWcDfma",
+          "timeCreated": 1786334565225,
+          "text": "<phase>Verification</phase>\n<contract>Complete issue #12 implementation: runtime Sol/Terra/Luna profile routing by selected primary model; recommendation-only effort; persisted session pins; permission-safe hidden clones; AntiGravity passthrough; exact install prerequisites; reversible lifecycle; preserved prior policy/docs.</contract>\n<latest_fix>docs/local-install.md now lists all four canonical AntiGravity model prerequisites, and policy tests derive/assert every canonical AntiGravity worker model appears in the walkthrough.</latest_fix>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<request>Fresh read-only adversarial review of full diff and all acceptance criteria. Run tests, inspect runtime/plugin/session/permissions and cross-document consistency. Do not edit.</request>\n<evidence>Prior rounds validated real OpenCode 1.18.10 explicit/default routing, unsupported pre-provider rejection, AntiGravity passthrough, and cross-process session pin recovery. Current reported suites before this small doc patch were 28 Node and 26 Python passing.</evidence>\n<verdict>Return `CONFIRMED` or `REFUTED` with concise concrete evidence.</verdict>"
+        },
+        {
+          "partId": "prt_fe9db0aed001xcHb9zM73WJtiP",
+          "timeCreated": 1786334874350,
+          "text": "REFUTED\n\n- Baseline checks passed: 28 Node tests, 26 Python tests, JSON validation, and `git diff --check`.\n- Counterexample: set public `executor.mode` to `\"primary\"`—possible through preserved customization/project override. The router clones it without validating or forcing subagent mode.\n- Actual result: `pilotfish-profile-sol-executor` resolved as `{\"mode\":\"primary\",\"hidden\":true}`, and its direct `chat.message` was accepted.\n- Expected: internal clones must remain subagents or configuration must fail, preventing direct invocation.\n\nBreaks in `templates/pilotfish/profile-router.mjs:82-87` and `:161-166`: worker mode is neither validated nor constrained. This violates the permission-safe hidden-clone/direct-invocation contract."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T04:02:45.218Z"
+    },
+    {
+      "sessionId": "ses_016217fe9ffe6JxXfHZClJfiyQ",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Verify secured subagent boundary (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786335100950,
+      "parts": [
+        {
+          "partId": "prt_fe9de801e001ihLFp9AUjK57Pw",
+          "timeCreated": 1786335100959,
+          "text": "<phase>Verification</phase>\n<contract>Complete issue #12 runtime profile architecture, including no direct access to internal clones, subagent-only workers, persisted profile pins, user-controlled effort, permission preservation, AntiGravity passthrough, exact docs/install lifecycle.</contract>\n<latest_fix>Config hook now atomically requires every public worker mode=subagent before cloning. chat.message rejects any resolved/raw agent with internal prefix before Pilotfish routing; Task already rejects internal targets. Docs/install verification cover direct chat/Task rejection and subagent modes.</latest_fix>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<request>Fresh read-only adversarial review of full diff. Run tests and seek concrete runtime, security, session-recovery, permission, preset, malformed input, and lifecycle failures. Respect recommendation-only effort.</request>\n<evidence>Reported 32 Node tests, 26 Python tests, diff check pass; prior live OpenCode smokes cover routing, defaults, unsupported rejection, AntiGravity, and process restart recovery.</evidence>\n<verdict>Return `CONFIRMED` or `REFUTED` with concrete evidence. Do not edit.</verdict>"
+        },
+        {
+          "partId": "prt_fe9e37276001UZTmHXzL2Yl7lZ",
+          "timeCreated": 1786335425142,
+          "text": "REFUTED\n\n- Reproduced reported checks: 32 Node tests and 26 Python tests passed; `git diff --check` passed.\n- Direct-chat guard counterexample: invoking `chat.message` with raw agent `pilotfish-profile-sol-executor` and resolved agent `build` was **accepted**. The latest claim says any resolved **or raw** internal-prefixed agent is rejected. `profile-router.mjs:303-304` checks only `resolved?.agent ?? input.agent`, ignoring the raw internal name when a resolved name exists. `tests/profile-router.test.mjs:430-445` explicitly codifies this acceptance.\n- Malformed plugin options fail open: calling the plugin with `{preset:\"malformed\"}` produced `factory-threw Pilotfish profile router option \"preset\" must be \"chatgpt\" or \"antigravity\"`. OpenCode 1.18.10 catches plugin-factory failures and skips registering its hooks. Consequently no config validation, profile pinning, Task routing, or direct-internal rejection exists, while the persisted public agents remain available. This breaks required-router fail-closed behavior for malformed runtime configuration."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T04:11:40.950Z"
+    },
+    {
+      "sessionId": "ses_01617b296ffeFX6ziSTFuVEhvA",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Verify fail-closed initialization (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786335743337,
+      "parts": [
+        {
+          "partId": "prt_fe9e84d6d001Rd5hOM26ke2eLR",
+          "timeCreated": 1786335743342,
+          "text": "<phase>Verification</phase>\n<contract>Complete issue #12 runtime router must fail closed for internal access and catchable initialization/config failures, preserve non-Pilotfish sessions, persist profile pins, maintain effort freedom, and satisfy lifecycle/docs.</contract>\n<latest_fix>Both raw and resolved agent identities independently reject internal prefixes. Default plugin factory catches router construction failures (invalid/missing preset, profile read/parse/validation) and returns protective hooks: config no-op, Pilotfish/internal chat blocked, internal Task blocked, unrelated sessions untouched. Resolved output remains authoritative for ordinary routing.</latest_fix>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<request>Fresh read-only adversarial review of full diff. Run tests and probe factory/config failure paths, conflicting identities, permissions, history recovery, routing, presets, docs/install. Respect recommendation-only effort.</request>\n<evidence>Reported 33 Node tests, 26 Python tests, diff check pass; prior real host smokes validate routing and persisted history recovery.</evidence>\n<verdict>Return `CONFIRMED` or `REFUTED` with concrete evidence. Do not edit.</verdict>"
+        },
+        {
+          "partId": "prt_fe9eb6070001OqTsRmWhIrOFYh",
+          "timeCreated": 1786335944816,
+          "text": "REFUTED\n\nConcrete counterexample:\n\n- Installed host: `opencode --version` → `1.18.10`.\n- OpenCode v1.18.10 SDK requires:\n  ```js\n  client.session.messages({ sessionID: \"...\" })\n  ```\n- Router instead calls `client.session.messages({ path: { id: sessionID } })` at `templates/pilotfish/profile-router.mjs:282`.\n\nProbe using the host-correct SDK contract:\n\n```json\n{\n  \"accepted\": false,\n  \"error\": \"Pilotfish could not recover this session's persisted model profile: session history retrieval failed (sessionID is required)...\",\n  \"seen\": [{\"path\":{\"id\":\"ses_host_contract\"}}]\n}\n```\n\nExpected: a new Pilotfish session receives empty history, pins Sol, and routes Tasks.\n\nActual: every cache-miss Pilotfish message fails closed because the router supplies the wrong SDK argument shape. This breaks initial routing and persisted-history recovery.\n\nOther checks reproduced:\n\n- `node --test tests/profile-router.test.mjs`: 33/33 passed, but its mock explicitly expects the incorrect `{path:{id}}` request.\n- `python3 -m unittest discover -s tests -v`: 26/26 passed.\n- `git diff --check`: passed."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T04:22:23.337Z"
+    },
+    {
+      "sessionId": "ses_0161440daffeNddn5yT42qHubI",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Verify actual injected SDK contract (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786335969061,
+      "parts": [
+        {
+          "partId": "prt_fe9ebbf2a0016vGZIXJyp5ceX9",
+          "timeCreated": 1786335969066,
+          "text": "<phase>Verification</phase>\n<critical_correction>The prior refutation used the wrong SDK surface. OpenCode v1.18.10 `packages/opencode/src/plugin/index.ts` imports `createOpencodeClient` from `@opencode-ai/sdk` and injects that client into plugins. The installed declaration `@opencode-ai/sdk/dist/gen/sdk.gen.d.ts` Session.messages takes Options<SessionMessagesData>; `dist/gen/types.gen.d.ts` defines SessionMessagesData.path.id. Therefore `client.session.messages({path:{id: sessionID}})` is the correct plugin-injected client call. A real OpenCode 1.18.10 cross-process smoke using the current router successfully read history, rejected Terra for a Sol-pinned session, then accepted Sol/low and routed to the Sol scout clone.</critical_correction>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<contract>Issue #12 full outcome as previously stated; effort recommendations are not gates.</contract>\n<request>Fresh read-only verification using the actual client injected by OpenCode's plugin/index.ts, not another SDK generation or custom API assumption. Reassess full diff, run tests, and attempt valid counterexamples across routing, security, recovery, presets, and lifecycle.</request>\n<evidence>Live host commands already validated `path.id` recovery. Current reported suites: 33 Node, 26 Python, diff check pass.</evidence>\n<verdict>Return `CONFIRMED` or `REFUTED` with concrete evidence tied to the actual injected client and OpenCode 1.18.10. Do not edit.</verdict>"
+        },
+        {
+          "partId": "prt_fe9f1a4aa00184Hd4fBkRP0wcq",
+          "timeCreated": 1786336355498,
+          "text": "REFUTED\n\nConcrete OpenCode 1.18.10 counterexamples:\n\n- **Unsupported-model errors are not user-actionable.**\n  - Input: ChatGPT router, `pilotfish`, model `google/antigravity-claude-opus-4-6-thinking`.\n  - Expected: actionable unsupported-model error before provider execution.\n  - Actual standard JSON output:\n    `Unexpected server error. Check server logs for details.`\n  - The useful message only appeared with `--print-logs`: `Pilotfish ChatGPT profile does not support primary model ...`\n  - Breaks at the OpenCode HTTP boundary after `profile-router.mjs:225` throws; the host replaces it with a generic error.\n\n- **Direct internal chat is not rejected on the normal CLI surface.**\n  - Input: `opencode run --agent pilotfish-profile-sol-scout ...`\n  - Expected: router rejection without provider execution.\n  - Actual: OpenCode warned that the hidden agent was a subagent, fell back to the default primary, then executed an LLM turn and `todowrite`. The router never received the requested internal identity.\n\nOther evidence reproduced:\n\n- Confirmed v1.18.10 `plugin/index.ts` injects `createOpencodeClient`.\n- Confirmed `Session.messages({path:{id}})` against the corresponding SDK declaration.\n- `node --test tests/profile-router.test.mjs`: 33/33 passed.\n- `python3 -m unittest discover -s tests -v`: 26/26 passed.\n- `git diff --check`: passed.\n- OpenCode 1.18.10 host configuration created the expected hidden Sol/Terra/Luna clones; AntiGravity created none."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T04:26:09.061Z"
+    },
+    {
+      "sessionId": "ses_0160b0a8effea0FaPF7aSWinIc",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Final verify documented host boundaries (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786336572785,
+      "parts": [
+        {
+          "partId": "prt_fe9f4f577001AgSRQkaqdHFHsy",
+          "timeCreated": 1786336572792,
+          "text": "<phase>Verification</phase>\n<authoritative_scope>Issue #12 requires fail-closed routing before provider execution, exact profiles, permission safety, persisted pins, AntiGravity passthrough, and reversible lifecycle. OpenCode 1.18.10 host presentation limits are now explicitly documented: hook exceptions appear as generic `Unexpected server error` in standard JSON but exact reasons are in `--print-logs`; CLI hidden-subagent selection is refused before plugin chat hooks and may fall back to default primary, but the hidden clone never executes. These host behaviors are not claimed as router-provided UX.</authoritative_scope>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<request>Fresh read-only adversarial review of complete diff under the documented host boundaries. Verify core routing/security/session/lifecycle outcomes, tests, and doc accuracy. Seek valid counterexamples where wrong profile/internal clone executes, provider runs after a router-handled rejection, permissions are weakened, pins change, or lifecycle loses user state. Do not require the plugin to alter host-level generic error rendering or pre-hook CLI fallback.</request>\n<evidence>33 Node and 26 Python tests pass; diff check passes. Real OpenCode 1.18.10 smokes validated explicit/default profile routing, no step_start/provider for unsupported and cross-process rejected model changes, same-model effort freedom, AntiGravity passthrough, and persisted history recovery.</evidence>\n<verdict>Return `CONFIRMED` or `REFUTED` with concrete evidence. Do not edit.</verdict>"
+        },
+        {
+          "partId": "prt_fe9fa81da001qlW5QPzBtApg4K",
+          "timeCreated": 1786336936410,
+          "text": "REFUTED — stale session pins affect non-Pilotfish agents.\n\nReproduction from `/Users/adrian/Documents/GitHub/pilotfish-opencode`:\n\n1. Pin a session to Luna through `pilotfish`.\n2. Switch the same session to resolved agent `build`.\n3. Have Build invoke public Task role `executor`.\n\nObserved:\n\n```json\n{\"subagent_type\":\"pilotfish-profile-luna-executor\"}\n{\"public\":\"openai/gpt-5.6-terra/high\",\"routed\":\"openai/gpt-5.6-luna/high\"}\n```\n\nExpected: the router should leave Build’s public `executor` Task unchanged. Actual: it executes the Luna internal clone.\n\nCause: non-Pilotfish messages return without clearing/deactivating the session pin (`profile-router.mjs:345-349`), while every subsequent Task in that session is remapped solely by session ID (`profile-router.mjs:401-409`). OpenCode then executes using the mutated arguments (`session/tools.ts:106-111`; `tool/task.ts:131,181-212`).\n\nBoth reported suites were reproduced successfully—33 Node and 26 Python tests—but they omit this mixed-agent, same-session boundary."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T04:36:12.785Z"
+    },
+    {
+      "sessionId": "ses_015fef406ffe0MuOmYfQLTjdyb",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Verify active-agent routing scope (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786337364985,
+      "parts": [
+        {
+          "partId": "prt_fea010c020018RSvReuCF6r7NV",
+          "timeCreated": 1786337364995,
+          "text": "<phase>Verification</phase>\n<contract>Runtime profile pin persists by session, but Task remapping is active only while latest successfully resolved chat agent is Pilotfish. All prior issue #12 security/session/lifecycle contracts apply.</contract>\n<latest_fix>Router tracks per-session current resolved agent separately from profile pin. Non-Pilotfish chat immediately deactivates routing; Pilotfish activates only after successful validation/recovery; superseded async recovery cannot reactivate; Task remaps only when marker is active Pilotfish; deletion clears all state. Tests cover Pilotfish→Build no-op, reactivation, failures, restart Build-first, concurrency, and AntiGravity.</latest_fix>\n<host_note>A CLI --session/--agent experiment can preserve prior context and cause the model itself to request a visible historical internal name; direct-internal guard rejects that. Verify the hook contract using resolved output.message.agent, which is the actual routing identity.</host_note>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<request>Fresh read-only adversarial review of complete diff. Run tests and find valid counterexamples tied to actual hook identities, routing, security, history, permissions, presets, or lifecycle. Respect documented host error/fallback boundaries and effort recommendations.</request>\n<evidence>Current tests reported 38 Node/26 Python before documentation-only updates; real host routing/recovery smokes passed.</evidence>\n<verdict>Return CONFIRMED or REFUTED with concrete evidence. Do not edit.</verdict>"
+        },
+        {
+          "partId": "prt_fea0627f90011xGQ4fgdMiHUi8",
+          "timeCreated": 1786337699833,
+          "text": "REFUTED\n\nConcrete counterexample:\n\n- Parent Pilotfish Task remapped `executor` to `pilotfish-profile-sol-executor`.\n- OpenCode 1.18.10 then creates the child user message using that resolved internal agent and invokes `chat.message`.\n- `rejectDirectInternalChat()` rejects this legitimate router-generated child, preventing every ChatGPT-remapped Task from running.\n\nReproduction from `/Users/adrian/Documents/GitHub/pilotfish-opencode` produced:\n\n```text\nremapped pilotfish-profile-sol-executor\nchild rejected Pilotfish internal profile agents cannot be invoked directly through chat\n```\n\nBreaks at `templates/pilotfish/profile-router.mjs:14-21`. The 38 Node and 26 Python tests pass, but no test exercises the child `chat.message` hook after Task remapping. OpenCode’s `task.ts` passes `next.name` into the child prompt, and `session/prompt.ts` triggers `chat.message` for that child."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T04:49:24.985Z"
+    },
+    {
+      "sessionId": "ses_015efb97effeJQ20wcci031xjN",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Verify one-time child authorization (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786338363009,
+      "parts": [
+        {
+          "partId": "prt_fea1046880019Z1RGg8kh4xLNI",
+          "timeCreated": 1786338363017,
+          "text": "<phase>Verification</phase>\n<contract>Complete issue #12 router, including legitimate hidden Task children allowed only through one-time parent authorization; direct internal access blocked; active-agent scoping; persisted pins; permission safety; lifecycle/docs.</contract>\n<latest_fix>Parent Task remap records one-time parent sessionID+callID+exact internal agent authorization. Internal child chat must resolve session.get parentID, match raw/resolved identity, active Pilotfish parent, pinned profile/role, then atomically consume. Replay/root/wrong parent/deactivated/malformed reject. tool.execute.after and deletion clear unused authorization. Background unsupported.</latest_fix>\n<live_evidence>OpenCode 1.18.10 foreground sequence just passed: public scout remapped to pilotfish-profile-sol-scout, child chat completed CHILD_AUTH_OK, and parent completed CHILD_AUTH_DONE.</live_evidence>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<request>Fresh read-only adversarial verification of full diff. Run tests; probe authorization lifecycle/concurrency, active-agent scope, history, permissions, presets, and install docs. Respect documented host boundaries and effort semantics.</request>\n<evidence>Reported 42 Node, 26 Python, diff check pass.</evidence>\n<verdict>Return CONFIRMED or REFUTED with concrete evidence. Do not edit.</verdict>"
+        },
+        {
+          "partId": "prt_fea134202001j96mSlU0wP5izu",
+          "timeCreated": 1786338558466,
+          "text": "REFUTED\n\n- Baseline verification passed: 42 Node tests, 26 Python tests, JSON/module syntax checks, and `git diff --check`.\n- Authorization bypass reproduced in `/Users/adrian/Documents/GitHub/pilotfish-opencode`:\n  1. Pin parent session `p` to Sol.\n  2. Authorize call `new-task` for `scout`.\n  3. Submit internal chat from a pre-existing sibling session whose `parentID` is `p`.\n  4. Actual: `PREEXISTING_SIBLING_ACCEPTED`.\n  5. Expected: rejection because that sibling was not the child created by `new-task`.\n\n`profile-router.mjs:381-395` matches only parent ID and expected agent. Although authorization records `callID`, child chat never proves association with that call, so any sibling under the parent can consume it.\n\nA second probe authorized two concurrent foreground `scout` calls. Both mapped to the same internal agent, and the legitimate child was rejected:\n\n```text\nCHILD_REJECTED: ... multiple matching parent Task authorizations are ambiguous\n```\n\nThus same-role concurrent read-only Tasks fail, while an unrelated sibling can steal a pending authorization. This contradicts exact Task-child authorization and direct-internal-access blocking."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T05:06:03.009Z"
+    },
+    {
+      "sessionId": "ses_015d74bd2ffeGuvoY6e0qr4c5u",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Verify exact child binding (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786339963949,
+      "parts": [
+        {
+          "partId": "prt_fea28b432001fl5ZDFfJATjE3l",
+          "timeCreated": 1786339963955,
+          "text": "<phase>Verification</phase>\n<contract>Complete issue #12 router with exact foreground Task-child authorization, active Pilotfish scoping, persisted pins, permission safety, effort freedom, AntiGravity, and reversible lifecycle.</contract>\n<latest_fix>New Tasks bind exact child via transient SHA-256 call marker in description/title; child session.get must match marker, parent, agent, profile, active state; title restored before provider. Concurrent same-role calls have distinct markers. Resumed tasks validate exact task_id. after-hook clears authorization and restores mutable values. Pre-existing siblings/replays reject. Background unsupported.</latest_fix>\n<documented_host_boundary>OpenCode 1.18.10 may retain the marked description in already-captured raw tool-input events even after mutable args/output restoration. Marker is only a call-ID digest, contains no prompt/credential data, and this is documented/tested—not claimed absent.</documented_host_boundary>\n<live_evidence>Actual OpenCode 1.18.10 foreground smoke succeeded: public scout remapped, exact internal child completed, clean output title returned, parent completed. Raw event retained the documented digest.</live_evidence>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<request>Fresh read-only adversarial review. Run tests and probe sibling/concurrency/resume/cleanup, routing, permissions, history, presets, lifecycle/docs. Respect documented host boundaries and effort semantics.</request>\n<evidence>Reported 45 Node/26 Python/diff pass before doc-only correction.</evidence>\n<verdict>Return CONFIRMED or REFUTED with concrete evidence. Do not edit.</verdict>"
+        },
+        {
+          "partId": "prt_fea29b575001228qEFWYAESScl",
+          "timeCreated": 1786340029813,
+          "text": "REFUTED\n\nFrom `/Users/adrian/Documents/GitHub/pilotfish-opencode`:\n\n- `node --test tests/profile-router.test.mjs`: **45/45 passed**\n- `git diff --check`: **passed**\n- `python3 -m unittest discover -s tests -v`: **failed—26 run, 2 failures**\n\nReproducible failures:\n\n1. `tests/test_policy.py:90` expects `raw tool-input history`; current docs use `raw tool-input event/events`.\n2. `tests/test_policy.py:348` expects `with no marker`; `RELEASING.md` says `without marker mutation`.\n\nExpected: all 26 policy/lifecycle/documentation tests pass.  \nActual: 24 pass, 2 fail after the documentation correction."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T05:32:43.949Z"
+    },
+    {
+      "sessionId": "ses_015d55e94ffeMxSotH4I2pYe4b",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Final adversarial outcome check (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786340090219,
+      "parts": [
+        {
+          "partId": "prt_fea2aa177001f8eJ7xi8aX8EGf",
+          "timeCreated": 1786340090233,
+          "text": "<phase>Verification</phase>\n<contract>Issue #12 complete outcome with exact-child foreground authorization, active-agent scoping, persisted pins, permission-safe routing, recommendation-only effort, AntiGravity passthrough, and reversible lifecycle.</contract>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<evidence>45 Node and 26 Python tests pass; diff check passes. Live OpenCode 1.18.10 exact-child foreground Task completed successfully. Raw event retained a documented SHA-256 call-ID digest in captured input; clean child/output titles and authorization cleanup succeeded. Other live smokes cover explicit/default profiles, unsupported pre-provider failure, AntiGravity, and cross-process pin recovery.</evidence>\n<request>Fresh read-only adversarial review of full diff. Probe only valid failures beyond the explicitly documented OpenCode host boundaries (generic hook error rendering, hidden --agent fallback, raw digest retention, experimental background unsupported). Run tests and inspect runtime/security/lifecycle.</request>\n<verdict>Return CONFIRMED or REFUTED with concrete evidence. Do not edit.</verdict>"
+        },
+        {
+          "partId": "prt_fea2de4a6001VVCcuPJ77hMnMH",
+          "timeCreated": 1786340304039,
+          "text": "REFUTED\n\nConcrete authorization-cleanup bypass:\n\n- OpenCode `1.18.10` runs `tool.execute.after` only after successful tool execution; it is not in a `finally` block (`packages/opencode/src/session/tools.ts`).\n- The router creates authorization in `tool.execute.before` but only deletes it in `tool.execute.after` or `session.deleted`.\n- Therefore, a Task failure before child chat—such as depth, permission, session, or agent failure—leaves an unconsumed authorization active.\n\nReproduced from `/Users/adrian/Documents/GitHub/pilotfish-opencode` with a pre-existing sibling session:\n\n1. Authorized `failed-call`.\n2. Simulated the host’s error path where `tool.execute.after` is not invoked.\n3. Retitled the sibling to the captured marked title.\n4. Sent direct internal chat from that sibling.\n\nActual result:\n\n```text\nACTUAL_ACCEPTED_STALE_AUTH {\n  id: 'sibling',\n  parentID: 'parent',\n  agent: 'pilotfish-profile-sol-executor',\n  title: 'will fail (@pilotfish-profile-sol-executor subagent)'\n}\n```\n\nExpected: failed Task authorization is revoked and the sibling is rejected.  \nActual: the sibling consumes the stale authorization and is accepted at `profile-router.mjs:424-472`.\n\nThis violates authorization cleanup, direct-internal rejection, and the claim that a pre-existing sibling cannot steal authorization. It is separate from the documented host boundaries.\n\nOther reproduced checks:\n\n- `node --test tests/profile-router.test.mjs`: 45 passed.\n- `python3 -m unittest discover -s tests -v`: 26 passed.\n- `git diff --check`: passed."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T05:34:50.219Z"
+    },
+    {
+      "sessionId": "ses_015c42318ffebryI9x5gXrmw84",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Verify event-bound authorization (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786341219559,
+      "parts": [
+        {
+          "partId": "prt_fea3bdcf4001hT0Lb1PjOTXNaz",
+          "timeCreated": 1786341219573,
+          "text": "<phase>Verification</phase>\n<contract>Complete issue #12 outcome with exact foreground child authorization, including cleanup on failed Task paths.</contract>\n<latest_fix>New authorization is unbound, timestamped, and expires independently after 30s. Only exact post-auth session.created event with matching marker/parent/agent/profile binds child ID. Child chat requires bound exact ID plus session.get revalidation. Pre-existing sibling retitle cannot bind. Timers clear on consume/after/deletion/dispose. Resumed task_id directly binds after validation. Background unsupported.</latest_fix>\n<live_evidence>Actual OpenCode 1.18.10 foreground smoke passed with event-bound child: public scout remapped, session.created binding occurred before child chat, child completed CREATED_EVENT_OK, parent completed. Raw digest retention is documented.</live_evidence>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<request>Fresh read-only adversarial review. Run tests; probe event binding, stale cleanup, sibling/new session attacks, concurrency/resume, routing/security/history/lifecycle. Respect explicit host boundaries and effort semantics.</request>\n<evidence>Reported 49 Node/26 Python/diff pass.</evidence>\n<verdict>Return CONFIRMED or REFUTED with concrete evidence. Do not edit.</verdict>"
+        },
+        {
+          "partId": "prt_fea3fa6b0001mHqbnk6MXCgLQw",
+          "timeCreated": 1786341467824,
+          "text": "REFUTED\n\n- `node --test tests/profile-router.test.mjs`: 49/49 passed.\n- `python3 -m unittest tests/test_policy.py`: 26/26 passed.\n- `git diff --check` and router syntax check passed.\n\nConcrete failed-Task cleanup counterexample in `/Users/adrian/Documents/GitHub/pilotfish-opencode`:\n\n1. Authorize a foreground Task.\n2. Emit its valid matching `session.created`.\n3. Simulate failure before child `chat.message`, with no `tool.execute.after`.\n4. Advance beyond the authorization TTL.\n\nObserved:\n```json\n{\n  \"taskDescription\": \"failed task\",\n  \"childTitle\": \"failed task [pilotfish-task:9be252…30cc] (@pilotfish-profile-sol-executor subagent)\",\n  \"timers\": 0\n}\n```\n\nAuthorization expires and child chat rejects, but the live child session permanently retains the transient marker. Only raw tool-input retention is documented as acceptable.\n\nThe break is in `templates/pilotfish/profile-router.mjs:405-415`: expiry removes authorization and restores Task arguments but never restores a bound child title. Title restoration exists only during child chat (`:542-549`) or the after hook (`:751-765`), both absent on this failure path. OpenCode 1.18.10 can fail after creating the child but before prompting it, while its tool wrapper skips `tool.execute.after` when execution throws, making this a valid foreground host path."
+        }
+      ],
+      "verdict": "REFUTED",
+      "verdictTextIndex": 1,
+      "timeCreatedISO": "2026-08-10T05:53:39.559Z"
+    },
+    {
+      "sessionId": "ses_015b6d306ffe5gd1ZKKG6jgiAg",
+      "parentId": "ses_021fea16affe6jIHf9T8zrIiNz",
+      "title": "Verify independent authorization cleanup (@verifier subagent)",
+      "directory": "/Users/adrian/Documents/GitHub/pilotfish-opencode",
+      "model": "openai/gpt-5.6-sol",
+      "timeCreated": 1786342092025,
+      "parts": [
+        {
+          "partId": "prt_fea492cff001R5JT69NjBT9GLe",
+          "timeCreated": 1786342092033,
+          "text": "<phase>Verification</phase>\n<contract>Complete issue #12 router with exact foreground child authorization and independent cleanup on all supported failure paths.</contract>\n<latest_fix>Expiry, parent deletion, and dispose now asynchronously restore any event-bound marked child title before finally revoking/removing authorization. Cleanup first marks unusable, shares one cleanup promise against timer/chat/after races, revalidates exact child/title, handles timer rejection, and always revokes even if host title update fails. Resumed tasks have no marker.</latest_fix>\n<documented_limit>If process exits before unref timer or host get/update fails, authorization is unusable but cosmetic marker may need manual cleanup.</documented_limit>\n<workspace>/Users/adrian/Documents/GitHub/pilotfish-opencode</workspace>\n<request>Fresh read-only adversarial review. Run tests and probe failed Task/no-after cleanup, races, sibling/event binding, resume, routing/security/history/lifecycle. Respect documented host/effort/background boundaries.</request>\n<evidence>Reported 52 Node/26 Python/diff pass; live event-bound foreground Task passed.</evidence>\n<verdict>Return CONFIRMED or REFUTED with concrete evidence. Do not edit.</verdict>"
+        }
+      ],
+      "verdict": null,
+      "verdictTextIndex": 0,
+      "note": "no parseable verdict; stored text is an echoed brief",
+      "timeCreatedISO": "2026-08-10T06:08:12.025Z"
+    }
+  ]
+}

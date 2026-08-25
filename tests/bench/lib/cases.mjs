@@ -18,7 +18,22 @@ import { fileURLToPath } from "node:url";
 
 const CASES_DIR = fileURLToPath(new URL("../cases/", import.meta.url));
 
-export const CLASSES = ["A", "B", "C", "D"];
+// B2 is class B's defect in a realistic commit. The class B fixtures are
+// 10-19 line files with exactly two exported functions, so their commit is a
+// two-hunk diff and detection reduces to noticing that a second hunk exists --
+// a diff-reading task, not a defect-finding one. Against the 44 historical
+// REFUTED sessions that shape is about 5% of real defects.
+//
+// B2 seeds the identical mutation, with identical markers, into a commit that
+// also carries four to six legitimate changes across two or three files: an
+// extracted helper that has its own reason to touch the defective function, a
+// rename propagated through call sites, an added test for the claimed
+// function, a documentation table brought up to date. The defect becomes one
+// hunk among several instead of one of two.
+//
+// Scored exactly as B -- only class D is special-cased anywhere -- so the two
+// tiers pool separately and can be compared directly on the same seat.
+export const CLASSES = ["A", "B", "B2", "C", "D"];
 
 // Commits are made with explicit identity so a run never depends on, or picks
 // up, whatever `user.email` the host happens to have configured.
@@ -29,8 +44,36 @@ const GIT_IDENTITY = [
   "-c", "core.hooksPath=/dev/null",
 ];
 
+// Commit dates are pinned, which makes a case's commit ids a function of its
+// content alone: materialize `b2-timeout-guard-adjacent` today and next month
+// and both repositories have the same two SHAs.
+//
+// This is not tidiness. A brief is captured from a real primary, and this
+// preset's primary writes the fixture's commit ids into it -- *"Immutable
+// pre-edit baseline commit: 9216815..., Claimed implementation commit:
+// f98d9cc..."*. Git stamps author and committer dates at one-second resolution,
+// so without pinning, two materializations of one case produce different SHAs
+// and every such brief names commits that do not exist in the fixture it is
+// replayed into. The verifier then cannot diff the claimed change at all, and
+// the failure arrives as a verdict rather than as an invalid run -- the same
+// shape as the dead fixture path in `briefs.mjs`, and the same reason it is
+// worth removing at the source rather than papering over on the way in.
+//
+// The change commit is a minute after the base so ordering is well-defined.
+// Both are fixed points, not offsets from now.
+const BASE_DATE = "2026-01-05T09:00:00+00:00";
+const CHANGE_DATE = "2026-01-05T09:01:00+00:00";
+
 function git(cwd, ...args) {
   return execFileSync("git", [...GIT_IDENTITY, ...args], { cwd, encoding: "utf8" });
+}
+
+function commit(cwd, message, date) {
+  return execFileSync("git", [...GIT_IDENTITY, "commit", "-q", "-m", message], {
+    cwd,
+    encoding: "utf8",
+    env: { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date },
+  });
 }
 
 export function loadCases({ ids = null, classes = null } = {}) {
@@ -106,16 +149,19 @@ export function materializeCase(item, targetDir) {
   cpSync(join(item.dir, "base"), targetDir, { recursive: true });
   git(targetDir, "init", "-b", "main", "-q");
   git(targetDir, "add", "-A");
-  git(targetDir, "commit", "-q", "-m", item.baseCommitMessage ?? "chore: initial state");
+  commit(targetDir, item.baseCommitMessage ?? "chore: initial state", BASE_DATE);
 
   cpSync(join(item.dir, "change"), targetDir, { recursive: true });
   for (const relative of item.delete ?? []) {
     rmSync(join(targetDir, relative), { recursive: true, force: true });
   }
   git(targetDir, "add", "-A");
-  git(targetDir, "commit", "-q", "-m", item.changeCommitMessage ?? item.claim.split("\n")[0]);
+  commit(targetDir, item.changeCommitMessage ?? item.claim.split("\n")[0], CHANGE_DATE);
 
-  return { head: git(targetDir, "rev-parse", "HEAD").trim() };
+  return {
+    base: git(targetDir, "rev-parse", "HEAD~1").trim(),
+    head: git(targetDir, "rev-parse", "HEAD").trim(),
+  };
 }
 
 // The brief handed to `pilotfish`. It forces the completion gate to fire but

@@ -77,6 +77,10 @@ export function readRunTelemetry(fixture, { outside = null } = {}) {
     `SELECT s.id AS sessionId, s.agent, s.title, s.time_created AS created,
             s.cost, s.tokens_input AS tokensInput, s.tokens_output AS tokensOutput,
             s.tokens_reasoning AS tokensReasoning,
+            s.tokens_cache_read AS tokensCacheRead,
+            s.tokens_cache_write AS tokensCacheWrite,
+            s.parent_id AS parentId,
+            (SELECT max(p.time_created) FROM part p WHERE p.session_id = s.id) AS lastActivity,
             ${LAST_TEXT} AS verdictText
      FROM session s WHERE ${VERIFIER_PREDICATE} ORDER BY s.time_created;`,
   );
@@ -122,10 +126,58 @@ export function readRunTelemetry(fixture, { outside = null } = {}) {
      FROM part p;`,
   );
 
+  // What the primary did *after* the gate reported. #16's scope change tells the
+  // verifier to file an adjacent defect as an observation beneath a CONFIRMED
+  // rather than refute on it, which only remains safe if the primary then acts
+  // on the observation. Nothing in the stored history answers that -- only two
+  // verifier sessions in the real database postdate the change, and neither
+  // carries an observation -- so it has to be captured from seeded runs.
+  //
+  // Keyed to the first verifier dispatch, because that is the one scored.
+  const first = verifierRuns[0] ?? null;
+  let primaryAftermath = null;
+  if (first?.parentId && first.lastActivity != null) {
+    const parent = sqlQuote(first.parentId);
+    const after = Number(first.lastActivity);
+    const [counts] = query(
+      dbPath,
+      `SELECT
+         sum(json_extract(p.data,'$.type') = 'text') AS textParts,
+         sum(json_extract(p.data,'$.type') = 'tool') AS toolCalls,
+         sum(json_extract(p.data,'$.tool') = 'task') AS taskDispatches
+       FROM part p
+       WHERE p.session_id = ${parent} AND p.time_created > ${after};`,
+    );
+    const tools = query(
+      dbPath,
+      `SELECT DISTINCT json_extract(p.data,'$.tool') AS tool
+       FROM part p
+       WHERE p.session_id = ${parent} AND p.time_created > ${after}
+         AND json_extract(p.data,'$.type') = 'tool';`,
+    );
+    // The primary's closing report. Whether it repeats the observation is the
+    // clearest single signal that the finding survived the gate.
+    const [final] = query(
+      dbPath,
+      `SELECT json_extract(p.data,'$.text') AS text FROM part p
+       WHERE p.session_id = ${parent} AND json_extract(p.data,'$.type') = 'text'
+       ORDER BY p.time_created DESC, p.id DESC LIMIT 1;`,
+    );
+    primaryAftermath = {
+      primarySessionId: first.parentId,
+      textPartsAfter: counts?.textParts ?? 0,
+      toolCallsAfter: counts?.toolCalls ?? 0,
+      taskDispatchesAfter: counts?.taskDispatches ?? 0,
+      toolsAfter: tools.map((row) => row.tool).filter(Boolean),
+      finalText: final?.text ?? null,
+    };
+  }
+
   return {
     present: true,
     sessions,
     errors,
+    primaryAftermath,
     cwdResets: drift?.cwdResets ?? 0,
     foreignPathMentions: drift?.foreignPathMentions ?? 0,
     verifierRuns: verifierRuns.map((run, index) => ({
@@ -139,7 +191,7 @@ export function readRunTelemetry(fixture, { outside = null } = {}) {
 // Quota and throttling are confounds, not results: a variant benchmarked while
 // the subscription is throttled looks worse for a reason that has nothing to do
 // with its prompt. Runs flagged here are invalid and re-runnable.
-const THROTTLE_PATTERN =
+export const THROTTLE_PATTERN =
   /rate.?limit|\b429\b|quota|too many requests|overloaded|capacity|insufficient_quota|usage limit/i;
 
 // An entitlement refusal is not a throttle. Observed on 2026-08-14: once the
@@ -148,7 +200,7 @@ const THROTTLE_PATTERN =
 // `cloudaicompanion.instances.completeTask` instead. Both mean the same thing
 // for a suite -- this account cannot run right now -- but only the first
 // matched, so 120 runs were classified as generic failures and retried.
-const DENIED_PATTERN =
+export const DENIED_PATTERN =
   /IAM_PERMISSION_DENIED|PERMISSION_DENIED|\b403\b|forbidden|lacks the required IAM permission/i;
 
 export function classifyRunHealth({ telemetry, stderr = "", stdout = "", timedOut = false, exitCode = 0 }) {
@@ -159,8 +211,22 @@ export function classifyRunHealth({ telemetry, stderr = "", stdout = "", timedOu
     ...telemetry.errors.map((e) => `${e.name}: ${e.message ?? ""}`),
   ].join("\n");
 
-  if (THROTTLE_PATTERN.test(haystack)) reasons.push("throttled-or-quota");
-  if (DENIED_PATTERN.test(haystack)) reasons.push("provider-denied");
+  // Both patterns are matched against a haystack that includes the verifier's
+  // own transcript, so the wording alone cannot tell a throttle from a session
+  // reasoning out loud about the code it was handed. Gate on completion first.
+  //
+  // A throttle or an entitlement refusal *stops* a run: it arrives as a provider
+  // error and the session does not finish. A run that exited cleanly with no
+  // provider error completed, so whatever matched came from its own output.
+  // Measured across every stored suite on 2026-08-24: 18 real throttles, all in
+  // the gemini suite, all carrying a provider error and exit 1; and 10 false
+  // ones, exit 0, empty `errors`, each with a finished verdict already in it and
+  // every single one a cap, cache, or timeout fixture -- the fixtures whose
+  // subject matter is capacity and rate limiting. Discarding a completed run
+  // because it discussed the word "capacity" cost a real measurement each time.
+  const providerFailed = exitCode !== 0 || timedOut || telemetry.errors.length > 0;
+  if (providerFailed && THROTTLE_PATTERN.test(haystack)) reasons.push("throttled-or-quota");
+  if (providerFailed && DENIED_PATTERN.test(haystack)) reasons.push("provider-denied");
   if (telemetry.errors.some((e) => e.name === "ProviderAuthError")) reasons.push("provider-auth");
   if (telemetry.errors.some((e) => e.name === "MessageAbortedError")) reasons.push("aborted");
   if (timedOut) reasons.push("timeout");

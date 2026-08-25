@@ -22,7 +22,12 @@
         "misses one",
         "fewer lines",
         "one too few",
-        "regress"
+        "regress",
+        "\"c\\nd\"",
+        "- n + 1",
+        "\"b\\nc\"",
+        "last two lines",
+        "rather than the documented last"
       ]
     }
   }

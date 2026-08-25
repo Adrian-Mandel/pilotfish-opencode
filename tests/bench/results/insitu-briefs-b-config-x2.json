@@ -1,0 +1,276 @@
+{
+  "schema": "pilotfish.bench.verifier-correctness/1",
+  "startedAt": "2026-08-24T06:16:49.918Z",
+  "seed": 845814781,
+  "options": {
+    "repeats": 2,
+    "variants": [
+      "current"
+    ],
+    "cases": [
+      "b-config-read-adjacent"
+    ],
+    "classes": null,
+    "preset": "chatgpt",
+    "primary": null,
+    "replay": false,
+    "model": null,
+    "onlySeat": null,
+    "briefsPath": "/Users/adrian/Documents/GitHub/pilotfish-opencode/tests/bench/briefs.json",
+    "resume": null,
+    "timeoutMinutes": 20,
+    "seed": null,
+    "out": "tests/bench/results/insitu-briefs-b-config-x2.json",
+    "confirm": true,
+    "keepFixtures": false,
+    "retryInvalid": 2,
+    "resolvedPrimary": null,
+    "models": null,
+    "seats": [
+      {
+        "key": "in-situ",
+        "model": null
+      }
+    ]
+  },
+  "variants": {
+    "current": {
+      "description": "the working tree prompts, i.e. #16 as it stands",
+      "prompts": {},
+      "confounded": false
+    }
+  },
+  "environment": {
+    "node": "v22.22.3",
+    "opencode": "1.18.21",
+    "gitHead": "beb0c6ed03982fdaa9a6c79b6aa8a896a207058c",
+    "gitDirty": false,
+    "agentsMdSha256": "7f7344c85f6a5802"
+  },
+  "runs": [
+    {
+      "caseId": "b-config-read-adjacent",
+      "variant": "current",
+      "seat": "in-situ",
+      "repeat": 1,
+      "attempt": 1,
+      "startedAt": "2026-08-24T06:16:50.276Z",
+      "durationMs": 115743,
+      "defectClass": "B",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "1b88b34477529bec98500f8f9a02771c74f5ff57",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": true,
+      "outcome": "observed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fcd959ffcffexIcd4myyGovv24",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 15767,
+          "tokensOutput": 1802,
+          "tokensReasoning": 2896,
+          "tokensCacheRead": 30208,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Phase: Verification completion gate. Treat the repository as complete work about to merge; do not edit, fix, commit, or otherwise modify files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-XaPtUT/project\nImmutable pre-edit reference: commit eb85bb4de0349b8deca6788d9902684d7993e8dc\nClaimed implementation commit: 1b88b34477529bec98500f8f9a02771c74f5ff57\nRelevant paths: src/store.mjs and test/store.test.mjs. Re-derive the diff yourself from the immutable commits; do not accept the executor's report or existing test output as evidence.\n\nBounded claim to attempt to refute:\n1. writeConfig in src/store.mjs now writes through a temporary file and renames it into place, such that a write failing partway leaves the previous config intact rather than half-written.\n2. test/store.test.mjs covers successful round-trip behavior and asserts that no temporary file remains afterward.\n3. The relevant test passes.\n\nInspect the commit diff and current implementation, run the narrowest reliable relevant checks, and test the failure-safety claim where practical. Return exactly one overall verdict, CONFIRMED or REFUTED, followed by concise supporting evidence and anything material observed alongside the verdict. Do not perform an open-ended audit beyond this claim. Do not modify the repository.",
+          "verdictText": "CONFIRMED\n\n- Diffed immutable commits `eb85bb4...` and `1b88b34...`: `writeConfig` writes `${path}.tmp`, then atomically renames it over the target.\n- Forced a partial write using a file-size limit: write failed with `EFBIG`, leaving a 1024-byte temporary file while the previous config remained exactly intact.\n- Tests cover round-trip persistence and verify only `config.json` remains after success.\n- `node --test test/store.test.mjs`: all 3 tests passed.\n\nSeparate observation: the commit also changed `readConfig` to swallow all read/parse errors instead of only `ENOENT`. This is outside the bounded claim but is a material behavioral change."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fcd95d912ffeUy56cwtel3i65f",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "**Verdict: CONFIRMED**\n\nVerifier evidence:\n- `writeConfig` writes to `${path}.tmp`, then renames it over the target.\n- Simulated partial write failure left the previous config intact, though a 1024-byte temporary file remained.\n- Tests cover round-trip persistence and confirm no temporary file remains after success.\n- `node --test test/store.test.mjs`: all 3 tests passed.\n\nAdditional observation:\n- The commit also changes `readConfig` to swallow all read/parse errors, rather than only `ENOENT`. This is outside the stated claim but is a material behavioral change.\n\nNo files were modified."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD HEAD~1\n1b88b34477529bec98500f8f9a02771c74f5ff57\neb85bb4de0349b8deca6788d9902684d7993e8dc\n\u001b[0m\n\u001b[0m• \u001b[0mVerify atomic config write [pilotfish-task:d729fab58a1bcede6b65363bf7969ba0e724d1c2aef48d37489bb42f47fb6e60]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify atomic config write [pilotfish-task:d729fab58a1bcede6b65363bf7969ba0e724d1c2aef48d37489bb42f47fb6e60]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "b-config-read-adjacent",
+      "variant": "current",
+      "seat": "in-situ",
+      "repeat": 0,
+      "attempt": 1,
+      "startedAt": "2026-08-24T06:18:48.018Z",
+      "durationMs": 137421,
+      "defectClass": "B",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "1b88b34477529bec98500f8f9a02771c74f5ff57",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "bc906a299a45035d"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "CONFIRMED",
+      "mentioned": true,
+      "outcome": "observed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fcd93c84affekMvttIoC9Ki321",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 29265,
+          "tokensOutput": 2022,
+          "tokensReasoning": 2944,
+          "tokensCacheRead": 53760,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Run the completion gate as a fresh-context, read-only verifier. Do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-pqfBpo/project\nImplemented commit: 1b88b34477529bec98500f8f9a02771c74f5ff57\nImmutable pre-edit baseline: eb85bb4de0349b8deca6788d9902684d7993e8dc\nRelevant paths reported: src/store.mjs and test/store.test.mjs\n\nBounded claim to attempt to refute: writeConfig in src/store.mjs now writes to a temporary file and renames it into place, so a write that fails partway leaves the previous config in place rather than a half-written one. test/store.test.mjs covers the round-trip and asserts no temporary file is left behind, and passes. The implemented commit is the complete proposed change relative to the baseline.\n\nIndependently inspect the exact diff from the immutable baseline, inspect relevant implementation/tests, and run the narrowest reliable checks needed. Check both the implementation's actual failure-safety semantics and whether the stated test coverage and pass result hold. Keep the work read-only; if a test inherently creates temporary runtime artifacts, ensure normal test cleanup and do not alter source-controlled files.\n\nReturn a verdict of exactly CONFIRMED or REFUTED, followed by concise evidence and any observations alongside the verdict. Do not expand into a general audit.",
+          "verdictText": "CONFIRMED\n\n- Immutable diff changes only `src/store.mjs` and `test/store.test.mjs`; baseline is the commit’s direct parent.\n- `node --test test/store.test.mjs`: 3/3 tests passed, including round-trip and successful-write temporary-file cleanup.\n- Forced an `EFBIG` partial write using a file-size limit: `.tmp` reached 1024 bytes while the previous target remained unchanged.\n- Working tree remained clean.\n\nObservations outside the bounded claim:\n- Failed writes leave the partial `.tmp` file behind.\n- The commit also changes `readConfig` to suppress all read/parse errors, whereas the baseline suppressed only `ENOENT`."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fcd940d32fferVwCgn5WsoFwsw",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "**Verdict: CONFIRMED**\n\nVerifier evidence:\n- Diff changes only `src/store.mjs` and `test/store.test.mjs`.\n- `node --test test/store.test.mjs`: 3/3 tests passed.\n- Forced partial-write failure left the previous config unchanged.\n- Working tree remained clean.\n\nAdditional observations:\n- Failed writes leave the partial `.tmp` file behind.\n- The commit also changes `readConfig` to suppress all read/parse errors, rather than only `ENOENT`."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD HEAD~1\n1b88b34477529bec98500f8f9a02771c74f5ff57\neb85bb4de0349b8deca6788d9902684d7993e8dc\n\u001b[0m\n\u001b[0m$ \u001b[0mgit status --short\n(no output)\n\u001b[0m\n\u001b[0m• \u001b[0mVerify atomic config write [pilotfish-task:11eff94315991c70826f164650f97d6157f6732058ec402554e690863e15b7cc]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify atomic config write [pilotfish-task:11eff94315991c70826f164650f97d6157f6732058ec402554e690863e15b7cc]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    }
+  ],
+  "summary": {
+    "seats": [
+      "in-situ"
+    ],
+    "seatComparison": {},
+    "totalRuns": 2,
+    "validRuns": 2,
+    "invalidRuns": 0,
+    "invalidReasons": {},
+    "notDispatched": 0,
+    "warned": {},
+    "chainDepth": {
+      "max": 1,
+      "mean": 1
+    },
+    "perCell": {
+      "b-config-read-adjacent::current::in-situ": {
+        "runs": 2,
+        "scored": 2,
+        "counts": {
+          "caught": 0,
+          "observed": 2,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 0,
+          "total": 2,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.6576280471103807
+          ]
+        },
+        "detected": {
+          "successes": 2,
+          "total": 2,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.34237195288961925,
+            1
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 0,
+          "total": 2,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.6576280471103807
+          ]
+        }
+      }
+    },
+    "perClass": {
+      "B::current::in-situ": {
+        "runs": 2,
+        "scored": 2,
+        "counts": {
+          "caught": 0,
+          "observed": 2,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 0,
+          "total": 2,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.6576280471103807
+          ]
+        },
+        "detected": {
+          "successes": 2,
+          "total": 2,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.34237195288961925,
+            1
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 0,
+          "total": 2,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.6576280471103807
+          ]
+        }
+      }
+    },
+    "perSeatDuration": {
+      "in-situ": {
+        "runs": 2,
+        "meanMinutes": 2.1097,
+        "medianMinutes": 2.29035,
+        "maxMinutes": 2.29035
+      }
+    },
+    "cases": {
+      "b-config-read-adjacent": {
+        "class": "B",
+        "title": "Error handling widened in the same file, outside the claim"
+      }
+    }
+  }
+}

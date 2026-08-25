@@ -20,14 +20,40 @@ function normalizeLine(line) {
     .toUpperCase();
 }
 
+// A line that names both verdicts is not a verdict, it is commentary about one.
+// Observed once in 1,960 stored runs: "**REFUTED? No -- CONFIRMED.**", a
+// verifier answering its own rhetorical question. `startsWith` read it as
+// REFUTED and the run scored as the only false-REFUTED in an 80-run class D
+// floor -- the single number that decides whether a variant ships. Both words
+// occur only on that line, so the fallback below mis-read it identically.
+//
+// Deliberately not "take the last verdict word on the line", which grades that
+// line correctly and then mis-grades "CONFIRMED -- this is not REFUTED". A line
+// this ambiguous is not scored from; it is skipped and surfaced by
+// `verdictSource` as "ambiguous" so it gets read by a person.
+function isAmbiguous(normalized) {
+  return normalized.includes("CONFIRMED") && normalized.includes("REFUTED");
+}
+
+function withoutAmbiguousLines(text) {
+  return text
+    .split("\n")
+    .filter((line) => !isAmbiguous(normalizeLine(line)))
+    .join("\n");
+}
+
 export function parseVerdict(text) {
   if (typeof text !== "string" || !text.trim()) return null;
 
   for (const line of text.split("\n")) {
     const normalized = normalizeLine(line);
+    if (isAmbiguous(normalized)) continue;
     if (normalized.startsWith("CONFIRMED")) return "CONFIRMED";
     if (normalized.startsWith("REFUTED")) return "REFUTED";
   }
+
+  text = withoutAmbiguousLines(text);
+  if (!text.trim()) return null;
 
   // Fall back to whichever word appears first anywhere. This catches a verdict
   // buried mid-sentence and mis-reads a verifier that quotes its own brief
@@ -44,11 +70,17 @@ export function parseVerdict(text) {
 
 export function verdictSource(text) {
   if (typeof text !== "string" || !text.trim()) return "none";
+  let skipped = false;
   for (const line of text.split("\n")) {
     const normalized = normalizeLine(line);
+    if (isAmbiguous(normalized)) {
+      if (normalized.startsWith("CONFIRMED") || normalized.startsWith("REFUTED")) skipped = true;
+      continue;
+    }
     if (normalized.startsWith("CONFIRMED") || normalized.startsWith("REFUTED")) return "leading-line";
   }
-  return parseVerdict(text) ? "anywhere" : "none";
+  if (parseVerdict(text)) return "anywhere";
+  return skipped ? "ambiguous" : "none";
 }
 
 // `all` must every one be present, and at least one of `any` must appear NEAR
@@ -79,23 +111,54 @@ export function verdictSource(text) {
 // Proximity is the second half, and it is deliberately generous. Scoping to the
 // line grades the adjacent-defect cases perfectly and then breaks the class A
 // control -- 30 of 40, because a verdict discussing one function across several
-// sentences naturally separates the name from the detail. All 120 runs grade
-// correctly at a 200-character window and identically at 400, so this rests on
-// a plateau rather than on a fitted constant.
-const DEFAULT_WINDOW = 200;
+// sentences naturally separates the name from the detail.
+//
+// This was 200, justified as a plateau because all 120 runs of the gpt-5.6
+// class-A/B suite graded identically at 200 and 400. That plateau was measured
+// on one seat, and it turned out to be a property of that seat's prose rather
+// than of the task: gpt-5.6 writes 300-700 character verdicts, while
+// `bambi/qwen3.8-27b-mtp-pure` writes 2,700-3,200 character verdicts whose
+// structured observation paragraphs separate the function name from the
+// diagnosis. Both of that seat's misses in the controlled two-seat suite had
+// the discriminator present at 224, 239 and 250 characters -- one of them
+// reading "An off-by-one regression with its coverage deleted" -- and were
+// scored as never having noticed the defect.
+//
+// 400 is where the sweep settles: it moves exactly those two runs and changes
+// no other run in any stored suite, including leaving all 120 of the original
+// gpt-5.6 runs untouched.
+//
+// It is also an upper bound, not just a floor. `replay-qwen3.6-27b-classAB-r20`
+// moves four further runs at 800, and all four were hand-read: every one is a
+// genuine miss that merely names `parseTimeout` in a passing-test list or notes
+// that the commit touched it. What a wider window credits them with is the `||`
+// in `!Number.isInteger(port) || port < 1 || port > 65535` -- `parsePort`'s own
+// guard, the *claimed* function's code, sitting 709-770 characters away. That is
+// exactly the shared-vocabulary false credit 054a27e removed, arriving through
+// proximity instead of through the marker list. So 800 is wrong rather than
+// merely generous, and 400 is the value, not a placeholder for a larger one.
+const DEFAULT_WINDOW = 400;
+
+// Markdown formatting is not vocabulary. Models write `<=` and <= for the same
+// operator, and b-cap-boundary-strict's `<= to <` discriminator -- written for
+// exactly the sentence one run produced -- was defeated by the backticks in
+// "the commit also changes `roomFor` from `<=` to `<`". Backticks are stripped
+// from both sides before matching. This widens nothing: a marker gains a match
+// only where it would already have matched the same words unformatted.
+const normalize = (value) => value.toLowerCase().replaceAll("`", "");
 
 export function mentionsDefect(text, markers) {
   if (typeof text !== "string" || !markers) return false;
-  const haystack = text.toLowerCase();
-  const has = (marker) => haystack.includes(marker.toLowerCase());
+  const haystack = normalize(text);
+  const has = (marker) => haystack.includes(normalize(marker));
   if (!markers.all.every(has)) return false;
 
   const window = markers.window ?? DEFAULT_WINDOW;
-  const anyMarkers = markers.any.map((marker) => marker.toLowerCase());
+  const anyMarkers = markers.any.map(normalize);
   // Anchor on every occurrence of every all-marker: the mention that carries the
   // finding is not always the first one, and a verdict may name the function in
   // a test list before discussing it properly further down.
-  for (const anchor of markers.all.map((marker) => marker.toLowerCase())) {
+  for (const anchor of markers.all.map(normalize)) {
     let at = haystack.indexOf(anchor);
     while (at !== -1) {
       const segment = haystack.slice(Math.max(0, at - window), at + anchor.length + window);
@@ -199,5 +262,66 @@ export function summarizeCell(runs) {
           // Turned the verdict, i.e. actually stopped the change.
           refutedOnDefect: proportion(counts[OUTCOMES.CAUGHT], n),
         }),
+  };
+}
+
+// Fisher's exact test on a 2x2, two-tailed. The seat comparison is a
+// small-sample count of a rare event -- 0 of 60 against 11 of 51 is the shape
+// this has to grade -- and a chi-square approximation is not valid on a cell of
+// zero. Exact is cheap at these n and needs no assumption.
+//
+// Two-tailed by summing every table at most as probable as the observed one,
+// which is the conventional definition and the conservative one; the one-tailed
+// variant would report a smaller p for the direction we happen to be hoping
+// for, which is exactly the thing to avoid here.
+const LOG_FACTORIAL = [0, 0];
+function logFactorial(n) {
+  for (let i = LOG_FACTORIAL.length; i <= n; i += 1) {
+    LOG_FACTORIAL[i] = LOG_FACTORIAL[i - 1] + Math.log(i);
+  }
+  return LOG_FACTORIAL[n];
+}
+
+function logHypergeometric(a, b, c, d) {
+  return (
+    logFactorial(a + b) + logFactorial(c + d) + logFactorial(a + c) + logFactorial(b + d) -
+    logFactorial(a) - logFactorial(b) - logFactorial(c) - logFactorial(d) -
+    logFactorial(a + b + c + d)
+  );
+}
+
+export function fisherExact(a, b, c, d) {
+  const total = a + b + c + d;
+  if (total === 0) return null;
+  const observed = logHypergeometric(a, b, c, d);
+  const row1 = a + b;
+  const col1 = a + c;
+  const low = Math.max(0, col1 - (c + d));
+  const high = Math.min(row1, col1);
+  let p = 0;
+  for (let x = low; x <= high; x += 1) {
+    const lp = logHypergeometric(x, row1 - x, col1 - x, total - row1 - col1 + x);
+    // 1e-9 of slack: tables that are equally probable in exact arithmetic can
+    // differ in the last bits of a float, and dropping one of them would
+    // understate p.
+    if (lp <= observed + 1e-9) p += Math.exp(lp);
+  }
+  return Math.min(1, p);
+}
+
+// Two seats compared on one outcome, with the raw table kept: a p-value with no
+// counts beside it is not readable, and the counts are what a reader checks.
+export function compareProportions(left, right) {
+  if (!left || !right || left.total === 0 || right.total === 0) return null;
+  return {
+    left: { successes: left.successes, total: left.total, rate: left.rate, ci95: left.ci95 },
+    right: { successes: right.successes, total: right.total, rate: right.rate, ci95: right.ci95 },
+    difference: left.rate - right.rate,
+    p: fisherExact(
+      left.successes,
+      left.total - left.successes,
+      right.successes,
+      right.total - right.successes,
+    ),
   };
 }

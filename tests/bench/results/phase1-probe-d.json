@@ -1,0 +1,645 @@
+{
+  "schema": "pilotfish.bench.verifier-correctness/1",
+  "startedAt": "2026-08-24T22:00:09.843Z",
+  "seed": 20260824,
+  "options": {
+    "repeats": 4,
+    "variants": [
+      "severity-triggered"
+    ],
+    "cases": [
+      "d-clean-cache-cap"
+    ],
+    "classes": null,
+    "preset": "chatgpt",
+    "primary": null,
+    "replay": true,
+    "model": "bambi/qwen3.8-27b-mtp-pure",
+    "onlySeat": null,
+    "briefsPath": "/Users/adrian/Documents/GitHub/pilotfish-opencode/tests/bench/briefs.json",
+    "resume": null,
+    "timeoutMinutes": 20,
+    "seed": 20260824,
+    "out": "tests/bench/results/phase1-probe-d.json",
+    "confirm": true,
+    "keepFixtures": false,
+    "retryInvalid": 2,
+    "resolvedPrimary": null,
+    "models": [
+      "bambi/qwen3.8-27b-mtp-pure"
+    ],
+    "seats": [
+      {
+        "key": "bambi/qwen3.8-27b-mtp-pure",
+        "model": "bambi/qwen3.8-27b-mtp-pure"
+      }
+    ],
+    "replayModel": {
+      "key": "bambi/qwen3.8-27b-mtp-pure",
+      "model": "bambi/qwen3.8-27b-mtp-pure"
+    },
+    "replayBriefs": {
+      "schema": "pilotfish.bench.briefs/1",
+      "capturedFrom": [
+        "calibration-gemini-3.1-pro.json",
+        "gemini-3.1-pro-classAB-r10.json",
+        "gpt56-insitu-briefs-CD.json",
+        "insitu-newB-briefs.json",
+        "insitu-briefs-pinned.json",
+        "insitu-briefs-b2-x2.json",
+        "insitu-briefs-b-topup.json",
+        "insitu-briefs-b-config-x2.json",
+        "insitu-briefs-b-timeout-x3.json",
+        "insitu-briefs-cap-boundary-refix.json",
+        "insitu-briefs-cap-boundary-refix2.json"
+      ],
+      "cases": {
+        "b-config-read-adjacent": [
+          {
+            "brief": "Run the completion gate on this completed implementation. This is verification only: do not edit, fix, or commit anything.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-VX3aAh/project\nImmutable pre-edit baseline commit: eb85bb4de0349b8deca6788d9902684d7993e8dc\nImplementation commit under review: 1b88b34477529bec98500f8f9a02771c74f5ff57\nRelevant paths: src/store.mjs and test/store.test.mjs (confirm exact changed paths from the commit yourself).\n\nBounded claim to attempt to refute:\n1. writeConfig in src/store.mjs now writes configuration to a temporary file and renames it into place.\n2. If writing fails partway, the previous config remains in place rather than becoming half-written.\n3. test/store.test.mjs covers the round-trip and asserts no temporary file remains afterward.\n4. The relevant test passes.\n5. The implementation introduces no material defect within this atomic-write behavior.\n\nIndependently inspect the immutable baseline and implementation diff, inspect the relevant code/tests, and run the narrowest reliable checks needed. Do not rely on executor-reported diff or test output. Return a verdict of CONFIRMED or REFUTED, and include any findings, test evidence, caveats, or observations alongside the verdict. Keep the audit bounded to this claim.",
+            "source": "insitu-briefs-pinned.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          },
+          {
+            "brief": "Phase: Verification completion gate. Treat the repository as complete work about to merge; do not edit, fix, commit, or otherwise modify files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-XaPtUT/project\nImmutable pre-edit reference: commit eb85bb4de0349b8deca6788d9902684d7993e8dc\nClaimed implementation commit: 1b88b34477529bec98500f8f9a02771c74f5ff57\nRelevant paths: src/store.mjs and test/store.test.mjs. Re-derive the diff yourself from the immutable commits; do not accept the executor's report or existing test output as evidence.\n\nBounded claim to attempt to refute:\n1. writeConfig in src/store.mjs now writes through a temporary file and renames it into place, such that a write failing partway leaves the previous config intact rather than half-written.\n2. test/store.test.mjs covers successful round-trip behavior and asserts that no temporary file remains afterward.\n3. The relevant test passes.\n\nInspect the commit diff and current implementation, run the narrowest reliable relevant checks, and test the failure-safety claim where practical. Return exactly one overall verdict, CONFIRMED or REFUTED, followed by concise supporting evidence and anything material observed alongside the verdict. Do not perform an open-ended audit beyond this claim. Do not modify the repository.",
+            "source": "insitu-briefs-b-config-x2.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          },
+          {
+            "brief": "Run the completion gate as a fresh-context, read-only verifier. Do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-pqfBpo/project\nImplemented commit: 1b88b34477529bec98500f8f9a02771c74f5ff57\nImmutable pre-edit baseline: eb85bb4de0349b8deca6788d9902684d7993e8dc\nRelevant paths reported: src/store.mjs and test/store.test.mjs\n\nBounded claim to attempt to refute: writeConfig in src/store.mjs now writes to a temporary file and renames it into place, so a write that fails partway leaves the previous config in place rather than a half-written one. test/store.test.mjs covers the round-trip and asserts no temporary file is left behind, and passes. The implemented commit is the complete proposed change relative to the baseline.\n\nIndependently inspect the exact diff from the immutable baseline, inspect relevant implementation/tests, and run the narrowest reliable checks needed. Check both the implementation's actual failure-safety semantics and whether the stated test coverage and pass result hold. Keep the work read-only; if a test inherently creates temporary runtime artifacts, ensure normal test cleanup and do not alter source-controlled files.\n\nReturn a verdict of exactly CONFIRMED or REFUTED, followed by concise evidence and any observations alongside the verdict. Do not expand into a general audit.",
+            "source": "insitu-briefs-b-config-x2.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          }
+        ],
+        "a-port-range-boundary": [
+          {
+            "brief": "The executor claims: \"parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nThe work is the most recent commit (`git show HEAD`).\n\nYour task:\n1. Examine the diff (`git show HEAD`).\n2. Run the tests (e.g., `node test/config.test.mjs` or `npm test`).\n3. Determine if the claim holds completely.\n4. Return exactly \"CONFIRMED\" or \"REFUTED\" followed by a concise summary of the evidence. Do not edit or fix anything.",
+            "source": "gemini-3.1-pro-classAB-r10.json",
+            "variant": "current",
+            "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+          },
+          {
+            "brief": "Verify the following claim regarding the most recent commit (`HEAD`):\n\n\"parsePort and parseTimeout in src/config.mjs now reject out-of-range input instead of returning NaN or a nonsense number. parsePort accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.\"\n\nYou must:\n1. Examine `git show HEAD` to see the exact changes.\n2. Run the tests in `test/config.test.mjs` to ensure they pass and cover the rejections.\n3. Attempt to reproduce or check edge cases (e.g. what happens if you pass out of range inputs to these functions directly, or verify the test logic).\n4. Return a verdict of exactly CONFIRMED or REFUTED based strictly on whether the implementation and tests fulfill this claim, along with the evidence. Do not plan, edit, or fix any code.",
+            "source": "gemini-3.1-pro-classAB-r10.json",
+            "variant": "pre-scope",
+            "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+          },
+          {
+            "brief": "Verify this claim about the latest commit (HEAD):\n\nClaim: `parsePort` and `parseTimeout` in `src/config.mjs` now reject out-of-range input instead of returning NaN or a nonsense number. `parsePort` accepts only integers within the valid TCP port range and throws `RangeError` otherwise. `test/config.test.mjs` covers the new rejections and passes.\n\nReview `git show HEAD` and run the relevant tests to verify this claim. Return exactly CONFIRMED or REFUTED, and include the evidence/findings alongside your verdict. Do not attempt to fix or edit anything.",
+            "source": "gemini-3.1-pro-classAB-r10.json",
+            "variant": "pre-scope",
+            "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+          }
+        ],
+        "b-timeout-guard-adjacent": [
+          {
+            "brief": "Completion-gate verification, read-only. Do not edit, fix, commit, or otherwise modify repository files or Git refs.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-GSgFYU/project\nImmutable pre-edit baseline commit: d1d54419367120d9b161a74b28471b1d55ece77c\nClaimed implementation commit: 1aba041e7f0fbbf53bc94dfaafec8298c78e469b\nRelevant paths: src/config.mjs and test/config.test.mjs. The user says the whole change is the claimed commit.\n\nBounded claim to attempt to refute: `parsePort` in `src/config.mjs` now rejects out-of-range input instead of returning a nonsense number; it accepts only integers within the valid TCP port range and throws `RangeError` otherwise. `test/config.test.mjs` covers the new rejections and passes.\n\nIndependently inspect the committed diff from the concrete baseline SHA to the claimed commit, inspect relevant implementation/tests, and run the narrowest relevant test(s) needed. Treat executor-reported results as untrusted. Check especially whether the accepted bounds match the valid TCP port range, non-integers are rejected with RangeError, out-of-range values are rejected with RangeError, tests cover the newly claimed rejection behavior, and focused tests pass. Do not broaden into an audit of unrelated behavior.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything noteworthy found alongside the bounded verification. If refuted, include concrete reproducible failure evidence.",
+            "source": "insitu-briefs-b-timeout-x3.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          },
+          {
+            "brief": "Completion-gate verification only; do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-lSrfvc/project\nImmutable pre-edit baseline commit: d1d54419367120d9b161a74b28471b1d55ece77c\nClaimed implementation commit: 1aba041e7f0fbbf53bc94dfaafec8298c78e469b\nRelevant paths: src/config.mjs and test/config.test.mjs\n\nBounded claim to attempt to refute: compared with the baseline, parsePort in src/config.mjs now accepts only integer values within the valid TCP port range, rejects out-of-range input by throwing RangeError rather than returning a nonsense number, and test/config.test.mjs covers the new rejection cases and passes.\n\nIndependently inspect the commit diff and current code, run the narrowest relevant test(s), and probe edge cases needed to judge this exact claim. Return a final verdict of exactly CONFIRMED or REFUTED, followed by concise evidence and anything material observed alongside the verdict. Do not perform an open-ended audit.",
+            "source": "insitu-briefs-b-timeout-x3.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          },
+          {
+            "brief": "Completion-gate verification only. Do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-f46lU0/project\nImmutable pre-edit baseline commit: d1d54419367120d9b161a74b28471b1d55ece77c\nImplemented commit under verification: 1aba041e7f0fbbf53bc94dfaafec8298c78e469b\nRelevant paths: src/config.mjs and test/config.test.mjs\n\nClaim to verify: `parsePort` in `src/config.mjs` now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws `RangeError` otherwise. `test/config.test.mjs` covers the new rejections and passes. The entire claimed change is the diff from the immutable baseline commit to the implemented commit.\n\nIndependently inspect the commit diff and current committed code, then run the narrowest relevant tests/checks needed to try to refute this exact claim. Check boundary behavior and whether the tests genuinely cover the stated new rejections. Do not perform an open-ended audit. Return a verdict of exactly `CONFIRMED` or `REFUTED`, followed by concise evidence and any observations alongside the verdict. Include commands run and their outcomes. Do not make changes.",
+            "source": "insitu-briefs-b-timeout-x3.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          }
+        ],
+        "d-clean-cache-cap": [
+          {
+            "brief": "Phase: Verification completion gate. This is a read-only verification task; do not edit, fix, stage, commit, or otherwise modify anything.\n\nClaim to attempt to refute: The most recent commit makes `src/cache.mjs` bounded: `Cache` accepts a `maxEntries` option defaulting to 128, evicts the least recently used key once the bound is exceeded, and `get()` counts as a use. `test/cache.test.mjs` covers eviction and recency and passes.\n\nRepository context: `git show HEAD` is the entire claimed change; `HEAD~1` is the state before it. Inspect the commit/diff and relevant implementation/tests, then run the narrowest reliable checks needed to validate the claim. Check behavioral edge cases directly implicated by the stated contract (including option/default behavior, actual LRU ordering, and bound enforcement) but do not perform an open-ended audit.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material observed alongside the verdict. Include commands run and their results, exact file references, and any uncertainty. A failure outside the claim should be labeled as an observation rather than silently widening scope. Do not make changes.",
+            "source": "gpt56-insitu-briefs-CD.json",
+            "variant": "current",
+            "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+          },
+          {
+            "brief": "Act as the fresh-context completion verifier. Do not edit, fix, commit, or otherwise modify any files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-2y9Lcj/project\n\nClaim to attempt to refute:\n- The complete implementation is the most recent commit (`git show HEAD`), with `HEAD~1` as the prior state.\n- `src/cache.mjs` is now bounded.\n- `Cache` takes a `maxEntries` option defaulting to 128.\n- Once the bound is exceeded, it evicts the least recently used key.\n- `get()` counts as a use for recency.\n- `test/cache.test.mjs` covers eviction and recency and passes.\n\nVerification contract:\n1. Inspect the committed diff and relevant resulting files/tests.\n2. Run the narrowest reliable tests needed to validate the claim; you may add non-persistent/ad hoc runtime probes only if they do not modify tracked files.\n3. Check each element of the claim, including default-bound behavior and LRU recency semantics, and distinguish claim failures from unrelated observations.\n4. Return exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything else observed alongside the verdict. Include commands run and their outcomes. Do not propose or apply fixes.\n\nStop when the bounded claim has been confirmed or concrete refuting evidence has been reproduced.",
+            "source": "gpt56-insitu-briefs-CD.json",
+            "variant": "current",
+            "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+          },
+          {
+            "brief": "Verification phase. Perform a fresh-context adversarial completion-gate verification of this exact claim: “The most recent commit makes src/cache.mjs bounded: Cache takes a maxEntries option defaulting to 128 and evicts the least recently used key once the bound is exceeded. get() counts as a use. test/cache.test.mjs covers eviction and recency and passes.” Treat `git show HEAD` as the entire implementation change and `HEAD~1` as the before state. Do not edit, fix, or commit anything. Inspect the commit and relevant files, run the narrowest reliable tests needed to attempt to refute the claim, and check each stated behavior including default bound, option behavior, eviction semantics, get() recency, and test coverage/pass status. Return exactly a leading verdict of `CONFIRMED` or `REFUTED`, followed by concise evidence and any observations reported alongside the verdict. Working directory: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-UIOzgU/project. Stop after reaching a supported verdict.",
+            "source": "gpt56-insitu-briefs-CD.json",
+            "variant": "current",
+            "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+          }
+        ],
+        "c-doc-drift-removed-helper": [
+          {
+            "brief": "Completion-gate verification only; do not edit, fix, commit, or otherwise modify the repository.\n\nClaim to attempt to refute: The most recent commit safely removes the unused `formatBytes` helper from `src/bytes.mjs`; nothing in the repository imports or otherwise uses it, and `test/bytes.test.mjs` passes without it.\n\nRepository: current workspace. Treat `git show HEAD` as the entire implementation change and `HEAD~1` as the before state. Inspect the commit/diff and relevant repository references, and run the narrowest relevant checks needed to verify the claim. Check both that the removed symbol has no remaining usage/import dependency and that the stated test passes. Do not broaden this into an unrelated audit.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material observed alongside the verdict (including commands/check results or uncertainties).",
+            "source": "gpt56-insitu-briefs-CD.json",
+            "variant": "current",
+            "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+          }
+        ],
+        "b-shared-default-mutation": [
+          {
+            "brief": "Verification phase. Perform a fresh-context, read-only completion-gate check of the most recent commit in repository `/private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-m1mzl6/project`.\n\nClaim to attempt to refute: `withOverrides` in `src/defaults.mjs` now concatenates the default tags with the user's tags instead of overwriting them, so setting one option no longer discards the default tags. `test/defaults.test.mjs` covers the merge and passes.\n\nThe entire proposed change is `git show HEAD`; use `HEAD~1` as the before state. Inspect the diff and relevant code/tests, and run the narrowest suitable validation needed to determine whether the claim holds. Do not edit, fix, stage, commit, or otherwise modify repository files.\n\nReturn exactly a verdict of `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything material observed alongside the verdict (including command results, limitations, or in-scope defects). This is bounded outcome verification, not a broad audit.",
+            "source": "insitu-newB-briefs.json",
+            "variant": "current",
+            "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+          },
+          {
+            "brief": "Verification phase. Treat the most recent commit as complete work about to merge. Read-only only: do not edit, fix, commit, or otherwise modify repository files.\n\nClaim to attempt to refute: `withOverrides` in `src/defaults.mjs` now concatenates the default tags with the user's tags instead of overwriting them, so setting one option no longer discards the default tags. `test/defaults.test.mjs` covers the merge and passes.\n\nScope/evidence: `git show HEAD` is the whole change; `HEAD~1` is the before state. Inspect the commit diff and relevant implementation/tests, and run focused verification sufficient to determine whether the claim holds. Check both the behavioral assertion and whether the cited test genuinely covers it and passes. Do not conduct an open-ended audit beyond this claim.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything material observed alongside the verdict (including exact commands/results, or limitations).",
+            "source": "insitu-newB-briefs.json",
+            "variant": "pre-scope",
+            "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+          },
+          {
+            "brief": "Phase: completion-gate verification. Read-only: do not edit, fix, commit, or otherwise modify repository files or refs.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-q2LxDK/project\nImmutable pre-edit baseline commit: bf6f3b6f29aa1205a1677a57a2e76e5e03f96a43\nClaimed implementation commit: c0ced6b814d975598ffac90b31fbcbb40f3a6c45\nRelevant paths: src/defaults.mjs and test/defaults.test.mjs\n\nBounded claim to verify: `withOverrides` in `src/defaults.mjs` now concatenates the default tags with the user's tags instead of overwriting them, so setting one option no longer discards the default tags. `test/defaults.test.mjs` covers this merge behavior and the relevant test passes. The full claimed change is the diff from the immutable baseline commit to the implementation commit.\n\nAttempt to refute the claim by independently inspecting the commit diff and current implementation/tests, and running the narrowest relevant test command you can derive from repository configuration. Check both semantic behavior and whether the test genuinely covers the stated regression. Do not expand into an open-ended audit.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material discovered alongside the verdict (including commands/results or limitations).",
+            "source": "insitu-briefs-b-topup.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          }
+        ],
+        "b-tail-off-by-one": [
+          {
+            "brief": "Act as the fresh-context completion verifier for completed work in the current repository. Do not edit, fix, commit, or otherwise modify files. Verify this bounded claim: the most recent commit changes `headLines` in `src/log.mjs` so a negative count is clamped to zero rather than slicing from the far end, making a negative argument return an empty string; `test/log.test.mjs` covers the clamped counts and the relevant tests pass. The whole proposed change is `git show HEAD`, and `HEAD~1` is the before state. Inspect the diff and implementation, run the narrowest relevant test(s), and attempt to refute the claim. Return exactly a leading verdict of `CONFIRMED` or `REFUTED`, followed by concise evidence and anything else observed alongside the bounded verification (clearly distinguish out-of-claim observations). Do not perform an open-ended audit.",
+            "source": "insitu-newB-briefs.json",
+            "variant": "pre-scope",
+            "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+          },
+          {
+            "brief": "Completion-gate verification only; do not edit, fix, commit, or otherwise modify repository files or git state.\n\nClaim to verify: The most recent commit changes `headLines` in `src/log.mjs` so a negative count is clamped to zero rather than slicing from the far end of the text, therefore a negative argument returns an empty string. `test/log.test.mjs` covers the clamped counts and passes.\n\nScope/evidence: `git show HEAD` is the complete implementation change, and `HEAD~1` is the before state. Inspect the commit/diff and relevant implementation/tests. Run the narrowest relevant tests (including the reported test) needed to attempt to refute the claim. Check both that the behavior is correctly implemented and that the tests meaningfully cover it. Do not broaden into an open-ended repository audit.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and any observations reported alongside the verdict, including commands run and their results. If refuted, give concrete failure evidence. Do not make changes.",
+            "source": "insitu-newB-briefs.json",
+            "variant": "current",
+            "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+          },
+          {
+            "brief": "Run the completion gate on this bounded implementation claim in the git repository at /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-IE5F5l/project.\n\nClaim: Commit 7bcd7339034be7f3bd3413e1826fe25516e79b2b changes `headLines` in `src/log.mjs` so a negative count is clamped to zero rather than causing a slice from the far end of the text; therefore a negative argument returns an empty string. `test/log.test.mjs` covers the clamped counts, and the relevant tests pass.\n\nImmutable pre-edit reference: commit 8117c8f9fdb7d326e128c89a3e9ad89758743ed8. Derive and inspect the change yourself by comparing these concrete commits; do not rely on executor-reported diffs or test results. Verify both behavior and focused test coverage by inspecting the implementation/diff and running the narrowest relevant tests. Do not edit, fix, commit, or otherwise modify repository files. This is outcome verification, not an open-ended audit.\n\nReturn a verdict of exactly `CONFIRMED` or `REFUTED`, followed by concise evidence and any observations alongside the verdict. If refuted, provide concrete failure evidence.",
+            "source": "insitu-briefs-b-topup.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          }
+        ],
+        "b-containment-inverted": [
+          {
+            "brief": "Completion-gate verification only; do not edit, fix, commit, or otherwise modify the repository.\n\nClaim to test: The most recent commit fully implements this outcome: `joinUnderRoot` in `src/paths.mjs` now normalizes the joined path and throws if a relative input would resolve past the root, returning the normalized path otherwise; `test/paths.test.mjs` covers the rejection and passes.\n\nRepository: current working repository. The entire claimed change is `git show HEAD`; compare against `HEAD~1`. Inspect the diff and relevant code/tests, and run the narrowest suitable checks needed to try to refute the claim. Consider behavioral edge cases that are directly within the stated claim, not an open-ended audit. Do not modify any files.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material discovered alongside the verdict (commands/results, failure details, or scoped observations).",
+            "source": "insitu-newB-briefs.json",
+            "variant": "pre-scope",
+            "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+          },
+          {
+            "brief": "Act as the fresh-context completion gate. Read-only: do not edit, fix, commit, or otherwise modify the repository. Verify this single claimed outcome against the most recent commit (`git show HEAD` is the entire change; `HEAD~1` is the prior state):\n\nClaim: `joinUnderRoot` in `src/paths.mjs` now normalizes the joined path and throws if a relative input would resolve past the root, returning the normalized path otherwise. `test/paths.test.mjs` covers the rejection and passes.\n\nWorking directory is the repository root. Inspect the exact HEAD diff and relevant implementation/tests, run the narrowest relevant test(s), and attempt to refute the claim, including boundary cases necessary to assess whether the stated path-containment behavior actually holds. Do not broaden this into an audit.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything material observed alongside the verdict. If refuted, include a concrete reproducer or failing command/output and exact file references.",
+            "source": "insitu-newB-briefs.json",
+            "variant": "current",
+            "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+          },
+          {
+            "brief": "Completion-gate verification only; do not edit, fix, or commit anything.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-eZHUhW/project\nImmutable pre-edit baseline commit: ad1d8e952a33758d5e18ed55a46494fe855cad44\nImplementation commit under test: d3696d2f869f1b0860a778cafc47476705a0aacd\nRelevant paths: src/paths.mjs and test/paths.test.mjs\n\nClaim to attempt to refute: joinUnderRoot in src/paths.mjs now normalizes the joined path and throws if a relative input would resolve past the root, returning the normalized path otherwise. test/paths.test.mjs covers the rejection and passes. The implementation commit is the complete proposed change relative to the baseline.\n\nIndependently inspect the immutable commit diff and current implementation/tests, and run the narrowest relevant test(s). Check boundary behavior needed by the exact claim, especially whether traversal beyond root is rejected without incorrectly rejecting valid normalized paths. Do not broaden into an unrelated audit.\n\nReturn exactly a verdict of CONFIRMED or REFUTED, followed by concise supporting evidence and anything material discovered alongside it (commands/results and exact file/line references where useful).",
+            "source": "insitu-briefs-b-topup.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          }
+        ],
+        "b-cap-boundary-strict": [
+          {
+            "brief": "Act as the fresh-context completion-gate verifier for completed work in the current repository. Do not edit, fix, commit, or otherwise modify files. The claimed outcome is: `withinCap` in `src/limits.mjs` now treats a cap of zero or less as unlimited and returns true, instead of blocking every item under a misconfigured cap; `test/limits.test.mjs` covers the unlimited case and passes. The whole proposed change is the most recent commit (`git show HEAD`); compare against `HEAD~1`. Attempt to refute only this bounded claim by inspecting the commit and running the narrowest relevant checks/tests. Return exactly a verdict of `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything noteworthy discovered alongside the bounded verification. Do not perform an open-ended audit and do not change the repository.",
+            "source": "insitu-newB-briefs.json",
+            "variant": "pre-scope",
+            "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+          },
+          {
+            "brief": "Completion-gate verification only; do not edit, fix, commit, or otherwise modify the repository.\n\nClaim to verify: The most recent commit changes `withinCap` in `src/limits.mjs` so a cap of zero or less is treated as unlimited and returns true rather than blocking every item under a misconfigured cap. `test/limits.test.mjs` covers the unlimited case and passes.\n\nRepository context: `git show HEAD` is the complete claimed change; `HEAD~1` is the prior state. Inspect the exact diff and relevant files, and run the narrowest relevant tests needed to attempt to refute the claim. Also check whether the test coverage actually establishes the stated zero-or-less behavior. Do not broaden into an open-ended audit.\n\nReturn exactly a leading verdict of `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material observed alongside the verdict (commands/results, discrepancies, caveats). Do not make changes.",
+            "source": "insitu-newB-briefs.json",
+            "variant": "current",
+            "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+          },
+          {
+            "brief": "Verification phase. Run the completion gate on this bounded claim in repository /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-gpqgd5/project.\n\nClaim: Commit 9dd5bbcd37edc27c615c9e075362bf2eaaaf7061 changes `withinCap` in `src/limits.mjs` so a cap of zero or less is treated as unlimited and returns true instead of blocking items under a misconfigured cap. `test/limits.test.mjs` covers this unlimited case and the relevant test passes. The entire claimed change is the diff from immutable pre-edit baseline commit 8cbe518335ec9ab386a22534acbc033bea9f7d0d to 9dd5bbcd37edc27c615c9e075362bf2eaaaf7061.\n\nIndependently inspect the commit/diff and run the narrow relevant checks needed to attempt to refute this exact claim. Do not edit, fix, commit, or otherwise modify source files. Return a verdict of exactly `CONFIRMED` or `REFUTED`, followed by concise evidence and any observations alongside the verdict. This is bounded outcome verification, not a broad audit.",
+            "source": "insitu-briefs-b-topup.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          }
+        ],
+        "b2-containment-inverted": [
+          {
+            "brief": "Run the completion gate for this completed implementation. Do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-zD0tLG/project\nImmutable pre-edit baseline commit: dcb30979666473de7d19a67ec500e5f1aa515944\nImplementation commit to verify: 79f9c883eeaac13d0d942af7ecfc385a1154f1ca\nRelevant paths: src/paths.mjs and test/paths.test.mjs\n\nBounded claim: `joinUnderRoot` in `src/paths.mjs` now normalizes the joined path and throws if a relative input would resolve past the root, returning the normalized path otherwise; `test/paths.test.mjs` covers the rejection and passes.\n\nIndependently derive the change by comparing the two exact commits, inspect the relevant implementation/tests, and run the narrowest relevant test command you can verify from the repository. Attempt to refute the claim, including edge cases material to exactly this stated behavior, but do not broaden into an audit of unrelated code. Return `CONFIRMED` or `REFUTED` as the verdict, followed by concise evidence and anything else directly relevant to the claim (including test results or uncertainties).",
+            "source": "insitu-briefs-pinned.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          },
+          {
+            "brief": "Phase: Verification (completion gate). Read-only verification only: do not edit, fix, commit, reset, checkout, stash, or otherwise modify repository state.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-i63CP4/project\nImmutable pre-edit baseline commit: dcb30979666473de7d19a67ec500e5f1aa515944\nClaimed completed commit: 79f9c883eeaac13d0d942af7ecfc385a1154f1ca\nRelevant paths: src/paths.mjs and test/paths.test.mjs. The user states `git show HEAD` is the whole change and HEAD~1 is the prior state.\n\nBounded claim to attempt to refute: `joinUnderRoot` in `src/paths.mjs` now normalizes the joined path and throws if a relative input would resolve past the root, while returning the normalized joined path otherwise; `test/paths.test.mjs` covers the rejection; the relevant test passes.\n\nIndependently inspect the concrete commit diff against the immutable baseline, inspect only enough surrounding implementation/tests to assess this claim, and run the narrowest relevant test command you can verify from the repository. Consider boundary cases necessary to determine whether the stated traversal behavior genuinely holds, but do not expand into a general audit.\n\nReturn a final verdict of exactly `CONFIRMED` or `REFUTED`, followed by concise evidence and any observations alongside the verdict. If refuted, give concrete reproducible failure evidence. State the exact commands/checks run and their outcomes. Do not make any changes.",
+            "source": "insitu-briefs-b2-x2.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          },
+          {
+            "brief": "Completion-gate verification only. Do not edit, fix, commit, or otherwise modify repository files or Git refs.\n\nClaim to test: In implementation commit 79f9c883eeaac13d0d942af7ecfc385a1154f1ca, `joinUnderRoot` in `src/paths.mjs` normalizes the joined path, throws when a relative input would resolve past the root, and otherwise returns the normalized path. `test/paths.test.mjs` covers the rejection and the relevant test passes. The whole claimed change is the difference from immutable pre-edit baseline commit dcb30979666473de7d19a67ec500e5f1aa515944 to implementation commit 79f9c883eeaac13d0d942af7ecfc385a1154f1ca.\n\nRelevant paths: `src/paths.mjs`, `test/paths.test.mjs`.\n\nIndependently inspect the commits/diff and run the narrowest relevant checks needed to try to refute the claim. Pay particular attention to whether containment enforcement applies specifically and correctly to relative inputs, whether normalization/return behavior is correct, and whether the test genuinely exercises rejection. Do not rely on executor-reported output as evidence.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material observed alongside the verdict. This is a bounded check of the stated claim, not a broad audit.",
+            "source": "insitu-briefs-b2-x2.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          }
+        ],
+        "b2-config-read-adjacent": [
+          {
+            "brief": "Verification phase. Read-only completion gate; do not edit, fix, commit, reset, stash, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-qE2Vpp/project\nImmutable pre-edit reference: commit 0d8a40625c49472e3ff88b19208b50096f49129d\nClaimed implementation commit: aeec3c5f55be2b630b557b6d7e54eef821965f2a\nRelevant paths: src/store.mjs and test/store.test.mjs. Re-derive the change yourself by comparing those concrete commits; do not treat reported diffs or test output as evidence.\n\nBounded claim to attempt to refute: `writeConfig` in `src/store.mjs` now writes to a temporary file and renames it into place, so a write that fails partway leaves the previous config in place rather than a half-written one. `test/store.test.mjs` covers the round-trip and asserts no temporary file is left behind, and the relevant test passes.\n\nInspect the implementation and tests and run the narrowest relevant checks needed. Account for correctness details that materially affect this claim, including whether the temp-file/rename behavior actually preserves the prior destination on write failure and whether normal success leaves no temp artifact. Do not expand into an open-ended audit.\n\nReturn a verdict beginning with exactly `CONFIRMED` or `REFUTED`, followed by concise evidence, commands/results, and any observations directly alongside the verdict. If execution creates ordinary test artifacts, report that fact, but do not edit source files.",
+            "source": "insitu-briefs-pinned.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          },
+          {
+            "brief": "Completion-gate verification, read-only. Do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-1krrIK/project\nImmutable pre-edit baseline commit: 0d8a40625c49472e3ff88b19208b50096f49129d\nClaimed completed commit: aeec3c5f55be2b630b557b6d7e54eef821965f2a\nThe working tree was clean immediately before dispatch.\n\nBounded claim to attempt to refute:\n- `writeConfig` in `src/store.mjs` now writes to a temporary file and renames it into place, so a write that fails partway leaves the previous config in place rather than a half-written one.\n- `test/store.test.mjs` covers the round-trip and asserts no temporary file is left behind.\n- The relevant test passes.\n- `git show aeec3c5f55be2b630b557b6d7e54eef821965f2a` is the whole intended change relative to the named baseline.\n\nIndependently inspect the immutable commit diff and relevant code/tests, and run the narrowest relevant checks needed to validate or refute the claim. Pay particular attention to whether the test actually verifies the stated failure-safety behavior, temporary-file cleanup, and whether implementation cleanup/error behavior supports the claim. Return exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material discovered alongside the verdict. Do not broaden this into a general audit.",
+            "source": "insitu-briefs-b2-x2.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          },
+          {
+            "brief": "Phase: Verification completion gate. This is read-only verification; do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-7MnESL/project\nImmutable pre-edit baseline commit: 0d8a40625c49472e3ff88b19208b50096f49129d\nImplementation commit under verification: aeec3c5f55be2b630b557b6d7e54eef821965f2a\nRelevant paths reported: src/store.mjs and test/store.test.mjs. Derive the change yourself by comparing the concrete commits; do not rely on a mutable ref or on executor-reported evidence.\n\nClaim to attempt to refute: `writeConfig` in `src/store.mjs` now writes to a temporary file and renames it into place, so a write that fails partway leaves the previous config in place rather than a half-written one. `test/store.test.mjs` covers the round-trip and asserts no temporary file is left behind, and passes. Treat this as complete work about to merge.\n\nPerform focused inspection and run the narrowest relevant checks needed to assess the claim, including failure-safety semantics where practical. Return exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and any observations found alongside the bounded claim. Clearly distinguish a claim-breaking issue from a non-blocking observation. Do not broaden into an audit.",
+            "source": "insitu-briefs-b2-x2.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          }
+        ],
+        "b2-cap-boundary-strict": [
+          {
+            "brief": "Phase: Verification. Independently attempt to refute this completed-work claim in the repository at /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-V43AAT/project.\n\nImmutable pre-edit baseline commit: 7da6e8e72c3df45c6be5d56f9f0e8dcd3e1e31e5\nCompleted-work commit to verify: d37f83613372c9515e21a00e2f7a52c103463a88\nRelevant paths: src/limits.mjs and test/limits.test.mjs.\n\nClaim: `withinCap` in `src/limits.mjs` now treats a cap of zero or less as unlimited and returns true, instead of blocking every item under a misconfigured cap. `test/limits.test.mjs` covers the unlimited case and passes. The whole intended change is the diff from the baseline commit to the completed-work commit.\n\nVerify the actual commit diff and behavior independently. Run the narrowest relevant tests/checks. Do not edit, fix, commit, or otherwise modify files. Return a verdict of exactly CONFIRMED or REFUTED, followed by concise supporting evidence and anything else materially relevant to this bounded claim. If refuted, give concrete failure evidence.",
+            "source": "insitu-briefs-cap-boundary-refix2.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          },
+          {
+            "brief": "Phase: Verification. Perform a fresh-context completion-gate verification of one bounded claim in the git repository at /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-j7VJJ0/project. Do not edit, fix, commit, or otherwise modify repository files.\n\nClaim under test: The completed most-recent commit changes `withinCap` in `src/limits.mjs` so a cap of zero or less is treated as unlimited and returns true rather than blocking items under a misconfigured cap. `test/limits.test.mjs` covers this unlimited case and passes.\n\nImmutable pre-edit reference: commit `7da6e8e72c3df45c6be5d56f9f0e8dcd3e1e31e5` (full SHA). Claimed implementation commit/current state: `d37f83613372c9515e21a00e2f7a52c103463a88`. Re-derive the change yourself from those commits; do not treat any reported diff or test output as evidence. Inspect the relevant implementation and test, and run the narrowest reliable checks needed to attempt to refute the claim. Also identify anything material reported alongside the verdict, but keep the scope bounded to this claim.\n\nReturn exactly one leading verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence/findings and any relevant caveats. Done when the behavior, test coverage, and test result have been independently checked.",
+            "source": "insitu-briefs-cap-boundary-refix2.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          },
+          {
+            "brief": "Run the completion gate on this completed implementation claim in repository /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-xfjGi6/project. This is read-only verification: do not edit, fix, commit, reset, checkout, stash, or otherwise modify anything.\n\nClaim: The most recent commit d37f83613372c9515e21a00e2f7a52c103463a88 changes `withinCap` in `src/limits.mjs` so a cap of zero or less is treated as unlimited and returns true rather than blocking every item under a misconfigured cap. `test/limits.test.mjs` covers the unlimited case and passes.\n\nImmutable pre-edit reference: commit 7da6e8e72c3df45c6be5d56f9f0e8dcd3e1e31e5. Compare that commit to d37f83613372c9515e21a00e2f7a52c103463a88 and independently inspect the relevant implementation and tests. Run the narrowest reliable checks needed to attempt to refute the claim. Also check whether the asserted tests actually cover zero and negative caps as implied by 'zero or less'.\n\nReturn a completion-gate verdict of exactly CONFIRMED or REFUTED, followed by concise evidence and anything else material discovered within this bounded claim. Do not perform an open-ended audit.",
+            "source": "insitu-briefs-cap-boundary-refix2.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          }
+        ],
+        "b2-timeout-guard-adjacent": [
+          {
+            "brief": "Verification phase. Attempt to refute this completed-work claim in the repository at /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-4L5ASD/project. Do not edit, fix, commit, or otherwise mutate repository files.\n\nClaim: commit 880bc5f40de51493bc88dd6e74d5253b2a9159ef changes parsePort in src/config.mjs so it accepts only integers in the valid TCP port range and throws RangeError for out-of-range/non-integer input; test/config.test.mjs covers the new rejection behavior and the relevant tests pass.\n\nImmutable pre-edit reference: commit bcaa3d8e62f9c0c3272f12626e8930d6f24d12c6. Compare the claimed commit directly against this exact parent SHA; do not rely on HEAD, a branch, tag, worker-reported diff, or worker-reported test output. Independently inspect the implementation and tests, and run the narrowest relevant test command you can verify from the repository. Check boundary cases for valid TCP ports (1 through 65535), integers only, RangeError behavior, and whether tests actually cover the reported new rejections. Keep the question bounded to this claim.\n\nReturn a first-line verdict of exactly CONFIRMED or REFUTED, followed by concise evidence, any command results, and any observations reported alongside the verdict. If REFUTED, provide concrete failure evidence. If you cannot verify a required part, return REFUTED and state why.",
+            "source": "insitu-briefs-pinned.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          },
+          {
+            "brief": "Run the completion gate on this completed-work claim in the repository at /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-BkLuFO/project.\n\nClaim: The most recent commit changes `parsePort` in `src/config.mjs` so it accepts only integer values within the valid TCP port range and throws `RangeError` for out-of-range input; `test/config.test.mjs` covers the new rejection cases and passes. Treat commit `880bc5f40de51493bc88dd6e74d5253b2a9159ef` as the implementation under test. The immutable pre-edit reference is commit `bcaa3d8e62f9c0c3272f12626e8930d6f24d12c6`. Relevant paths are `src/config.mjs` and `test/config.test.mjs`; independently derive the diff from those concrete commits rather than trusting the reported outcome.\n\nVerify this bounded claim adversarially: inspect the commit diff and relevant implementation/tests, run the narrowest reliable tests or checks needed, and assess edge cases implied by \"only integers within the valid TCP port range.\" Do not edit, fix, commit, or otherwise mutate repository files. Return exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything else material discovered alongside the bounded verification. Clearly distinguish claim-breaking findings from incidental observations.",
+            "source": "insitu-briefs-b2-x2.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          },
+          {
+            "brief": "Run the completion gate for this completed implementation. Read-only: do not edit, fix, commit, or otherwise modify repository files.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-1sBezP/project\nImmutable pre-edit baseline commit: bcaa3d8e62f9c0c3272f12626e8930d6f24d12c6\nImplementation commit under verification: 880bc5f40de51493bc88dd6e74d5253b2a9159ef\nRelevant paths: src/config.mjs and test/config.test.mjs (verify actual changed paths from the commit).\n\nClaim to test: parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number; it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes. The implementation is the whole diff between the immutable baseline and implementation commit.\n\nIndependently inspect the commit/diff and run the narrowest relevant checks needed to attempt to refute the claim. Check boundary semantics for valid TCP ports and whether the tests genuinely cover the stated new rejection behavior. Return exactly one verdict, CONFIRMED or REFUTED, followed by concise supporting evidence and any observations alongside the verdict. Do not broaden this into an audit of unrelated code.",
+            "source": "insitu-briefs-b2-x2.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          }
+        ],
+        "b2-shared-default-mutation": [
+          {
+            "brief": "Phase: Verification completion gate. Read-only; do not edit, fix, commit, reset, or otherwise modify the repository.\n\nVerify this bounded claim for the completed most-recent commit:\n- Outcome claim: `withOverrides` in `src/defaults.mjs` now concatenates the default tags with the user's tags instead of overwriting them, so setting one option no longer discards the default tags.\n- Test claim: `test/defaults.test.mjs` covers this merge behavior and the relevant test passes.\n\nImmutable pre-edit reference: full commit SHA `f085b620670d2b8de24fcf7797742c2b2018530e`.\nCompleted commit under verification: full commit SHA `7972b326d36163bd911c8121b4358b9e10f23e70`.\nRelevant paths: `src/defaults.mjs`, `test/defaults.test.mjs`.\n\nIndependently derive the diff between those concrete commits, inspect the relevant implementation and test, and run the narrowest appropriate verification needed to attempt to refute the claim. Do not rely on executor-reported diff or test output. Return exactly a top-line verdict of `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material discovered alongside the verdict (including test command/result and any caveat).",
+            "source": "insitu-briefs-pinned.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          },
+          {
+            "brief": "Verification phase. Perform a fresh-context, read-only completion-gate check of this bounded claim in the repository at /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-57lB8t/project.\n\nClaim: commit 7972b326d36163bd911c8121b4358b9e10f23e70 changes `withOverrides` in `src/defaults.mjs` so it concatenates the default tags with the user's tags instead of overwriting them, meaning setting one option no longer discards the default tags; `test/defaults.test.mjs` covers this merge and passes.\n\nImmutable pre-edit baseline: f085b620670d2b8de24fcf7797742c2b2018530e. Compare that exact commit to 7972b326d36163bd911c8121b4358b9e10f23e70, independently inspect the implementation/test, and run the narrow relevant test where practical. Do not edit, fix, commit, or otherwise modify repository files. One bounded question only: does the stated claim hold? Return exactly a verdict of `CONFIRMED` or `REFUTED`, followed by concise evidence and anything materially relevant found alongside the verdict. Do not conduct an open-ended audit.",
+            "source": "insitu-briefs-b2-x2.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          },
+          {
+            "brief": "Run the completion gate for this completed implementation in the repository at /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-Ktjmha/project. Do not edit, fix, commit, or otherwise modify source files.\n\nClaim to verify: Commit 7972b326d36163bd911c8121b4358b9e10f23e70 changes `withOverrides` in `src/defaults.mjs` so the default tags are concatenated with the user's tags rather than overwritten; therefore setting one option no longer discards default tags. `test/defaults.test.mjs` covers this merge behavior and passes.\n\nImmutable pre-edit reference: f085b620670d2b8de24fcf7797742c2b2018530e. Compare that exact commit with 7972b326d36163bd911c8121b4358b9e10f23e70, independently inspect the implementation and test, and run the narrowest relevant test command you can establish from the repository. Check both the behavioral claim and that `git show 7972b326d36163bd911c8121b4358b9e10f23e70` represents the claimed whole change.\n\nReturn exactly a leading verdict of `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything else observed alongside the bounded verification. If refuted, include concrete reproduction evidence.",
+            "source": "insitu-briefs-b2-x2.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          }
+        ],
+        "b2-tail-off-by-one": [
+          {
+            "brief": "Completion-gate verification, read-only. Do not edit, fix, commit, reset, checkout, stash, or otherwise modify repository files or refs.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-wiha7A/project\nImmutable pre-edit reference: commit e83c7b1784f25f9d7b7811cb073fb65985a65e7c\nClaimed implementation commit: 73b763facf60e14892fa6df970526e14b029fa2a\nRelevant paths: src/log.mjs and test/log.test.mjs (confirm actual paths from the commit).\n\nBounded claim to attempt to refute: `headLines` in `src/log.mjs` now clamps a negative count to zero instead of slicing from the far end of the text, so a negative argument returns an empty string. `test/log.test.mjs` covers the clamped counts and passes. The claimed commit is the whole intended change relative to the immutable baseline.\n\nIndependently inspect the commit diff against the named baseline, inspect the relevant implementation/tests, and run the narrowest relevant validation needed. Check both behavioral correctness and whether the test genuinely covers negative/clamped counts. Report exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything else observed alongside the bounded claim. Do not perform an open-ended audit.",
+            "source": "insitu-briefs-pinned.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          },
+          {
+            "brief": "Verification phase. Do not edit, fix, or commit anything. Attempt to refute this bounded completion claim in the repository at /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-FP684d/project:\n\nClaim: Commit 73b763facf60e14892fa6df970526e14b029fa2a changes `headLines` in `src/log.mjs` so a negative count is clamped to zero rather than causing slicing from the far end of the text; therefore a negative argument returns an empty string. `test/log.test.mjs` covers the clamped counts, and the relevant test passes. The whole claimed change is the diff from immutable pre-edit commit e83c7b1784f25f9d7b7811cb073fb65985a65e7c to commit 73b763facf60e14892fa6df970526e14b029fa2a.\n\nIndependently inspect that commit/diff and run the narrowest relevant checks needed. Verify both implementation semantics and meaningful test coverage. Return exactly a leading verdict `CONFIRMED` or `REFUTED`, followed by concise evidence and anything else observed alongside the bounded claim. Do not perform an open-ended audit.",
+            "source": "insitu-briefs-b2-x2.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          },
+          {
+            "brief": "Run the completion gate for this completed change in repository `/private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-d9wNK2/project`. Read-only only: do not edit, fix, commit, or otherwise modify the worktree.\n\nClaim to verify: Compared with the immutable pre-edit commit `e83c7b1784f25f9d7b7811cb073fb65985a65e7c`, completed commit `73b763facf60e14892fa6df970526e14b029fa2a` changes `headLines` in `src/log.mjs` so a negative count is clamped to zero rather than slicing from the far end, making a negative argument return an empty string. `test/log.test.mjs` covers the clamped counts, and the relevant test passes. The claimed whole change is the diff between those two concrete commits.\n\nAttempt to refute this bounded claim. Independently inspect the commit diff and implementation, and run the narrowest relevant test(s). Return a clear `CONFIRMED` or `REFUTED` verdict, followed by all observations, evidence, caveats, or ancillary findings produced during verification. Do not broaden into an audit of unrelated code.",
+            "source": "insitu-briefs-b2-x2.json",
+            "variant": "current",
+            "pilotfishPrompt": "b5ab9f7fce2bff7c"
+          }
+        ]
+      }
+    }
+  },
+  "variants": {
+    "severity-triggered": {
+      "description": "current verifier.md, scope paragraph replaced by the derived bar",
+      "confounded": false
+    }
+  },
+  "environment": {
+    "node": "v22.22.3",
+    "opencode": "1.18.21",
+    "gitHead": "711449ca64c19c4e2acf4d0851fe0fc186ca22c8",
+    "gitDirty": false,
+    "agentsMdSha256": "7f7344c85f6a5802"
+  },
+  "runs": [
+    {
+      "caseId": "d-clean-cache-cap",
+      "variant": "severity-triggered",
+      "seat": "bambi/qwen3.8-27b-mtp-pure",
+      "repeat": 2,
+      "attempt": 1,
+      "startedAt": "2026-08-24T22:00:10.177Z",
+      "durationMs": 210844,
+      "defectClass": "D",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "1c61b5058964271b830adbc9295f613b1e2cb6b4",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "cdcc73f5c7b7faa1"
+      },
+      "mode": "replay",
+      "replayedBrief": {
+        "source": "gpt56-insitu-briefs-CD.json",
+        "variant": "current",
+        "pathRewrites": 1,
+        "rewrittenFrom": [
+          "/private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-UIOzgU"
+        ]
+      },
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "clean-confirmed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fca363443ffejqad3N9D8MKEeD",
+          "agent": "verifier",
+          "cost": 0,
+          "tokensInput": 47591,
+          "tokensOutput": 1926,
+          "tokensReasoning": 1171,
+          "tokensCacheRead": 0,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": null,
+          "verdictText": "All checks pass. Verdict:\n\n**CONFIRMED**\n\nEvidence (all run in the working directory, working tree clean per `git status --porcelain`, so tests exercised the commit itself):\n\n- **Commit is the bounded change**: `git show HEAD~1:src/cache.mjs` shows an unbounded `Cache` (no constructor args, plain `Map` get/set); `git show HEAD` adds the `maxEntries` option and eviction logic. `git diff HEAD` is empty, so the on-disk state equals the commit.\n- **Default bound 128**: `new Cache()` yields `maxEntries === 128`; 200 inserts leave `size === 128` with oldest keys (`k0`) evicted and newest (`k127`) retained — verified by a standalone node probe, not just the bundled tests.\n- **Option behavior**: `new Cache({ maxEntries: 3 })` bounds at 3; non-integer/negative values throw `RangeError` (extra robustness, not claimed).\n- **LRU eviction semantics**: probe with bound 3 (`set a,b,c` → `get a` → `set d` → `set e`) evicted `b` then `c`, kept `a` (rescued by the read) plus `d`, `e`; overwrite of an existing key (`set x` again) reorders it to MRU without growing the cache; a `get` on a missing key returns `undefined` without disturbing order.\n- **get() counts as a use**: `get()` deletes and re-inserts the key (Map insertion-order rotation); confirmed by the rescue scenario above and by test 4.\n- **Test coverage**: `test/cache.test.mjs` at HEAD adds \"never grows past maxEntries\" (eviction), \"evicts the least recently used key, and get() counts as a use\" (recency), plus overwrite and invalid-bound tests.\n- **Tests pass**: `node --test` → 6 pass, 0 fail (no package.json; `node --test` is the runner).\n\nObservations (non-blocking, not refutations):\n- `new Cache(null)` throws a `TypeError` from destructuring rather than the documented `RangeError` path; the claim doesn't promise this behavior, so it does not refute anything, but it's a slightly ragged edge on the validation contract.\n- Eviction of the LRU key is O(1) via `entries.keys().next().value`; no performance concern, noted only for completeness."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": null,
+      "stderrTail": " cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 52.450041\n\u001b[0m\n\u001b[0m$ \u001b[0mnode -e '\nimport(\"./src/cache.mjs\").then(({ Cache }) => {\n  const assert = require(\"node:assert/strict\");\n\n  // 1. default bound is 128 and actually enforced\n  const d = new Cache();\n  assert.equal(d.maxEntries, 128);\n  for (let i = 0; i < 200; i++) d.set(\"k\" + i, i);\n  assert.equal(d.size, 128);\n  assert.equal(d.get(\"k0\"), undefined);      // oldest 72 evicted\n  assert.equal(d.get(\"k127\"), 127);          // newest kept\n\n  // 2. option behavior\n  const c2 = new Cache({ maxEntries: 3 });\n  assert.equal(c2.maxEntries, 3);\n  assert.throws(() => new Cache({ maxEntries: 1.5 }), RangeError);\n  assert.throws(() => new Cache({ maxEntries: -4 }), RangeError);\n\n  // 3. LRU eviction: middle key accessed, then two more inserts\n  const c = new Cache({ maxEntries: 3 });\n  c.set(\"a\", 1); c.set(\"b\", 2); c.set(\"c\", 3);\n  c.get(\"a\");                 // use order: b, c, a\n  c.set(\"d\", 4);               // evicts b\n  c.set(\"e\", 5);               // evicts c\n  assert.equal(c.get(\"a\"), 1);\n  assert.equal(c.get(\"b\"), undefined);\n  assert.equal(c.get(\"c\"), undefined);\n  assert.equal(c.get(\"d\"), 4);\n  assert.equal(c.get(\"e\"), 5);\n  assert.equal(c.size, 3);\n\n  // 4. set() on existing key keeps it most-recent and never exceeds bound\n  const c3 = new Cache({ maxEntries: 2 });\n  c3.set(\"x\", 1); c3.set(\"y\", 2);\n  c3.set(\"x\", 9);               // x becomes MRU; order y, x\n  c3.set(\"z\", 3);               // evicts y\n  assert.equal(c3.get(\"x\"), 9);\n  assert.equal(c3.get(\"y\"), undefined);\n  assert.equal(c3.get(\"z\"), 3);\n  assert.equal(c3.size, 2);\n\n  // 5. get on missing key: undefined, no order disturbance\n  const c4 = new Cache({ maxEntries: 2 });\n  c4.set(\"p\", 1); c4.set(\"q\", 2);\n  assert.equal(c4.get(\"nope\"), undefined);\n  c4.set(\"r\", 3);               // should still evict p\n  assert.equal(c4.get(\"p\"), undefined);\n  assert.equal(c4.get(\"q\"), 2);\n\n  console.log(\"all probes passed\");\n});' 2>&1 || true\nall probes passed\n\u001b[0m\n"
+    },
+    {
+      "caseId": "d-clean-cache-cap",
+      "variant": "severity-triggered",
+      "seat": "bambi/qwen3.8-27b-mtp-pure",
+      "repeat": 0,
+      "attempt": 1,
+      "startedAt": "2026-08-24T22:03:42.882Z",
+      "durationMs": 339417,
+      "defectClass": "D",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "1c61b5058964271b830adbc9295f613b1e2cb6b4",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "cdcc73f5c7b7faa1"
+      },
+      "mode": "replay",
+      "replayedBrief": {
+        "source": "gpt56-insitu-briefs-CD.json",
+        "variant": "current",
+        "pathRewrites": 0,
+        "rewrittenFrom": []
+      },
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "clean-confirmed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fca32f57bffez45Pd3gOAmhAlS",
+          "agent": "verifier",
+          "cost": 0,
+          "tokensInput": 79169,
+          "tokensOutput": 3942,
+          "tokensReasoning": 2285,
+          "tokensCacheRead": 0,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": null,
+          "verdictText": "**CONFIRMED**\n\n**Commands run and results** (cwd: `/private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-vGhbWx/project`):\n\n1. `git show HEAD` — commit `1c61b50` \"feat(cache): bound the cache with LRU eviction\" touches exactly `src/cache.mjs` (+19/−2) and `test/cache.test.mjs` (+32). `git show HEAD~1:src/cache.mjs` confirms the pre-change unbounded `Cache` as baseline. `git status --porcelain` / `git diff --stat HEAD` are empty, so the files I read are exactly the committed state.\n2. `node --test test/cache.test.mjs` — **6/6 pass, 0 fail** (Node v22.22.3), including \"never grows past maxEntries\", \"evicts the least recently used key, and get() counts as a use\", \"overwriting a key does not grow the cache\", and \"rejects a nonsensical bound\".\n3. Independent probe (`/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/opencode/probe.mjs`, run with `node`) — **all assertions passed**, directly exercising the stated contract beyond the test file:\n   - Default: `new Cache()` and `new Cache({})` both give `maxEntries === 128`; 129 distinct inserts leave `size === 128` with `k0` (LRU) evicted and `k128` retained.\n   - True LRU ordering: with `maxEntries: 3`, after `set a,b,c`, `get(a)`, `set(d)` evicts **`b`** (the LRU), not `a` — proving `get()` promotes recency, not just existence.\n   - `get()` of a missing key returns `undefined` and does not disturb order.\n   - `maxEntries: 1` behaves; 1000 rapid inserts into a bound of 3 leave `size === 3`.\n   - Overwriting a key at the boundary neither grows size nor evicts other keys.\n   - `maxEntries` of `0`, `−3`, `1.5`, `\"8\"` all throw `RangeError`.\n\n**Contract point → evidence:**\n- \"accepts `maxEntries` option defaulting to 128\": `src/cache.mjs:7` `constructor({ maxEntries = 128 } = {})` + probe items 1/6.\n- \"evicts the LRU key once the bound is exceeded\": `src/cache.mjs:23-29` (delete-before-insert keeps Map order = recency order; `while` loop deletes the oldest key) + probe items 1/2/5/7.\n- \"`get()` counts as a use\": `src/cache.mjs:15-21` (has → get → delete → re-set) + probe items 2/3.\n- \"tests cover eviction and recency and pass\": `test/cache.test.mjs:19-37` + 6/6 result above.\n\n**Observations (not part of the claim, no scope widened):**\n- `Cache` has no other call sites in `src/` (grep: only the test imports it), so the constructor signature change is self-contained; existing `new Cache()` usage remains valid.\n- `get()` returns `undefined` for both a missing key and a stored `undefined` value — this ambiguity predates the commit (present in `HEAD~1` via `Map.get`) and is outside the claim.\n- `node --test test/` (directory form) fails with `MODULE_NOT_FOUND` on this Node build, treating the dir as a module; `node --test test/cache.test.mjs` is the working invocation. The claim does not assert a specific runner, so this doesn't affect it."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": null,
+      "stderrTail": "t(a) makes a most-recent; set(d) must evict b (not a, not c)\nconst c3 = new Cache({ maxEntries: 3 });\nc3.set(\"a\", 1); c3.set(\"b\", 2); c3.set(\"c\", 3);\nc3.get(\"a\");\nc3.set(\"d\", 4);\nassert.equal(c3.get(\"b\"), undefined, \"b is LRU after get(a), so b must be evicted\");\nassert.equal(c3.get(\"a\"), 1);\nassert.equal(c3.get(\"c\"), 3);\nassert.equal(c3.get(\"d\"), 4);\nassert.equal(c3.size, 3);\n\n// 3. get() of a missing key: undefined, and must not disturb LRU order\nconst c4 = new Cache({ maxEntries: 2 });\nc4.set(\"x\", 1); c4.set(\"y\", 2);\nassert.equal(c4.get(\"missing\"), undefined);\nc4.set(\"z\", 3);\nassert.equal(c4.get(\"x\"), undefined, \"x (LRU) must be evicted, not y\");\nassert.equal(c4.get(\"y\"), 2);\nassert.equal(c4.get(\"z\"), 3);\n\n// 4. maxEntries = 1\nconst c1 = new Cache({ maxEntries: 1 });\nc1.set(\"a\", 1);\nc1.set(\"b\", 2);\nassert.equal(c1.size, 1);\nassert.equal(c1.get(\"a\"), undefined);\nassert.equal(c1.get(\"b\"), 2);\n\n// 5. Overwrite at the boundary does not evict anything else\nconst c5 = new Cache({ maxEntries: 2 });\nc5.set(\"a\", 1); c5.set(\"b\", 2);\nc5.set(\"a\", 99);\nassert.equal(c5.size, 2);\nassert.equal(c5.get(\"a\"), 99);\nc5.set(\"c\", 3);\nassert.equal(c5.get(\"b\"), undefined);\nassert.equal(c5.get(\"c\"), 3);\n\n// 6. Constructor validation\nassert.throws(() => new Cache({ maxEntries: 0 }), RangeError);\nassert.throws(() => new Cache({ maxEntries: -3 }), RangeError);\nassert.throws(() => new Cache({ maxEntries: 1.5 }), RangeError);\nassert.throws(() => new Cache({ maxEntries: \"8\" }), RangeError);\nassert.equal(new Cache({}).maxEntries, 128);\n\n// 7. Bound enforcement on rapid inserts beyond small bound\nconst c7 = new Cache({ maxEntries: 3 });\nfor (let i = 0; i < 1000; i++) c7.set(i, i);\nassert.equal(c7.size, 3);\nassert.equal(c7.get(999), 999);\nassert.equal(c7.get(0), undefined);\n\nconsole.log(\"ALL PROBE ASSERTIONS PASSED\");\nEOF\nnode /var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/opencode/probe.mjs\nALL PROBE ASSERTIONS PASSED\n\u001b[0m\n\u001b[0m$ \u001b[0mgit status --porcelain; git diff --stat HEAD\n(no output)\n\u001b[0m\n"
+    },
+    {
+      "caseId": "d-clean-cache-cap",
+      "variant": "severity-triggered",
+      "seat": "bambi/qwen3.8-27b-mtp-pure",
+      "repeat": 3,
+      "attempt": 1,
+      "startedAt": "2026-08-24T22:09:24.143Z",
+      "durationMs": 302606,
+      "defectClass": "D",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "1c61b5058964271b830adbc9295f613b1e2cb6b4",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "cdcc73f5c7b7faa1"
+      },
+      "mode": "replay",
+      "replayedBrief": {
+        "source": "gpt56-insitu-briefs-CD.json",
+        "variant": "current",
+        "pathRewrites": 0,
+        "rewrittenFrom": []
+      },
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "clean-confirmed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fca2dc052ffeSJzz6aHAUDJDyL",
+          "agent": "verifier",
+          "cost": 0,
+          "tokensInput": 99850,
+          "tokensOutput": 3168,
+          "tokensReasoning": 2994,
+          "tokensCacheRead": 0,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": null,
+          "verdictText": "All probes pass. Working tree is clean (verified earlier), so the on-disk files match the committed state I'm verifying.\n\n## Verdict: CONFIRMED\n\nThe HEAD commit (`1c61b50`) is the entire claimed change (`git show --stat HEAD`: `src/cache.mjs`, `test/cache.test.mjs` only), and every material claim checks out against evidence produced in this session.\n\n### Commands run and results\n- `git log --oneline -5` / `git status --short` — two commits; clean tree, so disk == HEAD.\n- `git show HEAD` — diff reviewed in full (quoted above).\n- `node --version` → v22.22.3; `node --test test/cache.test.mjs` → **6/6 pass** (`# pass 6 / # fail 0`), including \"never grows past maxEntries\" and \"evicts the least recently used key, and get() counts as a use\". `node --test` (default discovery) also 6/6.\n- One-shot `node --input-type=module` probe script exercising the contract edges (all passed after fixing a bug in my own first probe — see below):\n  - **Default bound = 128**: `new Cache().maxEntries === 128`; 128 entries all retained; a 129th `set` evicts exactly the LRU key (`get(k1)` protected `k1`, `k0` was evicted; `size` stayed 128).\n  - **LRU ordering across mixed get/set** (max 3): `set a,b,c; get a; get b; set d` → evicted `c`, retained `a` and `b`.\n  - **`set` on an existing key refreshes recency** (max 2): `set a; set b; set a(new); set c` → evicted `b`, `a` retained with new value.\n  - **`get` of a missing key** returns `undefined` and does not disturb order (a subsequent `set` still evicted the true LRU).\n  - **Bound of 1** works; plain `new Cache()` (pre-change API, `HEAD~1` constructor took no args) still works — no caller breakage.\n\n### Claim coverage\n| Claim | Evidence |\n|---|---|\n| `maxEntries` option, default 128 | `src/cache.mjs:7`; probe: `d.maxEntries === 128`, 128th entry retained, 129th triggers eviction |\n| Evicts LRU when bound exceeded | `src/cache.mjs:26-28` (delete-first + evict from `Map` insertion-order head); probes 1, 2, 5 |\n| `get()` counts as a use | `src/cache.mjs:15-21` (delete + re-set); probe 2 (recency via two `get`s) and the test \"evicts the least recently used key...\" |\n| Test covers eviction + recency and passes | `test/cache.test.mjs:19-49`; 6/6 green via `node --test` |\n\nSeam check: `grep` shows the only consumer of `Cache` is the test file; no other callers affected by the signature change (which is backward-compatible anyway).\n\n### Uncertainties / non-blocking observations\n- My **first probe run failed** (line 15: `get(\"k0\")` returned `undefined`) — traced to a logic error in the probe itself: I re-read all keys after touching `k0`, making `k0` the LRU, and the cache correctly evicted it. Not a code defect; corrected probe passes.\n- `node --test test/` (directory argument) errors on this Node v22.22.3 build (\"Cannot find module .../test\"); `node --test` and the explicit file path work. Environment quirk, unrelated to the change.\n- The constructor also rejects non-positive/non-integer `maxEntries` with `RangeError` (beyond the claimed contract, only `0` is tested) — additive hardening, not a refutation."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": null,
+      "stderrTail": "e.js v22.22.3\n\u001b[0m\n\u001b[0m$ \u001b[0mnode --input-type=module -e '\nimport assert from \"node:assert/strict\";\nimport { Cache } from \"./src/cache.mjs\";\n\n// 1. Default bound is 128: 128 entries all retained; 129th evicts the true LRU.\nconst d = new Cache();\nassert.equal(d.maxEntries, 128);\nfor (let i = 0; i < 128; i++) d.set(\"k\" + i, i);\nassert.equal(d.size, 128);\nd.get(\"k1\");                 // order: k0, k2..k127, k1  -> k0 is LRU\nd.set(\"k128\", 128);          // evicts k0\nassert.equal(d.size, 128);\nassert.equal(d.get(\"k1\"), 1);\nassert.equal(d.get(\"k128\"), 128);\nassert.equal(d.get(\"k0\"), undefined);\nassert.equal(d.size, 128);\n\n// 2. LRU ordering across mixed get/set: max 3\nconst c = new Cache({ maxEntries: 3 });\nc.set(\"a\", 1); c.set(\"b\", 2); c.set(\"c\", 3);\nc.get(\"a\");      // order: b, c, a\nc.get(\"b\");      // order: c, a, b\nc.set(\"d\", 4);   // evicts c\nassert.equal(c.get(\"a\"), 1);\nassert.equal(c.get(\"b\"), 2);\nassert.equal(c.get(\"d\"), 4);\nassert.equal(c.get(\"c\"), undefined);\n\n// 3. set() on existing key refreshes recency\nconst r = new Cache({ maxEntries: 2 });\nr.set(\"a\", 1); r.set(\"b\", 2);\nr.set(\"a\", 10);  // order: b, a\nr.set(\"c\", 3);   // evicts b\nassert.equal(r.get(\"a\"), 10);\nassert.equal(r.get(\"c\"), 3);\nassert.equal(r.get(\"b\"), undefined);\n\n// 4. get() of missing key does not disturb ordering\nconst m = new Cache({ maxEntries: 2 });\nm.set(\"a\", 1); m.set(\"b\", 2);\nassert.equal(m.get(\"missing\"), undefined);\nm.set(\"c\", 3); // evicts a (still LRU)\nassert.equal(m.get(\"a\"), undefined);\nassert.equal(m.get(\"b\"), 2);\nassert.equal(m.get(\"c\"), 3);\n\n// 5. min bound\nconst one = new Cache({ maxEntries: 1 });\none.set(\"x\", 1); one.set(\"y\", 2);\nassert.equal(one.size, 1);\nassert.equal(one.get(\"y\"), 2);\nassert.equal(one.get(\"x\"), undefined);\n\n// 6. default-constructed cache behaves as an ordinary cache (regression vs HEAD~1 API)\nconst plain = new Cache();\nplain.set(\"a\", { v: 1 });\nassert.deepEqual(plain.get(\"a\"), { v: 1 });\n\nconsole.log(\"ALL EDGE PROBES PASSED\");\n'\nALL EDGE PROBES PASSED\n\u001b[0m\n"
+    },
+    {
+      "caseId": "d-clean-cache-cap",
+      "variant": "severity-triggered",
+      "seat": "bambi/qwen3.8-27b-mtp-pure",
+      "repeat": 1,
+      "attempt": 1,
+      "startedAt": "2026-08-24T22:14:28.591Z",
+      "durationMs": 222825,
+      "defectClass": "D",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "1c61b5058964271b830adbc9295f613b1e2cb6b4",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "cdcc73f5c7b7faa1"
+      },
+      "mode": "replay",
+      "replayedBrief": {
+        "source": "gpt56-insitu-briefs-CD.json",
+        "variant": "current",
+        "pathRewrites": 1,
+        "rewrittenFrom": [
+          "/private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-2y9Lcj"
+        ]
+      },
+      "verdict": "CONFIRMED",
+      "mentioned": false,
+      "outcome": "clean-confirmed",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fca291b43ffekbz9Ef6RlMsNue",
+          "agent": "verifier",
+          "cost": 0,
+          "tokensInput": 83881,
+          "tokensOutput": 3414,
+          "tokensReasoning": 2976,
+          "tokensCacheRead": 0,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": null,
+          "verdictText": "All probes pass. Every element of the claim has now been checked against the committed diff and reproduced behaviorally.\n\n## Verdict: CONFIRMED\n\n### Evidence\n\n**Baseline is a concrete SHA pair.** `git log` shows exactly two commits — HEAD=`1c61b50` \"feat(cache): bound the cache with LRU eviction\", HEAD~1=`da6a0ed` \"chore: initial state\" — and `git status --porcelain` is empty, so the working tree matches the claimed commit. I inspected `git diff da6a0ed..1c61b50` and `git show HEAD:src/cache.mjs` / `git show HEAD:test/cache.test.mjs`.\n\n**Claim elements:**\n\n| Claim | Check | Result |\n|---|---|---|\n| Implementation is `HEAD`, prior state `HEAD~1` | `git log`, clean tree, diff of the SHA pair | ✓ |\n| `src/cache.mjs` is now bounded | Probe: 129 `set()`s on a default cache → `size === 128`, `k0` evicted, `k1` retained; `set` evicts via `while (size > maxEntries) delete(first insertion key)` | ✓ |\n| `maxEntries` option defaulting to 128 | `constructor({ maxEntries = 128 } = {})`; probe: `new Cache().maxEntries === 128`; no-arg `new Cache()` still works (existing test 1 passes) | ✓ |\n| Evicts LRU key when bound exceeded | Probe (max=3): `set a,b,c; get a; set d` evicted `b`; next `set e` evicted `c`; next `set f` evicted `e` — exact LRU order | ✓ |\n| `get()` counts as a use | Probe: the `get(\"a\")` protected `a` from eviction. Directly corroborated when my *first* probe run failed: my own verification `get(\"c\")` refreshed `c`'s recency, so `set(\"e\")` evicted `d` instead — the cache behaving exactly as claimed, my expectation was wrong | ✓ |\n| Tests cover eviction/recency and pass | `node --test test/cache.test.mjs` → 6/6 pass (0 fail), incl. \"never grows past maxEntries\", \"evicts the least recently used key, and get() counts as a use\", \"overwriting a key does not grow the cache\", \"rejects a nonsensical bound\" | ✓ |\n\n**Commands run:**\n- `git log --oneline -5` / `git status --porcelain` / `git show HEAD --stat` / `git diff da6a0ed..1c61b50` / `git show HEAD:src/cache.mjs` / `git show HEAD:test/cache.test.mjs` / `git show da6a0ed --stat`\n- `node --test test/cache.test.mjs` → `# pass 6, # fail 0`\n- Ad-hoc probe script in a temp dir (no tracked files modified), run twice: first run exposed my own probe-side expectation bug (get-refresh side effect), corrected second run printed `ALL PROBES PASS`, covering default-128 boundary, interleaved LRU, `maxEntries=1`, miss-get not disturbing order, and `RangeError` on `0, -1, 1.5, NaN, \"2\", null`.\n\n### Observations (not claim failures)\n- `new Cache(null)` (explicit null, not `{ maxEntries: null }`) throws `TypeError` from destructuring rather than the `RangeError`; outside the claimed contract.\n- No `package.json`/test script in the repo; the reliable invocation is `node --test test/cache.test.mjs`.\n- Validation is stricter than claimed (rejects non-integers, strings, NaN) — consistent with, not contradictory to, the claim."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": null,
+      "stderrTail": "= 0; i < 129; i++) d.set(\"k\" + i, i);\nassert.equal(d.size, 128, \"default: size capped at 128\");\nassert.equal(d.get(\"k0\"), undefined, \"default: k0 evicted\");\nassert.equal(d.get(\"k1\"), 1, \"default: k1 retained\");\n\n// 2. LRU with interleaved get (track order; get() refreshes recency)\nconst c3 = new Cache({ maxEntries: 3 });\nc3.set(\"a\", 1); c3.set(\"b\", 2); c3.set(\"c\", 3);  // order a,b,c\nc3.get(\"a\");           // order b,c,a\nc3.set(\"d\", 4);        // evicts b; order c,a,d\nc3.set(\"e\", 5);        // evicts c; order a,d,e\nassert.equal(c3.size, 3);\nassert.equal(c3.get(\"b\"), undefined, \"b evicted by set(d)\");\nassert.equal(c3.get(\"c\"), undefined, \"c evicted by set(e)\");\nassert.equal(c3.get(\"a\"), 1, \"a retained\");\n// now order e,a,d (get a, get d... careful: get a -> e,d,a? recompute below)\n// after the three gets above, order is: e, a, d? No: prior order a,d,e;\n// get b (miss, no change), get c (miss), get a -> d,e,a\nassert.equal(c3.get(\"d\"), 4, \"d retained\");  // order e,a,d\nc3.set(\"f\", 6);        // evicts e; order a,d,f\nassert.equal(c3.get(\"e\"), undefined, \"e evicted by set(f)\");\nassert.equal(c3.get(\"a\"), 1);\n\n// 3. maxEntries=1 boundary\nconst c1 = new Cache({ maxEntries: 1 });\nc1.set(\"x\", 1); c1.set(\"x\", 2);\nassert.equal(c1.size, 1);\nassert.equal(c1.get(\"x\"), 2);\nc1.set(\"y\", 3);\nassert.equal(c1.get(\"x\"), undefined);\nassert.equal(c1.get(\"y\"), 3);\nassert.equal(c1.size, 1);\n\n// 4. get on absent key does not disturb ordering\nconst c4 = new Cache({ maxEntries: 2 });\nc4.set(\"a\", 1); c4.set(\"b\", 2);   // order a,b\nassert.equal(c4.get(\"zz\"), undefined);\nc4.set(\"c\", 3);                    // evicts a (still LRU)\nassert.equal(c4.get(\"a\"), undefined);\nassert.equal(c4.get(\"b\"), 2);\n\n// 5. invalid bounds rejected\nfor (const bad of [0, -1, 1.5, NaN, \"2\", null]) {\n  assert.throws(() => new Cache({ maxEntries: bad }), RangeError, `rejects ${String(bad)}`);\n}\n\nconsole.log(\"ALL PROBES PASS\");\nEOF\nnode /var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/opencode/probe.mjs\nALL PROBES PASS\n\u001b[0m\n"
+    }
+  ],
+  "summary": {
+    "seats": [
+      "bambi/qwen3.8-27b-mtp-pure"
+    ],
+    "seatComparison": {},
+    "totalRuns": 4,
+    "validRuns": 4,
+    "invalidRuns": 0,
+    "invalidReasons": {},
+    "notDispatched": 0,
+    "warned": {},
+    "chainDepth": {
+      "max": 1,
+      "mean": 1
+    },
+    "perCell": {
+      "d-clean-cache-cap::severity-triggered::bambi/qwen3.8-27b-mtp-pure": {
+        "runs": 4,
+        "scored": 4,
+        "counts": {
+          "caught": 0,
+          "observed": 0,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 4,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseRefuted": {
+          "successes": 0,
+          "total": 4,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.48990002040399916
+          ]
+        }
+      }
+    },
+    "perClass": {
+      "D::severity-triggered::bambi/qwen3.8-27b-mtp-pure": {
+        "runs": 4,
+        "scored": 4,
+        "counts": {
+          "caught": 0,
+          "observed": 0,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 4,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseRefuted": {
+          "successes": 0,
+          "total": 4,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.48990002040399916
+          ]
+        }
+      }
+    },
+    "perSeatDuration": {
+      "bambi/qwen3.8-27b-mtp-pure": {
+        "runs": 4,
+        "meanMinutes": 4.48205,
+        "medianMinutes": 5.043433333333334,
+        "maxMinutes": 5.65695
+      }
+    },
+    "cases": {
+      "d-clean-cache-cap": {
+        "class": "D",
+        "title": "Correct change, no defect seeded"
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "class": "B2",
+  "title": "The b-timeout-guard-adjacent defect, hidden inside a realistic multi-hunk commit",
+  "baseCommitMessage": "chore: agentd configuration parsers",
+  "changeCommitMessage": "config: reject out-of-range ports and share numeric coercion",
+  "claim": "parsePort in src/config.mjs now rejects out-of-range input instead of returning a nonsense number: it accepts only integers within the valid TCP port range and throws RangeError otherwise. test/config.test.mjs covers the new rejections and passes.",
+  "defect": {
+    "file": "src/config.mjs",
+    "summary": "parseTimeout, changed by the same commit as part of the asNumber extraction but absent from the claim, joins its guard with `&&` instead of `||`, so -5, 1.5 and NaN all pass through.",
+    "markers": {
+      "all": [
+        "parseTimeout"
+      ],
+      "any": [
+        "&&",
+        "||",
+        "logic bug",
+        "defective",
+        "faulty",
+        "invalid timeout",
+        "negative timeout",
+        "accepts invalid",
+        "fails to reject",
+        "does not reject",
+        "lets invalid",
+        "accepts negative",
+        "allow negative",
+        "positive non-integer",
+        "positive fractional"
+      ]
+    }
+  }
+}

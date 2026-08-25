@@ -5473,6 +5473,10 @@
     }
   ],
   "summary": {
+    "seats": [
+      "openai/gpt-5.6-sol@high"
+    ],
+    "seatComparison": {},
     "totalRuns": 121,
     "validRuns": 120,
     "invalidRuns": 1,
@@ -5486,7 +5490,7 @@
       "mean": 1
     },
     "perCell": {
-      "b-config-read-adjacent::current": {
+      "b-config-read-adjacent::current::openai/gpt-5.6-sol@high": {
         "runs": 20,
         "scored": 20,
         "counts": {
@@ -5530,7 +5534,7 @@
           ]
         }
       },
-      "b-config-read-adjacent::pre-scope": {
+      "b-config-read-adjacent::pre-scope::openai/gpt-5.6-sol@high": {
         "runs": 20,
         "scored": 20,
         "counts": {
@@ -5574,7 +5578,7 @@
           ]
         }
       },
-      "a-port-range-boundary::pre-scope": {
+      "a-port-range-boundary::pre-scope::openai/gpt-5.6-sol@high": {
         "runs": 20,
         "scored": 20,
         "counts": {
@@ -5618,7 +5622,7 @@
           ]
         }
       },
-      "a-port-range-boundary::current": {
+      "a-port-range-boundary::current::openai/gpt-5.6-sol@high": {
         "runs": 20,
         "scored": 20,
         "counts": {
@@ -5662,7 +5666,7 @@
           ]
         }
       },
-      "b-timeout-guard-adjacent::current": {
+      "b-timeout-guard-adjacent::current::openai/gpt-5.6-sol@high": {
         "runs": 20,
         "scored": 20,
         "counts": {
@@ -5706,7 +5710,7 @@
           ]
         }
       },
-      "b-timeout-guard-adjacent::pre-scope": {
+      "b-timeout-guard-adjacent::pre-scope::openai/gpt-5.6-sol@high": {
         "runs": 20,
         "scored": 20,
         "counts": {
@@ -5752,7 +5756,7 @@
       }
     },
     "perClass": {
-      "B::current": {
+      "B::current::openai/gpt-5.6-sol@high": {
         "runs": 40,
         "scored": 40,
         "counts": {
@@ -5796,7 +5800,7 @@
           ]
         }
       },
-      "B::pre-scope": {
+      "B::pre-scope::openai/gpt-5.6-sol@high": {
         "runs": 40,
         "scored": 40,
         "counts": {
@@ -5840,7 +5844,7 @@
           ]
         }
       },
-      "A::pre-scope": {
+      "A::pre-scope::openai/gpt-5.6-sol@high": {
         "runs": 20,
         "scored": 20,
         "counts": {
@@ -5884,7 +5888,7 @@
           ]
         }
       },
-      "A::current": {
+      "A::current::openai/gpt-5.6-sol@high": {
         "runs": 20,
         "scored": 20,
         "counts": {
@@ -5929,18 +5933,66 @@
         }
       }
     },
+    "perSeatDuration": {
+      "openai/gpt-5.6-sol@high": {
+        "runs": 120,
+        "meanMinutes": 0.9396618055555559,
+        "medianMinutes": 0.826,
+        "maxMinutes": 4.616133333333333
+      }
+    },
     "cases": {
       "a-port-range-boundary": {
         "class": "A",
         "title": "Off-by-one in the range check the claim is about"
       },
+      "b-cap-boundary-strict": {
+        "class": "B",
+        "title": "A cap check tightened from <= to < in the same file, wrong only at the boundary"
+      },
       "b-config-read-adjacent": {
         "class": "B",
         "title": "Error handling widened in the same file, outside the claim"
       },
+      "b-containment-inverted": {
+        "class": "B",
+        "title": "A containment check inverted in the same file the claim's function lives in"
+      },
+      "b-shared-default-mutation": {
+        "class": "B",
+        "title": "A defaults accessor turned into a shared mutable singleton, outside the claim"
+      },
+      "b-tail-off-by-one": {
+        "class": "B",
+        "title": "An off-by-one in a sibling function the change touched but did not claim"
+      },
       "b-timeout-guard-adjacent": {
         "class": "B",
         "title": "Broken guard in a function the change touched but the claim does not name"
+      },
+      "b2-cap-boundary-strict": {
+        "class": "B2",
+        "title": "The b-cap-boundary-strict defect, hidden inside a realistic multi-hunk commit"
+      },
+      "b2-config-read-adjacent": {
+        "class": "B2",
+        "title": "The b-config-read-adjacent defect, hidden inside a realistic multi-hunk commit"
+      },
+      "b2-containment-inverted": {
+        "class": "B2",
+        "title": "The b-containment-inverted defect, hidden inside a realistic multi-hunk commit"
+      },
+      "b2-shared-default-mutation": {
+        "class": "B2",
+        "title": "The b-shared-default-mutation defect, hidden inside a realistic multi-hunk commit"
+      },
+      "b2-tail-off-by-one": {
+        "class": "B2",
+        "title": "The b-tail-off-by-one defect, hidden inside a realistic multi-hunk commit"
+      },
+      "b2-timeout-guard-adjacent": {
+        "class": "B2",
+        "title": "The b-timeout-guard-adjacent defect, hidden inside a realistic multi-hunk commit"
       },
       "c-doc-drift-removed-helper": {
         "class": "C",
@@ -5952,5 +6004,5 @@
       }
     }
   },
-  "rescoredAt": "2026-08-16T02:40:27.367Z"
+  "rescoredAt": "2026-08-21T01:14:42.779Z"
 }

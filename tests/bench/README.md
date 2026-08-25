@@ -49,6 +49,27 @@ Useful flags: `--repeats N`, `--variants current,pre-scope`, `--cases <id,...>`,
 `--classes A,B`, `--timeout <minutes>`, `--seed N` (replays a run order),
 `--keep-fixtures`, `--out <path>`.
 
+### Prompt variants
+
+| variant | what it is |
+|---|---|
+| `current` | the working-tree prompts — #16 as it stands. Default arm. |
+| `pre-scope` | `verifier.md` at `9332e48~1`, before the scope change. Default arm. |
+| `pre-scope-gate` | also reverts `pilotfish.md`. Confounded — use it to confirm a finding, never to produce one. |
+| `severity-triggered` | #53 Phase 1's third arm: `current` with the scope paragraph replaced. Opt-in, not in the default suite. |
+
+The first three pin each prompt at a git ref. `severity-triggered` is instead a
+patch against the working-tree `verifier.md`, because its text was written for
+the experiment and so has no ref to be recovered from. The patch is anchored on
+the passage it replaces, not on a line number, and resolution **fails closed**
+if that passage moves, is reworded, or appears twice — so a drive-by edit to the
+prompt aborts the run rather than silently measuring the wrong text. Resolution
+happens for every named variant before the queue is built, so that abort costs
+nothing.
+
+How its trigger list was derived, and why the bar it draws is reachability
+rather than severity: `docs/issue-53-phase1-trigger-derivation.md`.
+
 ## Replay mode: the same measurement for about a fiftieth of the cost
 
 An in-situ run pays for a whole orchestrated session — planning, tool calls,
@@ -68,12 +89,86 @@ subscription quota for the in-situ equivalent on `gpt-5.6`. That is what makes
 n=20 per cell unremarkable, and n is the whole problem — at the n=5 the default
 suite buys, a null result on class B is not concludable.
 
+### Comparing two seats
+
+`--model` takes a comma-separated list, and each seat becomes an axis of the
+same queue alongside cases and variants:
+
+```bash
+node tests/bench/verifier-correctness.mjs run --confirm --replay \
+  --model bambi/qwen3.8-27b-mtp-pure,openai/gpt-5.6-sol \
+  --classes B --variants current --repeats 10
+```
+
+This exists because the first cross-seat comparison could not be defended. A
+local seat scored 0/60 false `CONFIRMED` on the six class B cases and the
+frontier seat scored 11/51, but the two suites ran two days apart at different
+harness commits, with different effort tiers — so the case set matched and
+nothing else did. One queue holding both seats shares the commit, the case set,
+the brief at every repeat index, and whatever the machine was doing at the time;
+a seat difference that survives it is a seat difference.
+
+That 11/51 turned out not to be a seat difference at all. Audited, six of the
+eleven were detections the marker list did not match, and the suite was 88 valid
+runs of 240 planned. The controlled run this section describes, complete at 60
+runs per seat and rescored under the current markers, puts the two seats at 6.7%
+and 0%, Fisher p = 0.12 — no significant separation. Both audits
+are in [`docs/issue-15-gpt56-miss-audit.md`](../../docs/issue-15-gpt56-miss-audit.md)
+and [`docs/issue-15-seat-comparison-audit.md`](../../docs/issue-15-seat-comparison-audit.md),
+and the section below carries what they cost.
+
+`report` adds a **Seat comparison** section for any suite with more than one
+seat: Fisher's exact test, two-tailed, on the primary metric, with the raw
+counts beside every p-value. Exact rather than chi-square because these tables
+have zero cells, and two-tailed because the one-tailed variant would report a
+smaller p in whichever direction we were hoping for.
+
+Wall clock is reported per seat and deliberately not folded into the
+correctness table. For a local seat the tokens are free and the time is the
+whole cost, so the two seats have no common denominator — 2.9 min/run on
+`bambi/qwen3.8-27b-mtp-pure` against 0.7 on `openai/gpt-5.6-sol`, for the same
+six cases.
+
+Read the power note `plan` prints before choosing `--repeats`. At 60 per seat a
+true 0% against a true 20% separates comfortably (p ≈ 0.0001 on the observed
+counts); a true 0% against a true 5% does not, so a null seat difference means
+"no large difference", never "the same".
+
+### Fixture paths in captured briefs
+
+A captured brief can name the absolute fixture directory of the run that
+produced it, and that directory is gone by replay time. Three of the 45 stored
+briefs do, unevenly: `b-shared-default-mutation` has two briefs and one carries
+a path, so half of that case's replay runs used to open by reconciling a
+repository that did not exist.
+
+The path is now rewritten to each run's own fixture, and the rewrite is counted
+in the run record and reported. Rewritten rather than stripped — the primary did
+tell the verifier where the repository was, so pointing that sentence at a real
+directory keeps it true, while deleting it would change what the brief says.
+
+`bambi/qwen3.8-27b-mtp-pure` reconciled the dead path every time and proceeded,
+but it spent real effort doing so, and a weaker seat could follow it instead.
+That failure would arrive as a verdict rather than as an invalid run, which is
+the worst shape a harness artifact can take.
+
 `--replay` needs `--model` and refuses `--primary`, because there is no primary.
 The verifier is promoted to a primary agent in a throwaway config, which is how
 a role gets run directly at all: the CLI refuses a subagent for `--agent`. The
 router is **removed** from that config rather than taught an exception — a bench
 mode inside the component whose value is failing closed would be a bypass; a
 config without it is not.
+
+**Editing a claim invalidates that case's captured briefs, and nothing checks
+it.** A brief is the primary's own restatement of the claim, so it quotes the
+claim as it stood when the brief was captured. Nothing ties the two together:
+change `case.json`'s `claim` and every stored brief for that case keeps asking
+the old question, silently, and a replay suite measures the claim you edited out.
+Both B2 recaptures so far were forced by exactly this — first the enumerating
+claims, then the `b-config-read-adjacent` wording. **After any claim edit,
+recapture that case's briefs before replaying it.** A `claimDigest` stamped at
+capture time and checked before replay would make this loud instead of silent;
+it does not exist yet.
 
 **Briefs are captured, never written.** A hand-written brief would make the
 result a test of the harness author's prose. Every distinct brief a real run
@@ -91,16 +186,47 @@ the primary's choice of brief, and the Completion Gate wording is part of what
 model, not about the gate end to end. Keep a handful of in-situ runs alongside
 any replay conclusion to confirm the replay is not distorting.
 
-It also only covers cases that have a captured brief. Classes C and D have none
-yet, so the documentation-drift case and the false-REFUTED noise floor cannot be
-replayed until one in-situ run of each is recorded — two runs, then unlimited
-cheap repeats.
+It also only covers cases that have a captured brief. Coverage as of
+2026-08-21 — `plan` prints this for the cases a given suite selects, and refuses
+to start when any of them is zero:
+
+| class | case | briefs |
+|---|---|---:|
+| A | `a-port-range-boundary` | 13 |
+| B | six cases | 2–12 each |
+| C | `c-doc-drift-removed-helper` | 1 |
+| D | `d-clean-cache-cap` | 3 |
+| **B2** | **six cases** | **0 — cannot be replayed** |
+
+Classes C and D were captured in `98e96e8` and are replayable now, though C's
+single brief means every repeat of that cell replays identical input — it
+measures one phrasing, not the primary's variance. **B2 is the tier with no
+briefs.** The reason B's cannot substitute has changed: it used to be that a B2
+claim enumerated the commit's legitimate changes, so a B brief would describe a
+commit that is not on disk. `02346b2` removed that enumeration and a test now
+holds every B2 claim byte-identical to its class B counterpart, which makes a B
+brief structurally replayable against a B2 fixture. What it is not is what a
+primary writes *after making the larger commit*, and the primary's framing of a
+3-file, 3–5 hunk change is part of what B2 exists to measure — the first B2
+capture refuted 4 of 4 on exactly that framing. Capture B2's own briefs. See
+[`docs/issue-15-b2-runbook.md`](../../docs/issue-15-b2-runbook.md).
 
 ## Before you trust a number from a new model
 
-Two mistakes were made repeatedly while producing the results in
-`docs/issue-16-evidence.md`. Both are cheap to avoid and both changed the answer
-when they were not.
+Five mistakes have now been made here. Every one of them changed the answer, and
+every one was cheap to catch. Work down this list before quoting any rate.
+
+**Start with the anchor test — it sorts most of it in one pass.** Detection
+evaluates `markers.all` first and short-circuits, so for each run scored
+`missed`, ask only whether the verdict contains the case's `markers.all` anchor:
+
+- **Absent** — the verifier never named the function. A real miss, and no
+  marker change can rescue it. Stop.
+- **Present** — `markers.any` or the proximity window is what failed. Read the
+  window and judge the phrasing.
+
+Applied to `replay-gpt56-sol-classB-r20`, that single question separated 7
+artifacts from 10 real misses without reading a full verdict.
 
 **Marker vocabulary is model-sensitive. Validate it per model.** Detection is
 deterministic substring matching against markers declared in the case — there is
@@ -124,11 +250,84 @@ than a re-run — which is the reason every verdict is retained in full. Check t
 correction in both directions: a broadened marker that flips runs *toward* your
 preferred conclusion deserves more suspicion than one that flips them away.
 
-**Do not report a direction from a partial suite.** This was done twice and was
-wrong both times. At 40 of 120 runs one comparison looked like 8 misses in 12
-against 4 in 13; the finished suite was 40% against 43% with p = 1.00, and the
-nominal direction had flipped. Cells fill unevenly because the queue is
-randomized, so a half-finished suite is a biased sample, not a small one. Wait
+Two shapes recur and neither is covered by a longer word list:
+
+- **Demonstrative phrasing.** Every marker on `b-tail-off-by-one` names the bug
+  class — `off-by-one`, `one fewer`, `n-1`. `gpt-5.6` describes that defect by
+  showing an input and an output: *"`tailLines("a\nb\nc\nd", 2)` now returns
+  `"d"` instead of `"c\nd"`"*. Twelve markers credited 2 of 10 detecting runs,
+  and both credits came from the incidental word "regress" in *"an unrelated
+  regression"*. A discriminator that only fires on a bug-class noun will miss any
+  seat that argues from behaviour.
+- **Formatting.** `b-cap-boundary-strict` carries the marker `<= to <`, written
+  for exactly the sentence one run produced — and missed it, because the run
+  wrote ``from `<=` to `<` ``. Backticks are now stripped before matching.
+- **Morphology.** `b-containment-inverted` carried `invert`, which does not
+  match *"`isUnderRoot` currently returns the **inverse** of its documented
+  behavior"*. One letter, one uncredited catch. The marker is now the stem
+  `inver`, in the style of `negat`, `revers` and `mutat` — prefer the stem to
+  the inflected word.
+- **Demonstrative phrasing recurs on the same case.** `b-cap-boundary-strict`
+  needed fixing twice for it. After the backtick fix the surviving misses were
+  ``<= changed to <`` against a marker of ``<= to <``, and *"an exact fill is
+  allowed"* / *"an exact-fit item"* against a marker of `exact-fill`. It now
+  also carries `< cap` — the defective expression itself, which cannot match
+  the claimed function's own `<= cap`, because `<` is followed by `=` there.
+  A marker written against one sentence grades that sentence and nothing else.
+
+**A discriminator can also be present and simply too far away.** The proximity
+window was 200 characters, justified as a plateau because all 120 runs of the
+`gpt-5.6` class-A/B suite graded identically at 200 and 400. That plateau was a
+property of one seat's prose. `gpt-5.6` writes 300–700 character verdicts;
+`bambi/qwen3.8-27b-mtp-pure` writes 2,700–3,200 with structured observation
+paragraphs that separate the function name from the diagnosis. Both of that
+seat's misses in the controlled suite had the marker present at 224–250
+characters — one of them reading *"An off-by-one regression with its coverage
+deleted"* — and were scored as non-detections. The window is now **400**.
+
+400 is an upper bound as well as a floor, which is worth knowing before anyone
+raises it again. `replay-qwen3.6-27b-classAB-r20` moves four further runs at 800,
+and all four have been hand-read: every one is a genuine miss that merely names
+`parseTimeout` in a passing-test list, or notes the commit touched it without
+saying anything is wrong with it. What the wider window credits them with is the
+`||` in `!Number.isInteger(port) || port < 1 || port > 65535` — **`parsePort`'s
+own guard**, the *claimed* function's code, 709–770 characters away from that
+incidental mention. That is precisely the shared-vocabulary false credit
+`054a27e` removed, arriving through proximity rather than through the marker
+list. Widen the window and you rebuild the bug in a different place.
+
+**Never ship a correction that fixes one arm of a comparison and not the other.**
+This is the newest mistake and the most dangerous, because the result looks
+better rather than broken. The mechanical form of finishing it:
+after any marker edit, `rescore` **every** stored suite, not the one that
+prompted the edit, and hand-read every run that moves. The 2026-08-23 pass over
+1,127 stored verdicts moved 14 runs — 4 distinct verdicts seen across
+overlapping result files — and all four were read before the change was kept.
+Also state the sensitivity: crediting only the local seat's newly-matched run
+would have given p = 0.06 and crediting only the frontier seat's p = 0.36, where
+applying both gives p = 0.12. A correction that lands on one arm is not a
+smaller version of the right answer; it is a different answer. Widening the window and stripping backticks fixed
+*both* of the local seat's artifacts and only *one* of the frontier seat's five —
+the other four being vocabulary-shaped and deliberately left pending validation.
+The stored summary moved from p = 0.14 to p = 0.0195, crossing into significance
+in the flattering direction, on the asymmetry alone. If a fix reaches one seat's
+failure mode and not another's, either finish it or annotate the result so the
+partial state cannot be quoted.
+
+**Do not report a direction from a partial suite.** This was done three times
+and was wrong every time. At 40 of 120 runs one comparison looked like 8 misses
+in 12 against 4 in 13; the finished suite was 40% against 43% with p = 1.00, and
+the nominal direction had flipped. The third was `replay-gpt56-sol-classB-r20`,
+reported at 11/51 from a suite that was 88 valid runs of 240 with cells between
+4 and 11 of 20 — and the incompleteness was not a choice. The suite crashed at
+run 88 because `--resume` was passed without a path and swallowed the following
+`--timeout` flag as its value; the retyped command resumed with a 4-minute
+per-run cap where the original had 20, which is why every invalid run in that
+file is a timeout. A missing option value is now a hard error, but **check
+`validRuns` against `repeats × cells` before quoting anything** — a truncated
+suite still writes a complete-looking summary block. Cells fill unevenly because
+the queue is randomized, so a half-finished suite is a biased sample, not a small
+one. Wait
 for the suite, then run the paired test.
 
 ## Choosing which model is measured
@@ -190,8 +389,59 @@ anything is wrong.
 |---|---|---|
 | A | inside the stated claim | control — a miss here means the gate is broken outright, not merely narrowed |
 | B | in a file the change touched, outside the claim | the risk zone: precisely what "don't audit the surrounding code" tells it to skip |
+| B2 | the same defect, in a realistic commit | whether B measured defect-finding or only diff-reading |
 | C | documentation drift on a trivial edit | the class the #16 historical sample proved it catches today |
 | D | no defect | false-REFUTED noise floor |
+
+### Why B2 exists
+
+Every class B fixture is a 10–19 line file with exactly two exported functions,
+one claimed and one defective, so its commit is a **two-hunk diff**. Detection
+reduces to reading `git show HEAD` and noticing that a second hunk exists. That
+is a diff-reading task, and it explains 60/60 detection with live probes better
+than any claim about model capability.
+
+Against the 44 historical `REFUTED` verifier sessions, that shape — a one-token
+operator mutation in a sibling function, decidable by calling it twice — is
+about **5% of real defects**. The rest are adversarial input (34%), host or
+external contract mismatches (16%), documentation contradicting code (16%),
+races (14%), and lifecycle or spec problems. Real refutations cite a mean of 1.3
+distinct files, and 41% of them note that the test suite passed anyway.
+
+B2 seeds the **byte-identical mutation with identical markers** into a commit
+that also carries four to six legitimate changes across three files: a helper
+extracted that has its own reason to touch the defective function, a rename
+propagated through call sites, a test added for the claimed function, a
+documentation table brought up to date. The defect becomes one hunk among
+several instead of one of two.
+
+Note what B2 does *not* do. It does not merely grow the module — a 200-line file
+whose commit touches two functions still produces a two-hunk diff.
+Conspicuousness is a property of the **commit**, not of the file. Two tests
+enforce both halves of the design: every B2 commit must touch 3+ files with 3+
+hunks, and every B2 case's markers must match its class B counterpart exactly,
+so a difference between the tiers is a difference in the commit rather than in
+the defect.
+
+Read the result this way. If B2 detection stays near 100%, the calibration
+worry is answered and every existing class B number stands. If it collapses,
+class B measured diff-reading and every conclusion drawn from it — including any
+seat comparison — is scoped to that, not to verification quality.
+
+B2 has **no captured briefs**, so it cannot be replayed until one in-situ run of
+each case is recorded. Six in-situ runs, then unlimited cheap repeats:
+
+```bash
+node tests/bench/verifier-correctness.mjs run --confirm --classes B2 --variants current --repeats 1
+node tests/bench/verifier-correctness.mjs capture-briefs tests/bench/results/<that file>.json
+node tests/bench/verifier-correctness.mjs run --confirm --replay \
+  --model bambi/qwen3.8-27b-mtp-pure,openai/gpt-5.6-sol \
+  --classes B,B2 --variants current --repeats 10
+```
+
+That last command is the experiment: both tiers, both seats, one randomized
+queue, so the B-versus-B2 difference and the seat difference are measured under
+identical conditions.
 
 **The prediction under test is that A and D hold while B degrades.** If B
 degrades materially against the `9332e48~1` prompt, revert #16's scope change.
@@ -291,7 +541,17 @@ Wilson 95% interval for this reason.
 ## The database rule
 
 Fixture runs write to their own isolated `opencode.db` inside the fixture root.
-**Never pool that with `~/.local/share/opencode/opencode.db`.** That database is
-#16's measurement sample, which starts 2026-08-10; benchmark runs are not part
-of it and would corrupt it. The harness has no code path that can open it, and
-`scoring.test.mjs` asserts as much.
+**Never pool that with `~/.local/share/opencode/opencode.db`.** The harness has
+no code path that can open it, and `scoring.test.mjs` asserts as much.
+
+The original reason was that the shared database held #16's measurement sample.
+It no longer does. The data directory was recreated 2026-08-14 and the database
+now holds a schema, 38 `migration` rows and one `project` row — no sessions at
+all — so everything measured from it before that date is unreproducible: the
+328-session telemetry in `docs/issue-16-evidence.md`, and the 44 historical
+`REFUTED` verdicts that #16's P1 and #53's Phase 1 both rest on. See
+`docs/issue-53-phase1-trigger-derivation.md` §0 for what was searched.
+
+The rule stands on the other reason, which the first one was masking: a live
+session store is not a bench artifact and nothing preserves it. Anything a run
+needs must be exported while its fixture still exists.
