@@ -163,6 +163,89 @@ sqlite3 ~/.local/share/opencode/opencode.db "SELECT data FROM message WHERE sess
 
 On the first assistant message, `input + cache.read` is the prefix.
 
+### Prefix as a portability constraint, not a cost one (measured)
+
+Everything above prices the prefix in money, which is the right frame for a paid seat and the wrong
+one for a free local worker. On a local seat the prefix costs no money at all. It costs three other
+things, and two of them decide whether a configuration runs.
+
+**Measured on this install, 2026-08-25.** First-message prefix per role, `input + cache.read`:
+
+| role | prefix | note |
+|---|---:|---|
+| `pilotfish` (primary) | 39,245 | avg of 49 sessions, max 66,892 |
+| `executor` | 34,024 | **pre-scope-closing; not re-measured since** |
+| `verifier` | 33,549 | pre-scope-closing |
+| `mech-executor` | 28,830 | **pre-scope-closing; not re-measured since** |
+| `verifier` (after scope closing, bambi) | **20,907** | |
+| `verifier` (after scope closing, gpt-5.6-sol) | 14,758-18,041 | |
+| `Explore` | 5,800 -> 4,816 | before -> after |
+| `plan-verifier` | 5,778 -> 4,491 | before -> after |
+| `scout` | 5,006 -> 3,834 | before -> after |
+
+Closing worker tool scope roughly halved the verifier, 33,549 -> ~21,000. `executor`,
+`mech-executor` and `security-executor` have not run since that change, so their numbers above are
+stale and the current values are unknown.
+
+The gap between `verifier` (~21,000) and `plan-verifier` (~4,500) is the thing to look at. Both are
+read-oriented verification roles on the same host. The difference is that `verifier` carries `bash`,
+`skill`, and a whole-server `github_*` grant; the bash and skill schemas are small, so the MCP server
+is most of a ~16,000-token gap — consistent with the 13,748 measured in §1.
+
+**1. Portability — the constraint that decides whether a role runs at all.** A prefix is fixed
+overhead subtracted from working memory before any work begins. What is left has to hold the diff,
+the test output, and the files.
+
+| verifier prefix | of a 204k model | of a 100k model | of a 32k model |
+|---|---:|---:|---:|
+| 33,549 (before) | 16% | 34% | **does not fit usefully** |
+| 20,907 (now) | 10% | 21% | 65% |
+| ~11,000 (narrowed MCP) | 5% | 11% | 34% |
+
+Free local workers are this project's premise, and most local quants people actually run are 32k or
+100k, not 200k. So prefix size decides which hardware can host a role — a premise-level constraint,
+not an optimization. Nominal context is also generous: a 27B does not attend reliably across its
+whole window, so the usable remainder is smaller than the arithmetic suggests.
+
+**2. Cold-start latency.** Measured against `bambi/qwen3.8-27b-mtp-pure` on 2026-08-25: a 7,496-token
+prefix on an already-warm model took 11.74s, and a 6,056-token one took 9.06s — **~640 tokens/sec of
+prefill**. An identical prefix re-sent took 0.67s, so the KV cache is reused and repeat turns are
+~17x cheaper in time.
+
+At 640 tok/s a cold dispatch pays, before doing anything:
+
+| prefix | cold prefill |
+|---|---:|
+| 4,500 (`plan-verifier`) | 7s |
+| 13,748 (one MCP server) | 21s |
+| 20,907 (`verifier` now) | 33s |
+| 40,000 | 62s |
+
+This is why session reuse matters more on a local seat than the cost argument in §1 implies: the
+saving is seconds of wall clock per avoided cold start, not fractions of a cent.
+
+**3. LM Studio does not report cache hits, and this is a reporting gap, not a caching failure.** Its
+OpenAI-compatible response omits `prompt_tokens_details` entirely, so `tokens.cache.read` is recorded
+as 0 for every bambi session and a naive read of the database says "0% cached". The 17x timing above
+proves the cache is working. `omlx` does emit the field and shows an 87% hit rate. Do not conclude a
+local server is uncached from the database alone — time two identical requests instead.
+
+### Proposed budgets, and where this install actually stands
+
+Stated as a target because nothing currently measures or enforces it, and because the numbers below
+are a proposal rather than a finding:
+
+- **read-only roles: under 6,000.** `scout` (3,834) and `plan-verifier` (4,491) are already there.
+- **write and verify roles: under 12,000.** Nothing is there yet. `verifier` is at ~21,000, and
+  `executor`, `mech-executor` and `security-executor` are unmeasured since scope closing.
+
+The basis for 12,000 is portability, not taste: it is ~12% of a 100k model and ~37% of a 32k one,
+which leaves a working majority of the window for the actual task. 6,000 is the same test applied to
+roles that only read. Both should be re-derived if the target hardware changes.
+
+Measure with the snippet above, per role, after a restart. It is one number, it is cheap, and right
+now nothing reports it — so a configuration can quietly stop fitting the hardware it was chosen for.
+
 ---
 
 ## 2. OpenRouter caching
