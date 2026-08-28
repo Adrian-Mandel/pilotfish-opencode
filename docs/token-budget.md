@@ -159,13 +159,29 @@ GROUP BY s.agent, tool ORDER BY n DESC;"
 keeps your MCP servers.** This is about context, not capability.
 
 Every time a subagent runs it is sent the full text of every tool it may use: each name, description
-and argument. A whole server is expensive. The 44-tool GitHub server measured here is 13,748 tokens,
-re-sent on every step of every subagent that can see it. An individual tool is roughly 300.
+and argument. A whole server is expensive. For example, as of writing this doc, the default GitHub MCP
+server has 44 tools and measured 13,748 tokens, re-sent on every step of every subagent that can see
+it. A single tool is about 300. Subagents are intended to be cheaper models, which could have small
+context windows: a 20,000-token tool list is 65% of a 32k window, leaving little room for the diff
+being reviewed.
 
-So the guidance is not "keep MCP away from subagents". It is **grant individual tools rather than
-whole servers, and only after you have seen a subagent need one.** On a small local model this
-decides whether a role works at all: a 20,000-token tool list is 65% of a 32k context window, leaving
-little room for the diff being reviewed.
+Our recommendation is to grant individual tools rather than whole servers, and depending on your needs
+it may be best to grant those specific tools only after you have seen a subagent need one.
+
+**How do you know if a subagent needs a specific tool?** Use the audit below (`node mcp-audit.mjs`).
+It reports, per role, which MCP tools that role called and how many times, alongside that role's prefix
+size — so you can weigh a tool's roughly-300-token cost against the role's context budget. One limit
+to be honest about: it shows what a role called *when it already had the tool*. It cannot show what a
+locked-down role *wanted* — a subagent with no access does not visibly try, it just reports back to the
+orchestrator in prose. Surfacing that second signal is not yet built (tracked as future work); until it
+is, read a role's absence of calls as "no demand observed", not "no demand".
+
+**How do you add a specific tool to a specific subagent?** Two ways. Ask any session pointed at your
+Pilotfish repo — e.g. *"grant the verifier the `github_issue_read` tool"* — and it will make the edit.
+Or edit `~/.config/opencode/opencode.json` by hand: in that agent's `permission` block, add
+`"github_issue_read": "allow"`. Order matters — OpenCode resolves a tool against the **last** matching
+rule, so the grant must sit *after* the `"*": "deny"` it overrides. Append it; never insert it above
+the deny. Restart OpenCode to apply.
 
 The default is closed because the two failure modes are not equal. Too closed shows up as a subagent
 reporting it could not check something — visible, and one line to fix. Too open shows up as degraded
