@@ -187,28 +187,31 @@ model, not about the gate end to end. Keep a handful of in-situ runs alongside
 any replay conclusion to confirm the replay is not distorting.
 
 It also only covers cases that have a captured brief. Coverage as of
-2026-08-21 — `plan` prints this for the cases a given suite selects, and refuses
+2026-08-28 — `plan` prints this for the cases a given suite selects, and refuses
 to start when any of them is zero:
 
 | class | case | briefs |
 |---|---|---:|
-| A | `a-port-range-boundary` | 13 |
-| B | six cases | 2–12 each |
+| A | `a-port-range-boundary` | 3 |
+| B | six cases | 3 each |
 | C | `c-doc-drift-removed-helper` | 1 |
-| D | `d-clean-cache-cap` | 3 |
-| **B2** | **six cases** | **0 — cannot be replayed** |
+| D | four cases | 3 each |
+| B2 | six cases | 3 each |
 
 Classes C and D were captured in `98e96e8` and are replayable now, though C's
 single brief means every repeat of that cell replays identical input — it
-measures one phrasing, not the primary's variance. **B2 is the tier with no
-briefs.** The reason B's cannot substitute has changed: it used to be that a B2
-claim enumerated the commit's legitimate changes, so a B brief would describe a
-commit that is not on disk. `02346b2` removed that enumeration and a test now
-holds every B2 claim byte-identical to its class B counterpart, which makes a B
-brief structurally replayable against a B2 fixture. What it is not is what a
-primary writes *after making the larger commit*, and the primary's framing of a
-3-file, 3–5 hunk change is part of what B2 exists to measure — the first B2
-capture refuted 4 of 4 on exactly that framing. Capture B2's own briefs. See
+measures one phrasing, not the primary's variance. **B2 now carries its own
+briefs**, three per case from the same chatgpt primary, recomposed in `163a4eb`
+so a B-versus-B2 difference cannot be brief diversity or authorship. A B brief
+cannot stand in for one, and the reason is worth keeping: a B2 claim once
+enumerated the commit's legitimate changes, so a B brief would describe a commit
+that is not on disk. `02346b2` removed that enumeration and a test now holds
+every B2 claim byte-identical to its class B counterpart, which makes a B brief
+*structurally* replayable against a B2 fixture. What it is not is what a primary
+writes *after making the larger commit*, and the primary's framing of a 3-file,
+3–5 hunk change is part of what B2 exists to measure — the first B2 capture
+refuted 4 of 4 on exactly that framing, which is why B2 was given its own briefs
+rather than borrowing B's. See
 [`docs/issue-15-b2-runbook.md`](../../docs/issue-15-b2-runbook.md).
 
 ## Before you trust a number from a new model
@@ -428,8 +431,10 @@ worry is answered and every existing class B number stands. If it collapses,
 class B measured diff-reading and every conclusion drawn from it — including any
 seat comparison — is scoped to that, not to verification quality.
 
-B2 has **no captured briefs**, so it cannot be replayed until one in-situ run of
-each case is recorded. Six in-situ runs, then unlimited cheap repeats:
+B2 **now carries its own briefs** (three per case, `163a4eb`), so it replays
+directly. Recapture is only needed when a fixture edit invalidates a case's
+briefs — as the `shared-default-mutation` co-defect fix did — by recording one
+in-situ run per affected case, then replaying cheaply:
 
 ```bash
 node tests/bench/verifier-correctness.mjs run --confirm --classes B2 --variants current --repeats 1
