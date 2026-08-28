@@ -55,6 +55,8 @@ You
 
 Workers cannot launch subagents. The four discovery and pre-approval review roles cannot edit or run shell commands. `security-reviewer` alone may fetch supplied external evidence. `verifier` cannot use file-edit tools but can run checks after implementation.
 
+**MCP servers and subagents.** By default only the orchestrator — the agent you talk to — keeps your MCP servers; subagents get none. This is about context, not capability: a subagent is sent the full text of every tool it may use on every step, and a whole server is thousands of tokens (a 44-tool GitHub server measured ~13,700), which crowds the working context of the smaller models subagents are meant to run on. The recommendation is to grant *individual tools* to *specific roles*, and only once you have seen a role need one — an individual tool costs about 300 tokens, not thousands. [`docs/token-budget.md`](./docs/token-budget.md) explains the trade-off and ships a copy-pasteable audit that reports, from your own session history, which MCP tools each role actually used and what each role's context already costs.
+
 Large, ambiguous, architectural, risky, cross-surface, or explicitly plan-first work follows Discovery, Plan, Approval, Execution, and Verification phases. Small stable work remains direct. A material Plan is synthesized in the primary session and may receive a read-only readiness review before explicit approval; writing workers receive only stable, authorized contracts.
 
 ### Runtime Profile Router
