@@ -1,0 +1,441 @@
+{
+ "derivedAt": "2026-08-28",
+ "source": "tests/bench/data/historical-verifier-sessions.json (44 REFUTED)",
+ "method": "one independent classifier pass over each session's REFUTED verdict text; exactly one primary shape per session, with an alternate where the boundary was genuinely close",
+ "shapes": [
+  "security",
+  "race",
+  "host",
+  "doc",
+  "lifecycle",
+  "missing",
+  "local"
+ ],
+ "trustedPartition": {
+  "security": 15,
+  "race": 7,
+  "host": 7,
+  "doc": 6,
+  "lifecycle": 4,
+  "missing": 3,
+  "local": 2
+ },
+ "trustedSource": "issue #15 comment 5361704033 (class-B calibration review), quoted in #53",
+ "myPartition": {
+  "security": 15,
+  "race": 5,
+  "host": 4,
+  "doc": 7,
+  "lifecycle": 6,
+  "missing": 1,
+  "local": 6
+ },
+ "delta": {
+  "security": 0,
+  "race": -2,
+  "host": -3,
+  "doc": 1,
+  "lifecycle": 2,
+  "missing": -2,
+  "local": 4
+ },
+ "note": "Divergence at the tail is expected and reported in docs/issue-53-phase1-trigger-derivation.md \u00a77. The security bucket reproduces at 15/44 under the natural reading; combined security+race lands at 36-45% (vs the trusted 50%) depending on the race/host/local boundary.",
+ "classification": [
+  {
+   "n": 1,
+   "sessionId": "ses_09d6a46c6ffex9mE049uTiBmyL",
+   "directory": "OpenCode_Test-04",
+   "title": "Verify QR Maker app (@verifier subagent)",
+   "primaryShape": "local",
+   "alternateShape": "host",
+   "rationale": "QR quiet-zone padding missing + window clipping; rendering math wrong. alt: QR spec is an external contract"
+  },
+  {
+   "n": 2,
+   "sessionId": "ses_09608869cffe7MlEeesLkiHhzO",
+   "directory": "rpgmz-test-01",
+   "title": "Verify fresh-session handoff (@verifier subagent)",
+   "primaryShape": "doc",
+   "alternateShape": null,
+   "rationale": "CURRENT_STATE.md / battle-flow.md / test-count docs stale vs current issue state"
+  },
+  {
+   "n": 3,
+   "sessionId": "ses_0870ad1cbffeiYRpCPLNlxOT0V",
+   "directory": "rpgmz-test-01",
+   "title": "Review handoff plan (@verifier subagent)",
+   "primaryShape": "doc",
+   "alternateShape": "security",
+   "rationale": "handoff plan review: stale operational snapshot regresses state; also flags remote-write API bypass"
+  },
+  {
+   "n": 4,
+   "sessionId": "ses_06a1fd288ffesl14gK77cWyWv3",
+   "directory": "rpgmz-test-01",
+   "title": "Verify Claude forensics (@verifier subagent)",
+   "primaryShape": "local",
+   "alternateShape": "host",
+   "rationale": "forensic-narrative refutation: 'prior handoff' misclassification claim is timing-wrong. OUTLIER, not a code-shape"
+  },
+  {
+   "n": 5,
+   "sessionId": "ses_041866f6fffebiShgkU68iYi4Y",
+   "directory": "rpgmz-test-01",
+   "title": "Verify worktree workflow changes (@verifier subagent)",
+   "primaryShape": "doc",
+   "alternateShape": null,
+   "rationale": "serve-mz writes non-port-specific filename AGENTS.md promised: documented filename never written"
+  },
+  {
+   "n": 6,
+   "sessionId": "ses_02c08ade6ffeunysVK9rFT3h2W",
+   "directory": "rpgmz-test-01-issue-14",
+   "title": "Verify presentation implementation (@verifier subagent)",
+   "primaryShape": "local",
+   "alternateShape": null,
+   "rationale": "camera clamp geometry produces wrong y / 82-114px handoff jump"
+  },
+  {
+   "n": 7,
+   "sessionId": "ses_02b28552cffeQTZvsXO30JVq5f",
+   "directory": "rpgmz-test-01",
+   "title": "Verify issue 11 outcome (@verifier subagent)",
+   "primaryShape": "doc",
+   "alternateShape": null,
+   "rationale": "PROJECT_NOTES.md says fixtures pending; Armors.json already generated"
+  },
+  {
+   "n": 8,
+   "sessionId": "ses_02b252d0fffeN73BrpQZIlCmoZ",
+   "directory": "rpgmz-test-01",
+   "title": "Reverify issue 11 (@verifier subagent)",
+   "primaryShape": "local",
+   "alternateShape": "security",
+   "rationale": "strict-tag parser accepts unclosed second tag (missing-close only checked when zero matches); also stale doc"
+  },
+  {
+   "n": 9,
+   "sessionId": "ses_02abd1a97ffe7qZGAqFdINuIZ8",
+   "directory": "rpgmz-test-01-issue-14",
+   "title": "Reverify DS formation (@verifier subagent)",
+   "primaryShape": "missing",
+   "alternateShape": null,
+   "rationale": "approved enemy-introduction lattice entirely absent"
+  },
+  {
+   "n": 10,
+   "sessionId": "ses_0229a8d29ffe828i4hpgvoHweL",
+   "directory": "rpgmz-test-01",
+   "title": "Verify unified action picker (@verifier subagent)",
+   "primaryShape": "local",
+   "alternateShape": null,
+   "rationale": "_showFocusArt calls removed _updateMountMarker -> TypeError"
+  },
+  {
+   "n": 11,
+   "sessionId": "ses_022931dd0ffeFZRt7hMWw4m4TF",
+   "directory": "rpgmz-test-01",
+   "title": "Reverify action picker (@verifier subagent)",
+   "primaryShape": "doc",
+   "alternateShape": null,
+   "rationale": "AGENTS.md documents removed _openWeaponSelect helper"
+  },
+  {
+   "n": 12,
+   "sessionId": "ses_021f18815ffe5G17HJT48yu8NY",
+   "directory": "opencode-video-vision",
+   "title": "Verify OpenCode vertical slice (@verifier subagent)",
+   "primaryShape": "lifecycle",
+   "alternateShape": "doc",
+   "rationale": "cleanup only runs when indexing disabled -> temp frames leak; contradicts PRIVACY.md"
+  },
+  {
+   "n": 13,
+   "sessionId": "ses_021537773ffeFtqu541YH8BAtk",
+   "directory": "opencode-video-vision",
+   "title": "Reverify cleanup and port (@verifier subagent)",
+   "primaryShape": "race",
+   "alternateShape": null,
+   "rationale": "concurrent video_watch share same Date.now() ms tmp dir; one finally deletes other's workspace"
+  },
+  {
+   "n": 14,
+   "sessionId": "ses_0214d8ba0ffeh9bY6afYU9S8df",
+   "directory": "opencode-video-vision",
+   "title": "Final verify OpenCode slice (@verifier subagent)",
+   "primaryShape": "race",
+   "alternateShape": null,
+   "rationale": "concurrent calls race on shared manifest; last-writer-wins overwrite"
+  },
+  {
+   "n": 15,
+   "sessionId": "ses_02149c9daffeZZgzSAX5W546Ee",
+   "directory": "opencode-video-vision",
+   "title": "Verify manifest race fix (@verifier subagent)",
+   "primaryShape": "race",
+   "alternateShape": null,
+   "rationale": "concurrent manifest writers lose updates; saveManifest with stale manifest bypasses serialization"
+  },
+  {
+   "n": 16,
+   "sessionId": "ses_02144a59dffejN0eCkAmdo1V9T",
+   "directory": "opencode-video-vision",
+   "title": "Final verify shared writers (@verifier subagent)",
+   "primaryShape": "race",
+   "alternateShape": "local",
+   "rationale": "segmented calls overwrite same frame in shared persistent dir"
+  },
+  {
+   "n": 17,
+   "sessionId": "ses_021418d5fffeAceHuz0V6wf2ip",
+   "directory": "opencode-video-vision",
+   "title": "Verify segmented cache fix (@verifier subagent)",
+   "primaryShape": "race",
+   "alternateShape": "local",
+   "rationale": "segment reuses same temp frame path; later overwrites before copy"
+  },
+  {
+   "n": 18,
+   "sessionId": "ses_0213ba0e5ffeeKLM67BiCGr16P",
+   "directory": "opencode-video-vision",
+   "title": "Verify segment isolation fix (@verifier subagent)",
+   "primaryShape": "local",
+   "alternateShape": "race",
+   "rationale": "second-granularity timestamps collide on filename within one call (dedup logic)"
+  },
+  {
+   "n": 19,
+   "sessionId": "ses_02136eb48ffehGuqtSRzpFFawA",
+   "directory": "opencode-video-vision",
+   "title": "Verify subsecond indexing (@verifier subagent)",
+   "primaryShape": "host",
+   "alternateShape": "local",
+   "rationale": "fractional timestamp emitted by indexer rejected by view schema (HH:MM:SS); internal contract mismatch"
+  },
+  {
+   "n": 20,
+   "sessionId": "ses_0168f91a6ffeMBGeoblJVpWKav",
+   "directory": "opencode-video-vision",
+   "title": "Verify issue fifteen outcome (@verifier subagent)",
+   "primaryShape": "security",
+   "alternateShape": null,
+   "rationale": "forged manifest w/ self-computed hashes -> uninstall deletes unmanaged root (trusts manifest hashes)"
+  },
+  {
+   "n": 21,
+   "sessionId": "ses_01689f6e2ffeGSP4SWPbR2VSJ2",
+   "directory": "opencode-video-vision",
+   "title": "Reverify ownership hardening (@verifier subagent)",
+   "primaryShape": "security",
+   "alternateShape": null,
+   "rationale": "forged install recovery journal deletes unmanaged plugin before ownership verification"
+  },
+  {
+   "n": 22,
+   "sessionId": "ses_01686453affeLMdG0P1Qt8I5ZE",
+   "directory": "opencode-video-vision",
+   "title": "Final installer security verification (@verifier subagent)",
+   "primaryShape": "security",
+   "alternateShape": null,
+   "rationale": "forged manifest+receipt accepted -> recursive deletion"
+  },
+  {
+   "n": 23,
+   "sessionId": "ses_01682a640ffewyQaUxss6lIpLO",
+   "directory": "opencode-video-vision",
+   "title": "Verify source-bound ownership (@verifier subagent)",
+   "primaryShape": "security",
+   "alternateShape": null,
+   "rationale": "forged inventory entry -> uninstall deletes arbitrary file under lockfile prefix"
+  },
+  {
+   "n": 24,
+   "sessionId": "ses_0167bc2cdffeoIdWlBY406WxCm",
+   "directory": "opencode-video-vision",
+   "title": "Independent final outcome check (@verifier subagent)",
+   "primaryShape": "security",
+   "alternateShape": null,
+   "rationale": "forged stale-lock nonce + forged journal bypass nonce auth -> deletes plugin"
+  },
+  {
+   "n": 25,
+   "sessionId": "ses_01677dc59ffenxNL3ybSCVo7Wr",
+   "directory": "opencode-video-vision",
+   "title": "Verify fail-closed recovery (@verifier subagent)",
+   "primaryShape": "security",
+   "alternateShape": "lifecycle",
+   "rationale": "recovery.json excluded from payload seal -> uninstall deletes it; drift not fail-closed"
+  },
+  {
+   "n": 26,
+   "sessionId": "ses_016736880ffeLZq0xPhstlc4a0",
+   "directory": "opencode-video-vision",
+   "title": "Final drift safety check (@verifier subagent)",
+   "primaryShape": "lifecycle",
+   "alternateShape": null,
+   "rationale": "rollback never removes recovery.json marker -> incomplete rollback"
+  },
+  {
+   "n": 27,
+   "sessionId": "ses_0166043daffekuDpJjnVtJSmLu",
+   "directory": "pilotfish-opencode",
+   "title": "Verify runtime profile implementation (@verifier subagent)",
+   "primaryShape": "security",
+   "alternateShape": null,
+   "rationale": "direct hidden-clone name bypasses session-profile routing; hidden != authz boundary"
+  },
+  {
+   "n": 28,
+   "sessionId": "ses_016598ca4ffep8T2oYgzLpdM0H",
+   "directory": "pilotfish-opencode",
+   "title": "Reverify secured profile router (@verifier subagent)",
+   "primaryShape": "security",
+   "alternateShape": "local",
+   "rationale": "variant/effort immutability bypass: guard pins/compares only model, ignores variant"
+  },
+  {
+   "n": 29,
+   "sessionId": "ses_01655ce6bffesVesFXQ3QJQ0FQ",
+   "directory": "pilotfish-opencode",
+   "title": "Final verify approved profile contract (@verifier subagent)",
+   "primaryShape": "security",
+   "alternateShape": null,
+   "rationale": "appended exact allow overrides customized deny (last-match) -> permission weakened"
+  },
+  {
+   "n": 30,
+   "sessionId": "ses_0164e8d22ffepE66lucJ1wbN0t",
+   "directory": "pilotfish-opencode",
+   "title": "Verify hardened routing outcome (@verifier subagent)",
+   "primaryShape": "security",
+   "alternateShape": null,
+   "rationale": "'?' wildcard not implemented -> custom deny weakened, fail-open"
+  },
+  {
+   "n": 31,
+   "sessionId": "ses_01648c7bbffe3ZuWfAeyqcYefO",
+   "directory": "pilotfish-opencode",
+   "title": "Verify final wildcard hardening (@verifier subagent)",
+   "primaryShape": "host",
+   "alternateShape": "local",
+   "rationale": "reads raw input.model not resolved output.message.model -> valid `opencode run` path fails"
+  },
+  {
+   "n": 32,
+   "sessionId": "ses_016432edbffeUDcyRUeZCkV3PJ",
+   "directory": "pilotfish-opencode",
+   "title": "Verify resolved-default routing (@verifier subagent)",
+   "primaryShape": "lifecycle",
+   "alternateShape": null,
+   "rationale": "pins in process-local Map, no session-state recovery -> model-change not rejected across processes"
+  },
+  {
+   "n": 33,
+   "sessionId": "ses_01637ae71ffeLQfiydPBinsfcB",
+   "directory": "pilotfish-opencode",
+   "title": "Verify persisted profile pinning (@verifier subagent)",
+   "primaryShape": "security",
+   "alternateShape": "lifecycle",
+   "rationale": "malformed persisted history record silently skipped -> never validated, fail-open pin"
+  },
+  {
+   "n": 34,
+   "sessionId": "ses_016314489ffeECDzJ530q1BZvy",
+   "directory": "pilotfish-opencode",
+   "title": "Verify history parsing hardening (@verifier subagent)",
+   "primaryShape": "doc",
+   "alternateShape": null,
+   "rationale": "docs/local-install.md AntiGravity requirement list incomplete vs canonical mappings/installer"
+  },
+  {
+   "n": 35,
+   "sessionId": "ses_01629ac9dffeOeqBYhoJW1P9co",
+   "directory": "pilotfish-opencode",
+   "title": "Verify complete issue outcome (@verifier subagent)",
+   "primaryShape": "security",
+   "alternateShape": "lifecycle",
+   "rationale": "executor.mode=primary clone not validated/constrained -> direct invocation accepted"
+  },
+  {
+   "n": 36,
+   "sessionId": "ses_016217fe9ffe6JxXfHZClJfiyQ",
+   "directory": "pilotfish-opencode",
+   "title": "Verify secured subagent boundary (@verifier subagent)",
+   "primaryShape": "security",
+   "alternateShape": null,
+   "rationale": "direct-chat guard ignores raw internal name when resolved present; malformed preset fails open"
+  },
+  {
+   "n": 37,
+   "sessionId": "ses_01617b296ffeFX6ziSTFuVEhvA",
+   "directory": "pilotfish-opencode",
+   "title": "Verify fail-closed initialization (@verifier subagent)",
+   "primaryShape": "host",
+   "alternateShape": null,
+   "rationale": "router calls SDK with wrong arg shape {path:{id}} vs {sessionID} -> every cache-miss msg fails closed"
+  },
+  {
+   "n": 38,
+   "sessionId": "ses_0161440daffeNddn5yT42qHubI",
+   "directory": "pilotfish-opencode",
+   "title": "Verify actual injected SDK contract (@verifier subagent)",
+   "primaryShape": "host",
+   "alternateShape": "security",
+   "rationale": "host-boundary: unsupported-model error generic on JSON surface; CLI direct-internal falls back to default primary"
+  },
+  {
+   "n": 39,
+   "sessionId": "ses_0160b0a8effea0FaPF7aSWinIc",
+   "directory": "pilotfish-opencode",
+   "title": "Final verify documented host boundaries (@verifier subagent)",
+   "primaryShape": "lifecycle",
+   "alternateShape": "security",
+   "rationale": "non-Pilotfish msg doesn't clear pin -> Build's executor Task remapped to Luna clone"
+  },
+  {
+   "n": 40,
+   "sessionId": "ses_015fef406ffe0MuOmYfQLTjdyb",
+   "directory": "pilotfish-opencode",
+   "title": "Verify active-agent routing scope (@verifier subagent)",
+   "primaryShape": "lifecycle",
+   "alternateShape": null,
+   "rationale": "rejectDirectInternalChat rejects the legitimate router-generated child -> all remapped Tasks fail"
+  },
+  {
+   "n": 41,
+   "sessionId": "ses_015efb97effeJQ20wcci031xjN",
+   "directory": "pilotfish-opencode",
+   "title": "Verify one-time child authorization (@verifier subagent)",
+   "primaryShape": "security",
+   "alternateShape": null,
+   "rationale": "pre-existing sibling under same parent consumes authorization (matches only parent+agent, not callID)"
+  },
+  {
+   "n": 42,
+   "sessionId": "ses_015d74bd2ffeGuvoY6e0qr4c5u",
+   "directory": "pilotfish-opencode",
+   "title": "Verify exact child binding (@verifier subagent)",
+   "primaryShape": "doc",
+   "alternateShape": null,
+   "rationale": "python policy tests fail on doc wording drift (event/events, marker mutation)"
+  },
+  {
+   "n": 43,
+   "sessionId": "ses_015d55e94ffeMxSotH4I2pYe4b",
+   "directory": "pilotfish-opencode",
+   "title": "Final adversarial outcome check (@verifier subagent)",
+   "primaryShape": "security",
+   "alternateShape": null,
+   "rationale": "failed Task leaves stale auth; retitled sibling consumes it (after-hook not in finally)"
+  },
+  {
+   "n": 44,
+   "sessionId": "ses_015c42318ffebryI9x5gXrmw84",
+   "directory": "pilotfish-opencode",
+   "title": "Verify event-bound authorization (@verifier subagent)",
+   "primaryShape": "lifecycle",
+   "alternateShape": "security",
+   "rationale": "expiry restores args but never restores bound child title marker -> marker permanently retained"
+  }
+ ]
+}

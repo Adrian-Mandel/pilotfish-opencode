@@ -43,8 +43,9 @@ recommendation keeps P1's goal and moves its mechanism.
 >
 > **What it does not change.** No conclusion in §2 through §5 depends on the
 > sample being unreadable; they depend on the partition, which the recovered
-> sessions can now confirm or refute. Nothing below has been re-derived against
-> them yet.
+> sessions can now confirm or refute. The re-derivation is now done — see §7,
+> added 2026-08-28 against the export at
+> [`tests/bench/data/historical-verifier-sessions.json`](../tests/bench/data/historical-verifier-sessions.json).
 >
 > One number the recovered sessions give immediately, and the first in this
 > investigation measured on real work rather than seeded fixtures: the pre-scope
@@ -395,3 +396,88 @@ test suite passes is not grounds* to the 41%.
    the database again, identified on count, window and seat. The advice in the
    second half stands and is now urgent rather than theoretical: they survived
    one data-directory reset by luck, and should be exported before the next.
+   **Done 2026-08-28**: exported to
+   [`tests/bench/data/historical-verifier-sessions.json`](../tests/bench/data/historical-verifier-sessions.json),
+   so a second reset cannot lose them, and re-derived against in §7.
+
+## 7. Re-derivation against the recovered 44 (2026-08-28)
+
+§0 promised the partition could now be verified rather than trusted. This is
+that pass. Every one of the 44 REFUTED verdict texts in the export was read and
+assigned exactly one primary shape, with an alternate recorded wherever the
+boundary was genuinely close; the per-session assignments and their one-line
+rationales are in
+[`tests/bench/data/refutation-shape-classification.json`](../tests/bench/data/refutation-shape-classification.json),
+so this is checkable and not a bare count. It is one independent classifier
+pass, not a recount of the calibration reviewer's own reasoning, which is not in
+the export — so where it diverges, the divergence is a disagreement between two
+readers, and the honest reading is not that one is wrong but that the boundary
+there is soft.
+
+**What reproduces, and it is the load-bearing part.** Security is the dominant
+bucket at exactly **15/44**, the same count and the same 34% the calibration
+review reported. The bias the review named is visible directly in the sample:
+sessions 20–26 are the video-vision installer-security hardening and 27–43 the
+router-authorization hardening, so the security bucket is a record of a
+sustained late-July/early-August security sprint, not a stationary defect rate.
+Because security reproduces exactly, everything in §2 that rests on it reproduces
+exactly too: set A (security only) still misses 29/44 = **65.9%**, and a
+severity-ordered list that fires on security alone still discards two-thirds of
+what the gate historically caught.
+
+**What does not reproduce: the tail.** The other six buckets do not survive an
+independent pass at their reported counts.
+
+| shape | trusted (§1) | this pass | Δ |
+|---|---:|---:|---:|
+| security/adversarial | 15 | 15 | +0 |
+| race/shared resource | 7 | 5 | −2 |
+| host/external contract | 7 | 4 | −3 |
+| doc contradicts code | 6 | 7 | +1 |
+| lifecycle | 4 | 6 | +2 |
+| missing feature | 3 | 1 | −2 |
+| local logic in one function | 2 | 6 | +4 |
+
+Roughly nine cases move relative to the trusted partition, and they move along
+predictable seams: the video-vision frame/manifest cluster (sessions 13–19) is
+seven cases that are all "two writers land on one path," but only some involve
+concurrency — 13–15 are genuine races, 16–17 are shared-path overwrites, 18 is a
+single-call filename-granularity collision, and 19 is a producer/consumer schema
+mismatch. Read as one shape they are the trusted race bucket's 7; read on
+mechanism they split across race, local-logic, and host, which is what this pass
+did and why race lands at 5. The same softness explains local-logic coming out
+at 6 against the trusted 2: it collects the QR quiet-zone math, the camera-clamp
+geometry, a call to a removed helper, and the granularity collision — each of
+which has a defensible home in another bucket (the QR case is compliance with an
+external standard; the granularity case is a shared-path overwrite).
+
+**Consequence for #53's viability floor.** #53 states its floor as "misses the
+security and race buckets … that is 48% of the sample," and the trusted counts
+give 15 + 7 = 22/44 = 50%. This pass gives security + race = 20/44 = **45.5%**
+under its natural reading, and **36.4%** if the three soft security cases
+(malformed-input fail-open #33, mode-not-constrained #35, variant-immutability
+#28) are read as lifecycle/local-logic instead. So the *qualitative* floor holds
+— a shape-severity filter that stops at security-and-race discards a large
+fraction, between a third and a half, of the historically caught defects — but
+the specific **48% does not robustly reproduce**; it is sensitive to exactly
+where the race/host/local boundary is drawn, which this pass shows is not a
+sharp boundary.
+
+**One number that moves against §4.** §4 argues that excluding the local-logic
+bucket "suppresses 2 refutations in 44," i.e. that set E costs almost nothing.
+This pass puts local-logic at 6, not 2 — so on these assignments set E would
+miss closer to 14% than 4.5%. That is the least reliable number in the table (it
+is exactly the bucket whose members each have a plausible second home), so it is
+flagged rather than asserted; but it means §4's "4.5%" should be read as the
+low end of a range, not a fixed cost.
+
+**Net.** The re-derivation confirms the one fact #53's argument actually leans
+on — security dominance at 15/44 — and confirms the qualitative shape of the
+partition (security-dominated, long-tailed). It does **not** confirm the
+seven-bucket partition at the resolution #53 quotes it: an independent reader
+moves about a fifth of the sample across the tail buckets, and the security+race
+share lands below the 48% the issue names. If anything this strengthens §4's
+actual recommendation — that the filter should not be shape at all — because the
+shape boundaries turn out to be soft enough that two careful readers partition
+the tail differently. §6.6 is not reopened; the sample is exported and the
+partition is now a checkable artifact rather than a trusted quotation.
