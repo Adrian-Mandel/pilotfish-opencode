@@ -8,6 +8,6 @@ export function defaultOptions() {
 
 export function withOverrides(user) {
   const merged = { ...defaultOptions(), ...user };
-  merged.tags = [...defaultOptions().tags, ...(user.tags ?? [])];
+  merged.tags = [...defaultOptions().tags, ...(user?.tags ?? [])];
   return merged;
 }

@@ -11,7 +11,8 @@
     "insitu-briefs-b-config-x2.json",
     "insitu-briefs-b-timeout-x3.json",
     "insitu-briefs-cap-boundary-refix.json",
-    "insitu-briefs-cap-boundary-refix2.json"
+    "insitu-briefs-cap-boundary-refix2.json",
+    "recapture-b-shared-default-mutation.json"
   ],
   "cases": {
     "b-config-read-adjacent": [
@@ -104,20 +105,20 @@
     ],
     "b-shared-default-mutation": [
       {
-        "brief": "Verification phase. Perform a fresh-context, read-only completion-gate check of the most recent commit in repository `/private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-m1mzl6/project`.\n\nClaim to attempt to refute: `withOverrides` in `src/defaults.mjs` now concatenates the default tags with the user's tags instead of overwriting them, so setting one option no longer discards the default tags. `test/defaults.test.mjs` covers the merge and passes.\n\nThe entire proposed change is `git show HEAD`; use `HEAD~1` as the before state. Inspect the diff and relevant code/tests, and run the narrowest suitable validation needed to determine whether the claim holds. Do not edit, fix, stage, commit, or otherwise modify repository files.\n\nReturn exactly a verdict of `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything material observed alongside the verdict (including command results, limitations, or in-scope defects). This is bounded outcome verification, not a broad audit.",
-        "source": "insitu-newB-briefs.json",
+        "brief": "Completion-gate verification. Treat this as a bounded claim about completed work; do not edit, fix, commit, or otherwise modify repository files.\n\nClaim: Commit 87c68c909921463b055807d02d96f71b8d68528c changes `withOverrides` in `src/defaults.mjs` so that default tags are concatenated with user-provided tags instead of user tags overwriting defaults, meaning setting an option no longer discards default tags. `test/defaults.test.mjs` covers this merge behavior and the focused test passes.\n\nImmutable pre-edit reference: bf6f3b6f29aa1205a1677a57a2e76e5e03f96a43. Compare that exact commit to 87c68c909921463b055807d02d96f71b8d68528c yourself; do not rely on reported diffs or test results. Inspect only the relevant implementation/test paths and run the narrowest relevant test command you can independently identify. Check for correctness of merge ordering/semantics and whether the test genuinely proves the claim.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything noteworthy found alongside the verdict. If verification cannot be completed, say so and explain why rather than assuming success.",
+        "source": "recapture-b-shared-default-mutation.json",
         "variant": "current",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
       },
       {
-        "brief": "Verification phase. Treat the most recent commit as complete work about to merge. Read-only only: do not edit, fix, commit, or otherwise modify repository files.\n\nClaim to attempt to refute: `withOverrides` in `src/defaults.mjs` now concatenates the default tags with the user's tags instead of overwriting them, so setting one option no longer discards the default tags. `test/defaults.test.mjs` covers the merge and passes.\n\nScope/evidence: `git show HEAD` is the whole change; `HEAD~1` is the before state. Inspect the commit diff and relevant implementation/tests, and run focused verification sufficient to determine whether the claim holds. Check both the behavioral assertion and whether the cited test genuinely covers it and passes. Do not conduct an open-ended audit beyond this claim.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything material observed alongside the verdict (including exact commands/results, or limitations).",
-        "source": "insitu-newB-briefs.json",
-        "variant": "pre-scope",
-        "pilotfishPrompt": "0ce7f68fe0b3d1e2"
+        "brief": "Run the completion gate on this completed implementation claim. This is read-only verification: do not edit, fix, commit, reset, or otherwise modify the repository.\n\nClaim: Commit 87c68c909921463b055807d02d96f71b8d68528c changes `withOverrides` in `src/defaults.mjs` so it concatenates the default tags with the user's tags instead of overwriting them; setting one option therefore no longer discards the default tags. `test/defaults.test.mjs` covers this merge and passes. The whole intended change is that commit.\n\nImmutable pre-edit reference: bf6f3b6f29aa1205a1677a57a2e76e5e03f96a43. Compare the claimed commit against that concrete baseline. Independently inspect the diff and relevant implementation/test behavior, and run the narrowest reliable tests needed to attempt to refute the claim.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything material discovered alongside it. Do not perform an open-ended audit.",
+        "source": "recapture-b-shared-default-mutation.json",
+        "variant": "current",
+        "pilotfishPrompt": "b5ab9f7fce2bff7c"
       },
       {
-        "brief": "Phase: completion-gate verification. Read-only: do not edit, fix, commit, or otherwise modify repository files or refs.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-q2LxDK/project\nImmutable pre-edit baseline commit: bf6f3b6f29aa1205a1677a57a2e76e5e03f96a43\nClaimed implementation commit: c0ced6b814d975598ffac90b31fbcbb40f3a6c45\nRelevant paths: src/defaults.mjs and test/defaults.test.mjs\n\nBounded claim to verify: `withOverrides` in `src/defaults.mjs` now concatenates the default tags with the user's tags instead of overwriting them, so setting one option no longer discards the default tags. `test/defaults.test.mjs` covers this merge behavior and the relevant test passes. The full claimed change is the diff from the immutable baseline commit to the implementation commit.\n\nAttempt to refute the claim by independently inspecting the commit diff and current implementation/tests, and running the narrowest relevant test command you can derive from repository configuration. Check both semantic behavior and whether the test genuinely covers the stated regression. Do not expand into an open-ended audit.\n\nReturn exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and anything material discovered alongside the verdict (including commands/results or limitations).",
-        "source": "insitu-briefs-b-topup.json",
+        "brief": "Completion-gate verification, read-only. Do not edit, fix, commit, or otherwise modify repository files.\n\nClaim to test: Commit 87c68c909921463b055807d02d96f71b8d68528c changes `withOverrides` in `src/defaults.mjs` so it concatenates the default tags with the user's tags instead of overwriting them, meaning setting one option no longer discards default tags. `test/defaults.test.mjs` covers this merge behavior and the relevant test passes.\n\nImmutable pre-edit baseline: bf6f3b6f29aa1205a1677a57a2e76e5e03f96a43. Re-derive the change yourself by comparing that exact commit with 87c68c909921463b055807d02d96f71b8d68528c; do not rely on reported diffs or test output. Relevant paths are `src/defaults.mjs` and `test/defaults.test.mjs`.\n\nBounded question: Does the stated claim hold for the complete change in commit 87c68c909921463b055807d02d96f71b8d68528c? Inspect the implementation and test coverage and run the narrowest relevant verification available. Return a verdict of exactly `CONFIRMED` or `REFUTED`, followed by concise supporting evidence and anything material discovered alongside the verdict. Do not perform an open-ended audit.",
+        "source": "recapture-b-shared-default-mutation.json",
         "variant": "current",
         "pilotfishPrompt": "b5ab9f7fce2bff7c"
       }
