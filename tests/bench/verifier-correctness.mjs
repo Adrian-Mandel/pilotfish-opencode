@@ -31,6 +31,7 @@ import {
   briefFor as briefFromStore,
   captureBriefs,
   loadBriefs,
+  mergeBriefs,
   normalizeFixturePaths,
   staleCommitIds,
   writeBriefs,
@@ -1128,11 +1129,26 @@ async function main() {
     // hand would make the measurement a test of my prose rather than of the
     // primary's.
     if (positional.length === 0) throw new Error("capture-briefs needs one or more result files");
-    const store = captureBriefs(positional);
-    const path = writeBriefs(store, options.briefsPath);
+    const briefsPath = options.briefsPath ?? BRIEFS_PATH;
+    // Merge into the existing store rather than overwriting it. A capture over
+    // result files that cover only some cases must not drop the briefs for every
+    // case those files did not touch.
+    const incoming = captureBriefs(positional);
+    const existing = existsSync(briefsPath) ? loadBriefs(briefsPath) : null;
+    const priorCounts = existing ? briefCounts(existing) : {};
+    const store = mergeBriefs(existing, incoming);
+    const path = writeBriefs(store, briefsPath);
     const counts = briefCounts(store);
     for (const [id, count] of Object.entries(counts)) {
-      process.stdout.write(`ok  ${id}: ${count} distinct brief(s)\n`);
+      const added = count - (priorCounts[id] ?? 0);
+      const note = added > 0 ? `+${added} new` : "unchanged";
+      process.stdout.write(`ok  ${id}: ${count} distinct brief(s) (${note})\n`);
+    }
+    const kept = Object.keys(priorCounts).filter((id) => !counts[id]);
+    for (const id of kept) {
+      // Unreachable while merge preserves cases, but a loud line beats a silent
+      // drop if that ever regresses.
+      process.stdout.write(`!!  ${id}: present before, absent after -- briefs were dropped\n`);
     }
     const missing = cases.filter((item) => !counts[item.id]);
     for (const item of missing) {

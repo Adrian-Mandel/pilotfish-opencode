@@ -21,6 +21,7 @@ import {
   BRIEFS_SCHEMA,
   briefFor as storeBriefFor,
   captureBriefs,
+  mergeBriefs,
   normalizeFixturePaths,
   staleCommitIds,
 } from "./lib/briefs.mjs";
@@ -815,6 +816,52 @@ describe("replayed briefs", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  // The carried capture-briefs bug: a capture over result files covering only
+  // some cases must fold into the stored briefs, never replace them, or a
+  // single-file capture drops every case those files did not touch.
+  test("merge folds new briefs in without dropping untouched cases", () => {
+    const existing = {
+      schema: BRIEFS_SCHEMA,
+      capturedFrom: ["old.json"],
+      cases: {
+        "a-case": [{ brief: "first", source: "old.json", variant: "current" }],
+        "b-case": [{ brief: "kept", source: "old.json", variant: "current" }],
+      },
+    };
+    const incoming = {
+      schema: BRIEFS_SCHEMA,
+      capturedFrom: ["new.json"],
+      cases: {
+        "a-case": [
+          { brief: "first", source: "new.json", variant: "current" }, // duplicate
+          { brief: "second", source: "new.json", variant: "pre-scope" }, // new
+        ],
+        "c-case": [{ brief: "fresh", source: "new.json", variant: "current" }], // new case
+      },
+    };
+    const merged = mergeBriefs(existing, incoming);
+    assert.deepEqual(merged.cases["b-case"], existing.cases["b-case"], "untouched case survives");
+    assert.equal(merged.cases["a-case"].length, 2, "new brief appended, duplicate dropped");
+    assert.equal(merged.cases["c-case"].length, 1, "new case added");
+    assert.deepEqual(merged.capturedFrom, ["old.json", "new.json"], "provenance unions");
+  });
+
+  test("merge with no prior store returns the incoming store unchanged", () => {
+    const incoming = { schema: BRIEFS_SCHEMA, capturedFrom: ["new.json"], cases: { x: [] } };
+    assert.equal(mergeBriefs(null, incoming), incoming);
+  });
+
+  test("merge refuses to fold across a schema change", () => {
+    assert.throws(
+      () =>
+        mergeBriefs(
+          { schema: "pilotfish.bench.briefs/0", cases: {} },
+          { schema: BRIEFS_SCHEMA, cases: {} },
+        ),
+      /schema/,
+    );
   });
 });
 

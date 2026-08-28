@@ -57,6 +57,39 @@ export function captureBriefs(resultPaths) {
   };
 }
 
+// Fold a freshly captured store into an existing one instead of replacing it.
+// `captureBriefs` only ever sees the cases the result files it was given happen
+// to cover, so writing its output straight to `briefs.json` deletes every other
+// case's briefs -- capturing from one result file that touches three cases drops
+// the other fifteen. Merge preserves untouched cases, appends only briefs the
+// incoming store adds (deduped by brief text within a case, matching capture's
+// own dedup), and unions the provenance. `existing` null (no prior file) returns
+// the incoming store unchanged, so a first capture still works.
+export function mergeBriefs(existing, incoming) {
+  if (!existing) return incoming;
+  if (existing.schema !== incoming.schema) {
+    throw new Error(
+      `cannot merge briefs: existing schema "${existing.schema}" != incoming "${incoming.schema}"`,
+    );
+  }
+  const cases = {};
+  for (const [id, entries] of Object.entries(existing.cases ?? {})) {
+    cases[id] = [...entries];
+  }
+  for (const [id, entries] of Object.entries(incoming.cases ?? {})) {
+    const target = (cases[id] ??= []);
+    for (const entry of entries) {
+      if (!target.some((existingEntry) => existingEntry.brief === entry.brief)) {
+        target.push(entry);
+      }
+    }
+  }
+  const capturedFrom = [
+    ...new Set([...(existing.capturedFrom ?? []), ...(incoming.capturedFrom ?? [])]),
+  ];
+  return { schema: incoming.schema, capturedFrom, cases };
+}
+
 export function writeBriefs(store, path = BRIEFS_PATH) {
   writeFileSync(path, `${JSON.stringify(store, null, 2)}\n`);
   return path;
