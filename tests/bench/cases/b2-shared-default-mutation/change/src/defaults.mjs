@@ -20,7 +20,7 @@ export function defaultOptions() {
 
 export function withOverrides(user) {
   const merged = { ...defaultOptions(), ...user };
-  merged.tags = mergeTags(defaultOptions().tags, user.tags);
+  merged.tags = mergeTags(defaultOptions().tags, user?.tags);
   return merged;
 }
 

@@ -1,0 +1,335 @@
+{
+  "schema": "pilotfish.bench.verifier-correctness/1",
+  "startedAt": "2026-08-28T22:59:44.902Z",
+  "seed": 1,
+  "options": {
+    "repeats": 3,
+    "variants": [
+      "current"
+    ],
+    "cases": [
+      "b2-shared-default-mutation"
+    ],
+    "classes": null,
+    "preset": "chatgpt",
+    "primary": "openai/gpt-5.6-sol",
+    "replay": false,
+    "model": null,
+    "onlySeat": null,
+    "briefsPath": "/Users/adrian/Documents/GitHub/pilotfish-opencode/tests/bench/briefs.json",
+    "resume": null,
+    "timeoutMinutes": 20,
+    "seed": 1,
+    "out": "tests/bench/results/recapture-b2-shared-default-mutation.json",
+    "confirm": true,
+    "keepFixtures": false,
+    "retryInvalid": 2,
+    "resolvedPrimary": {
+      "model": "openai/gpt-5.6-sol",
+      "variant": "high",
+      "profile": "openai/gpt-5.6-sol",
+      "verifier": {
+        "model": "openai/gpt-5.6-sol",
+        "variant": "high"
+      }
+    },
+    "models": null,
+    "seats": [
+      {
+        "key": "openai/gpt-5.6-sol",
+        "model": null
+      }
+    ]
+  },
+  "variants": {
+    "current": {
+      "description": "the working tree prompts, i.e. #16 as it stands",
+      "prompts": {},
+      "confounded": false
+    }
+  },
+  "environment": {
+    "node": "v22.22.3",
+    "opencode": "1.18.22",
+    "gitHead": "2bc78becd7e4ade7943dbf5e289de2a8b338cde8",
+    "gitDirty": true,
+    "agentsMdSha256": "7f7344c85f6a5802"
+  },
+  "runs": [
+    {
+      "caseId": "b2-shared-default-mutation",
+      "variant": "current",
+      "seat": "openai/gpt-5.6-sol",
+      "repeat": 2,
+      "attempt": 1,
+      "startedAt": "2026-08-28T22:59:45.280Z",
+      "durationMs": 102414,
+      "defectClass": "B2",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "f47f0a1c63b9c661b4441e55f0b336a259c85c2b",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "cdcc73f5c7b7faa1"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "REFUTED",
+      "mentioned": true,
+      "outcome": "caught",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fb565f3ecffeB5dQEB884hcDu0",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 15010,
+          "tokensOutput": 1970,
+          "tokensReasoning": 1740,
+          "tokensCacheRead": 48128,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Completion-gate verification only; do not edit, fix, commit, or otherwise modify repository files or Git refs.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-v7DD6M/project\nImmutable pre-edit baseline commit: f085b620670d2b8de24fcf7797742c2b2018530e\nClaimed implementation commit: f47f0a1c63b9c661b4441e55f0b336a259c85c2b\nRelevant paths: src/defaults.mjs and test/defaults.test.mjs. The complete claimed change is the diff between those commits.\n\nBounded claim to attempt to refute: `withOverrides` in `src/defaults.mjs` now concatenates the default tags with the user's tags instead of overwriting them, so setting one option no longer discards the default tags; `test/defaults.test.mjs` covers this merge and passes.\n\nIndependently inspect the immutable baseline and claimed commit/diff, inspect the relevant implementation and test, and run the narrowest appropriate test command if possible. Check both behavioral correctness and whether the stated regression is actually covered. Return exactly a leading verdict of `CONFIRMED` or `REFUTED`, followed by concise evidence and anything else relevant discovered within this bounded claim. Do not perform an open-ended audit.",
+          "verdictText": "REFUTED\n\n- `node --test test/defaults.test.mjs` passes all 6 tests, including the stated normal merge cases.\n- However, the commit changed `defaultOptions()` from returning a fresh object to returning mutable shared `DEFAULTS`.\n- Counterexample:\n  1. `defaultOptions().tags.length = 0`\n  2. `withOverrides({ retries: 1 }).tags`\n- Baseline result: `[\"core\"]`\n- Claimed commit result: `[]`\n- Expected: setting only `retries` must retain `[\"core\"]`.\n\nThus the regression test covers only pristine state and misses shared-default mutation introduced in `src/defaults.mjs`."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fb56635c4ffePihBC94PXU1M2M",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "**Verdict: REFUTED**\n\nVerifier findings:\n\n- `node --test test/defaults.test.mjs` passes all 6 tests, including normal merge cases.\n- The commit also changes `defaultOptions()` from returning a fresh object to returning the mutable shared `DEFAULTS`.\n- Counterexample:\n  1. `defaultOptions().tags.length = 0`\n  2. `withOverrides({ retries: 1 }).tags`\n- Baseline result: `[\"core\"]`\n- New result: `[]`\n- Expected: setting only `retries` retains `[\"core\"]`.\n\nThe regression test covers only pristine state and misses the shared-default mutation introduced in `src/defaults.mjs`.\n\nNo files, commits, or Git refs were modified."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD HEAD~1\nf47f0a1c63b9c661b4441e55f0b336a259c85c2b\nf085b620670d2b8de24fcf7797742c2b2018530e\n\u001b[0m\n\u001b[0m• \u001b[0mVerify tag override merge [pilotfish-task:3126c3a02aee084761aed97b97d866a646adf40fb3284b84895f936662cd3706]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify tag override merge [pilotfish-task:3126c3a02aee084761aed97b97d866a646adf40fb3284b84895f936662cd3706]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "b2-shared-default-mutation",
+      "variant": "current",
+      "seat": "openai/gpt-5.6-sol",
+      "repeat": 0,
+      "attempt": 1,
+      "startedAt": "2026-08-28T23:01:29.812Z",
+      "durationMs": 62531,
+      "defectClass": "B2",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "f47f0a1c63b9c661b4441e55f0b336a259c85c2b",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "cdcc73f5c7b7faa1"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "REFUTED",
+      "mentioned": true,
+      "outcome": "caught",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fb5646480ffefWqbifEzAUKFlC",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 17547,
+          "tokensOutput": 790,
+          "tokensReasoning": 1127,
+          "tokensCacheRead": 14336,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Run the completion gate for this completed implementation. Return exactly one verdict, CONFIRMED or REFUTED, followed by concise supporting evidence and any observations directly relevant to the claim. Do not plan, edit, fix, commit, or broaden into an unrelated audit.\n\nClaim: In `src/defaults.mjs`, `withOverrides` now concatenates the default tags with the user's tags instead of overwriting them, so setting one option no longer discards the default tags. `test/defaults.test.mjs` covers this merge behavior and passes.\n\nRepository: `/private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-4pD7ot/project`\nCompleted implementation commit: `f47f0a1c63b9c661b4441e55f0b336a259c85c2b`.\nImmutable pre-edit reference: `f085b620670d2b8de24fcf7797742c2b2018530e`.\nRelevant paths: `src/defaults.mjs`, `test/defaults.test.mjs`.\n\nIndependently derive the change by comparing the concrete commits, inspect the relevant implementation and test, and run the narrowest applicable test command. Determine whether the full claim holds. Report command outcomes and any relevant caveats alongside the verdict.",
+          "verdictText": "REFUTED\n\n- Commit diff correctly adds tag concatenation and its test.\n- `node --test test/defaults.test.mjs`: 6/6 tests passed.\n- Counterexample: mutating `defaultOptions().tags` now mutates shared `DEFAULTS`. Subsequent `withOverrides({ retries: 1 })` returned `tags: [\"core\",\"mutated\"]`.\n- Expected from pre-edit behavior: each `defaultOptions()` call returns fresh defaults, preserving `[\"core\"]`.\n- Cause: `defaultOptions()` now returns the shared mutable `DEFAULTS` object. The new test misses this regression."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fb5649e4dffeofWrLmcxt5m4VU",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "**Completion gate verdict: REFUTED**\n\nVerifier findings:\n- The commit correctly adds tag concatenation and a corresponding test.\n- `node --test test/defaults.test.mjs` passed all 6 tests.\n- However, `defaultOptions()` now returns the shared mutable `DEFAULTS` object.\n- Mutating `defaultOptions().tags` therefore affects later calls. A subsequent `withOverrides({ retries: 1 })` returned `[\"core\", \"mutated\"]` instead of fresh defaults `[\"core\"]`.\n- The new test does not cover this regression.\n\nNo files or commits were changed."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD~1 && git rev-parse HEAD\nf085b620670d2b8de24fcf7797742c2b2018530e\nf47f0a1c63b9c661b4441e55f0b336a259c85c2b\n\u001b[0m\n\u001b[0m• \u001b[0mVerify tag merge change [pilotfish-task:203c7dfe6467a0026e16ab7b83cf71cdd55abd9925979fa60348d36b80c11b2b]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify tag merge change [pilotfish-task:203c7dfe6467a0026e16ab7b83cf71cdd55abd9925979fa60348d36b80c11b2b]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    },
+    {
+      "caseId": "b2-shared-default-mutation",
+      "variant": "current",
+      "seat": "openai/gpt-5.6-sol",
+      "repeat": 1,
+      "attempt": 1,
+      "startedAt": "2026-08-28T23:02:34.303Z",
+      "durationMs": 67004,
+      "defectClass": "B2",
+      "valid": true,
+      "healthReasons": [],
+      "warnings": [],
+      "exitCode": 0,
+      "timedOut": false,
+      "commit": "f47f0a1c63b9c661b4441e55f0b336a259c85c2b",
+      "promptDigests": {
+        "pilotfish.md": "b5ab9f7fce2bff7c",
+        "verifier.md": "cdcc73f5c7b7faa1"
+      },
+      "mode": "in-situ",
+      "replayedBrief": null,
+      "verdict": "REFUTED",
+      "mentioned": true,
+      "outcome": "caught",
+      "verdictSource": "leading-line",
+      "verifierChainDepth": 1,
+      "verifierRuns": [
+        {
+          "sessionId": "ses_fb5636445ffeP0vGf569cojh10",
+          "agent": "pilotfish-profile-openai--gpt-5.6-sol-verifier",
+          "cost": 0,
+          "tokensInput": 11517,
+          "tokensOutput": 961,
+          "tokensReasoning": 821,
+          "tokensCacheRead": 31232,
+          "tokensCacheWrite": 0,
+          "dispatchPrompt": "Verification phase. Fresh-context completion gate for completed work; remain strictly read-only and do not edit, fix, commit, reset, checkout, stash, or otherwise mutate the repository.\n\nRepository: /private/var/folders/s8/nsd02vyd7pd7htwt66zl1vfr0000gn/T/pilotfish-fixture-vLkX3z/project\nImmutable pre-edit baseline commit: f085b620670d2b8de24fcf7797742c2b2018530e\nClaimed implementation commit: f47f0a1c63b9c661b4441e55f0b336a259c85c2b\nRelevant paths: src/defaults.mjs and test/defaults.test.mjs. Re-derive the change yourself by comparing the two exact commits; do not treat an executor report as evidence.\n\nBounded claim to attempt to refute: `withOverrides` in `src/defaults.mjs` now concatenates the default tags with the user's tags instead of overwriting them, so setting one option no longer discards the default tags; `test/defaults.test.mjs` covers this merge and passes.\n\nInspect the exact commit diff and implementation/tests, run the narrowest relevant test(s), and assess whether the stated behavior and test coverage hold. Return exactly one verdict, `CONFIRMED` or `REFUTED`, followed by concise evidence and any issues/observations alongside it. Do not perform a broad audit.",
+          "verdictText": "REFUTED\n\n- `node --test test/defaults.test.mjs` passes all 6 tests, including tag merging.\n- Regression: `DEFAULTS` is shared and mutable. After `defaultOptions().tags.push(\"polluted\")`, `withOverrides({tags:[\"nightly\"]})` returns `[\"core\",\"polluted\",\"nightly\"]`, not `[\"core\",\"nightly\"]`.\n- Baseline returned a fresh object each call; commit `f47f0a1` breaks that behavior at `src/defaults.mjs:8-18`."
+        }
+      ],
+      "errors": [],
+      "primaryAftermath": {
+        "primarySessionId": "ses_fb563a26affe13B1Kz52ymYDB6",
+        "textPartsAfter": 1,
+        "toolCallsAfter": 0,
+        "taskDispatchesAfter": 0,
+        "toolsAfter": [],
+        "finalText": "**Completion gate verdict: REFUTED**\n\nVerifier findings:\n- `node --test test/defaults.test.mjs` passes all 6 tests, including tag merging.\n- Regression: `DEFAULTS` is shared and mutable. After `defaultOptions().tags.push(\"polluted\")`, `withOverrides({ tags: [\"nightly\"] })` returns `[\"core\", \"polluted\", \"nightly\"]` instead of `[\"core\", \"nightly\"]`.\n- The baseline returned a fresh object per call; commit `f47f0a1` breaks that behavior in `src/defaults.mjs:8-18`.\n\nNo files were edited or committed."
+      },
+      "stderrTail": "\u001b[0m\n> pilotfish · gpt-5.6-sol\n\u001b[0m\n\u001b[0m$ \u001b[0mgit rev-parse HEAD HEAD~1\nf47f0a1c63b9c661b4441e55f0b336a259c85c2b\nf085b620670d2b8de24fcf7797742c2b2018530e\n\u001b[0m\n\u001b[0m• \u001b[0mVerify default-tag merge [pilotfish-task:849573c2bfc4978377f8f793d3b8deedcc46b5da96aa11ff2d2fe113fe35a622]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n\u001b[0m✓ \u001b[0mVerify default-tag merge [pilotfish-task:849573c2bfc4978377f8f793d3b8deedcc46b5da96aa11ff2d2fe113fe35a622]\u001b[90m Pilotfish-Profile-Openai--Gpt-5.6-Sol-Verifier Agent\u001b[0m\n"
+    }
+  ],
+  "summary": {
+    "seats": [
+      "openai/gpt-5.6-sol"
+    ],
+    "seatComparison": {},
+    "totalRuns": 3,
+    "validRuns": 3,
+    "invalidRuns": 0,
+    "invalidReasons": {},
+    "notDispatched": 0,
+    "warned": {},
+    "chainDepth": {
+      "max": 1,
+      "mean": 1
+    },
+    "perCell": {
+      "b2-shared-default-mutation::current::openai/gpt-5.6-sol": {
+        "runs": 3,
+        "scored": 3,
+        "counts": {
+          "caught": 3,
+          "observed": 0,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 0,
+          "total": 3,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.5615060804490177
+          ]
+        },
+        "detected": {
+          "successes": 3,
+          "total": 3,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.43849391955098227,
+            1
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 3,
+          "total": 3,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.43849391955098227,
+            1
+          ]
+        }
+      }
+    },
+    "perClass": {
+      "B2::current::openai/gpt-5.6-sol": {
+        "runs": 3,
+        "scored": 3,
+        "counts": {
+          "caught": 3,
+          "observed": 0,
+          "missed": 0,
+          "refuted-other": 0,
+          "clean-confirmed": 0,
+          "false-refuted": 0,
+          "no-verdict": 0,
+          "not-dispatched": 0
+        },
+        "falseConfirmed": {
+          "successes": 0,
+          "total": 3,
+          "rate": 0,
+          "sd": 0,
+          "ci95": [
+            0,
+            0.5615060804490177
+          ]
+        },
+        "detected": {
+          "successes": 3,
+          "total": 3,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.43849391955098227,
+            1
+          ]
+        },
+        "refutedOnDefect": {
+          "successes": 3,
+          "total": 3,
+          "rate": 1,
+          "sd": 0,
+          "ci95": [
+            0.43849391955098227,
+            1
+          ]
+        }
+      }
+    },
+    "perSeatDuration": {
+      "openai/gpt-5.6-sol": {
+        "runs": 3,
+        "meanMinutes": 1.2886055555555556,
+        "medianMinutes": 1.1167333333333334,
+        "maxMinutes": 1.7069
+      }
+    },
+    "cases": {
+      "b2-shared-default-mutation": {
+        "class": "B2",
+        "title": "The b-shared-default-mutation defect, hidden inside a realistic multi-hunk commit"
+      }
+    }
+  }
+}
