@@ -218,6 +218,8 @@ GROUP BY s.agent, tool ORDER BY n DESC;"
 
 Do not assume the answer. Real installs have shown heavy MCP use by roles that look read-only on paper — `verifier` in particular, which uses a code host to check claims against merged history.
 
+Equally, do not assume the reverse. On the install `docs/token-budget.md` was measured against, five of the eight workers had never made a single MCP call across 2,219 tool calls, and 196 of the verifier's 289 calls were reading files from a repository already checked out in its working directory — work `grep` and `read` do at no prefix cost. A call a role made is not by itself evidence it needs the tool granted. That document carries a copy-pasteable audit script that reports per-role MCP use and per-role prefix from the user's own session database; point the user at it when they want to decide from their own data rather than from this conversation.
+
 Carry into the approval gate, for each enabled MCP server: its name, tool count, estimated tokens per request, and the observed per-role usage. Never enable a server for a role the user did not approve.
 
 ## Step 2: Approval Gate

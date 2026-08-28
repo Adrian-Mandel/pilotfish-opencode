@@ -153,6 +153,113 @@ WHERE json_extract(p.data,'\$.tool') LIKE 'github_%'
 GROUP BY s.agent, tool ORDER BY n DESC;"
 ```
 
+### Deciding which MCP tools a subagent should get
+
+**By default Pilotfish gives subagents no MCP access. Only the orchestrator — the agent you talk to —
+keeps your MCP servers.** This is about context, not capability.
+
+Every time a subagent runs it is sent the full text of every tool it may use: each name, description
+and argument. A whole server is expensive. The 44-tool GitHub server measured here is 13,748 tokens,
+re-sent on every step of every subagent that can see it. An individual tool is roughly 300.
+
+So the guidance is not "keep MCP away from subagents". It is **grant individual tools rather than
+whole servers, and only after you have seen a subagent need one.** On a small local model this
+decides whether a role works at all: a 20,000-token tool list is 65% of a 32k context window, leaving
+little room for the diff being reviewed.
+
+The default is closed because the two failure modes are not equal. Too closed shows up as a subagent
+reporting it could not check something — visible, and one line to fix. Too open shows up as degraded
+work on small hardware, and as `bash`- and `edit`-capable roles holding servers that can deploy,
+delete, or post. Only the first tells you it happened.
+
+#### What your own subagents actually reach for
+
+This reads your local session database and writes nothing. Save it as `mcp-audit.mjs` and run
+`node mcp-audit.mjs`.
+
+```javascript
+import { execFileSync } from "node:child_process";
+import { readFileSync, existsSync } from "node:fs";
+import { homedir } from "node:os";
+
+const DB = `${homedir()}/.local/share/opencode/opencode.db`;
+const CFG = `${homedir()}/.config/opencode/opencode.json`;
+if (!existsSync(DB)) { console.error(`no session database at ${DB}`); process.exit(1); }
+
+const q = (sql) => execFileSync("sqlite3", ["-json", DB, sql], { encoding: "utf8", maxBuffer: 1 << 28 }).trim();
+const rows = (sql) => { const t = q(sql); return t ? JSON.parse(t) : []; };
+
+const cfg = existsSync(CFG) ? JSON.parse(readFileSync(CFG, "utf8")) : {};
+const servers = Object.keys(cfg.mcp ?? {});
+if (!servers.length) console.log("No MCP servers configured; showing tool use anyway.\n");
+
+const calls = rows(`
+  select s.agent agent, json_extract(p.data,'$.tool') tool, count(*) n
+  from part p join session s on s.id = p.session_id
+  where json_extract(p.data,'$.type') = 'tool' and s.agent is not null
+  group by agent, tool`);
+
+const isMcp = (t) => servers.some((s) => t?.startsWith(`${s}_`));
+const byAgent = new Map();
+for (const r of calls) {
+  if (!r.tool) continue;
+  const a = byAgent.get(r.agent) ?? { mcp: new Map(), mcpTotal: 0, total: 0 };
+  a.total += r.n;
+  if (isMcp(r.tool)) { a.mcp.set(r.tool, (a.mcp.get(r.tool) ?? 0) + r.n); a.mcpTotal += r.n; }
+  byAgent.set(r.agent, a);
+}
+
+const pref = rows(`
+  with f as (
+    select s.agent agent,
+           json_extract(m.data,'$.tokens.input') inp,
+           json_extract(m.data,'$.tokens.cache.read') cr,
+           row_number() over (partition by s.id order by m.time_created) rn
+    from session s join message m on m.session_id = s.id
+    where json_extract(m.data,'$.role') = 'assistant' and s.agent is not null)
+  select agent, count(*) n, cast(avg(inp + coalesce(cr,0)) as int) prefix
+  from f where rn = 1 and inp is not null group by agent`);
+const prefix = new Map(pref.map((r) => [r.agent, r]));
+
+console.log("MCP tool use by agent\n" + "=".repeat(60));
+for (const agent of [...new Set([...byAgent.keys(), ...prefix.keys()])].sort()) {
+  const a = byAgent.get(agent) ?? { mcp: new Map(), mcpTotal: 0, total: 0 };
+  const p = prefix.get(agent);
+  const head = `${agent}  —  prefix ~${p?.prefix ?? "?"} tokens (${p?.n ?? 0} sessions)`;
+  if (!a.mcpTotal) { console.log(`\n${head}\n  no MCP calls (${a.total} tool calls total)`); continue; }
+  console.log(`\n${head}\n  ${a.mcpTotal} MCP calls of ${a.total} tool calls (${Math.round(100*a.mcpTotal/a.total)}%)`);
+  for (const [tool, n] of [...a.mcp].sort((x, y) => y[1] - x[1])) {
+    console.log(`    ${String(n).padStart(5)}  ${tool}`);
+  }
+}
+```
+
+#### Reading the output
+
+Measured on the install this document was written against, before any narrowing:
+
+| role | MCP calls | share of its tool calls |
+|---|---:|---|
+| `verifier` | 289 | 12% |
+| `executor` | 29 | 3% |
+| `security-executor` | 8 | 3% |
+| `scout`, `Explore`, `plan-verifier`, `security-reviewer` | **0** | 0% |
+
+**Five of the eight workers had never made a single MCP call**, across 2,219 tool calls. For those,
+any grant is pure cost.
+
+Two cautions when reading your own numbers. **A call a subagent could have made locally is not
+evidence it needs the tool** — 196 of the verifier's 289 calls were `search_code` and
+`get_file_contents` against a repository already checked out in its working directory, which `grep`
+and `read` answer without any prefix cost. And **a high count on one tool is not a reason to grant the
+server**: on this install `github_issue_read` was the only genuinely remote need at 56 calls across 62
+sessions, about 0.9 per session, and granting that one tool costs ~300 tokens against ~13,748 for the
+server it lives in.
+
+A closed default has one blind spot worth knowing: a subagent that never has a tool never visibly
+tries to use it, so this audit shows what the orchestrator did instead. Treat a role's `0` as "no
+demand observed", not as proof that none exists.
+
 ### Measuring your prefix
 
 `debug agent` cannot do this. Use real traffic — one short turn, then:
