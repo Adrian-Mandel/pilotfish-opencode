@@ -30,7 +30,16 @@ const PROBE = fileURLToPath(new URL("./host-fact-probe.mjs", import.meta.url));
 // A free model needs no user credentials, so the fixture stays offline-safe in
 // the `auth: false` sense that the other integration tests rely on: nothing is
 // spent and no personal account is touched.
-const MODEL = "opencode/deepseek-v4-flash-free";
+//
+// OpenCode's free tier rotates its roster. `opencode/deepseek-v4-flash-free`
+// was retired from it, and a pinned model that no longer resolves never emits a
+// tool call, so every scenario below fails INCONCLUSIVE and H7 fails its
+// persistence assertion -- collateral of the missing model, not a host change.
+// Pinned to a model confirmed present on the tier (nemotron-3-ultra, which
+// passed all six host-fact scenarios on OpenCode 1.18.22). Re-pin when this one
+// rotates out in turn; `opencode models | grep '^opencode/'` lists the current
+// free roster.
+const MODEL = "opencode/nemotron-3-ultra-free";
 
 // Live turns on a small free model; the host also pays a cold start per run.
 //

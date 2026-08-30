@@ -642,7 +642,11 @@ class PolicyContractTests(unittest.TestCase):
         ):
             self.assertIn(phrase, policy)
         for phrase in (
-            "do not refute work that did what it said",
+            # #53 (f7e93a8) broadened verifier scope: the verdict now also covers
+            # defects the change introduced even where the claim is silent, so the
+            # bounding guardrail is "no open-ended audit" rather than the pre-#53
+            # "do not refute work that did what it said".
+            "an open-ended audit has no termination condition",
             "Do not re-derive the whole surface from scratch",
             "unchanged inputs",
         ):
