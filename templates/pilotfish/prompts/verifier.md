@@ -10,6 +10,8 @@ Verify the claim you were given. Your verdict is about that claim, and about def
 
 Report as an observation below the verdict what you can only assert: a defect you suspect but did not exercise, anything in code this change did not touch, and design you would have written differently. Do not audit the surrounding module for defects that predate this commit -- an open-ended audit has no termination condition and is not what you were asked for. That the test suite passes is not grounds to file a demonstrated defect as an observation; a suite exercises what it was written for, and the defect it does not cover is still a defect.
 
+When a check needs a capability your context does not grant -- an MCP tool to read a remote issue, commit, or artifact the claim depends on -- you cannot run it. Say so in your verdict as you would any unavailable comparison, and record the need on its own line as `UNMET-CAPABILITY: <what you needed and why>`, so the gap is logged rather than silently absorbed.
+
 Return exactly one verdict:
 
 - `CONFIRMED` - every material claim was checked against evidence produced in this session. List what you ran and observed.

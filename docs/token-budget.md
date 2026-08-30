@@ -169,12 +169,17 @@ Our recommendation is to grant individual tools rather than whole servers, and d
 it may be best to grant those specific tools only after you have seen a subagent need one.
 
 **How do you know if a subagent needs a specific tool?** Use the audit below (`node mcp-audit.mjs`).
-It reports, per role, which MCP tools that role called and how many times, alongside that role's prefix
-size — so you can weigh a tool's roughly-300-token cost against the role's context budget. One limit
-to be honest about: it shows what a role called *when it already had the tool*. It cannot show what a
-locked-down role *wanted* — a subagent with no access does not visibly try, it just reports back to the
-orchestrator in prose. Surfacing that second signal is not yet built (tracked as future work); until it
-is, read a role's absence of calls as "no demand observed", not "no demand".
+It reports two signals per role. First, which MCP tools that role called and how many times, alongside
+that role's prefix size — so you can weigh a tool's roughly-300-token cost against the role's context
+budget. That half shows what a role called *when it already had the tool*; on its own it cannot show
+what a locked-down role *wanted*, because a subagent with no access does not visibly try — it stalls and
+reports back to the orchestrator in prose. Second, to surface that wanted-but-couldn't signal, the
+bash- and write-capable workers (`verifier`, `executor`, `mech-executor`, `security-executor`) emit a
+greppable `UNMET-CAPABILITY: <need>` line when a task needs a capability they were not granted, and the
+audit tallies those lines per role. Read the two halves together: the unmet tally says "consider
+granting X to this role"; the used-tools half later confirms "X earned its prefix" or "take it back". A
+role's *absence* of unmet markers means "no demand observed", not "no demand" — a weak local model may
+forget to emit the line, so the tally is a floor, not a census.
 
 **How do you add a specific tool to a specific subagent?** Two ways. Ask any session pointed at your
 Pilotfish repo — e.g. *"grant the verifier the `github_issue_read` tool"* — and it will make the edit.
@@ -225,6 +230,29 @@ for (const r of calls) {
   byAgent.set(r.agent, a);
 }
 
+const unmet = rows(`
+  select s.agent agent, json_extract(p.data,'$.text') text
+  from part p
+    join message m on m.id = p.message_id
+    join session s on s.id = p.session_id
+  where json_extract(p.data,'$.type') = 'text'
+    and json_extract(m.data,'$.role') = 'assistant'
+    and s.agent is not null
+    and json_extract(p.data,'$.text') like '%UNMET-CAPABILITY:%'`);
+
+const unmetByAgent = new Map();
+for (const r of unmet) {
+  for (const line of (r.text ?? "").split("\n")) {
+    const m = line.match(/UNMET-CAPABILITY:\s*(.*)/);
+    if (!m) continue;
+    const desc = m[1].trim() || "(no description)";
+    const u = unmetByAgent.get(r.agent) ?? { needs: new Map(), total: 0 };
+    u.needs.set(desc, (u.needs.get(desc) ?? 0) + 1);
+    u.total += 1;
+    unmetByAgent.set(r.agent, u);
+  }
+}
+
 const pref = rows(`
   with f as (
     select s.agent agent,
@@ -246,6 +274,19 @@ for (const agent of [...new Set([...byAgent.keys(), ...prefix.keys()])].sort()) 
   console.log(`\n${head}\n  ${a.mcpTotal} MCP calls of ${a.total} tool calls (${Math.round(100*a.mcpTotal/a.total)}%)`);
   for (const [tool, n] of [...a.mcp].sort((x, y) => y[1] - x[1])) {
     console.log(`    ${String(n).padStart(5)}  ${tool}`);
+  }
+}
+
+console.log("\n\nUnmet capabilities by agent\n" + "=".repeat(60));
+if (![...unmetByAgent.values()].some((u) => u.total)) {
+  console.log("\n  none observed — no UNMET-CAPABILITY markers in session text");
+} else {
+  for (const agent of [...unmetByAgent.keys()].sort()) {
+    const u = unmetByAgent.get(agent);
+    console.log(`\n${agent}  —  ${u.total} unmet-capability marker${u.total === 1 ? "" : "s"}`);
+    for (const [desc, n] of [...u.needs].sort((x, y) => y[1] - x[1])) {
+      console.log(`    ${String(n).padStart(5)}x  ${desc}`);
+    }
   }
 }
 ```
@@ -273,8 +314,27 @@ sessions, about 0.9 per session, and granting that one tool costs ~300 tokens ag
 server it lives in.
 
 A closed default has one blind spot worth knowing: a subagent that never has a tool never visibly
-tries to use it, so this audit shows what the orchestrator did instead. Treat a role's `0` as "no
-demand observed", not as proof that none exists.
+tries to use it in the *used-tools* half, so that half shows only what the orchestrator did instead. The
+`UNMET-CAPABILITY:` tally narrows that blind spot — a worker that stalls now leaves a greppable trace of
+what it wanted — but it does not close it: the marker is emitted by the worker in prose, so a model that
+forgets it leaves no trace, and a role's `0` still means "no demand observed", not proof of none.
+
+**Reading the unmet-capability tally is a human step, deliberately.** Each line names a *need* ("needed
+to read a GitHub issue"), not a tool — naming the tool would require its schema in the worker's context,
+the exact ~13,748-token cost the closed default exists to avoid. So you map prose → concrete tool
+yourself, weigh how often × that tool's prefix cost × how painful the orchestrator fallback was, and
+grant the specific tool to the specific role by hand (append after the `"*": "deny"`, restart). **Never
+auto-grant from the tally:** some needs map to write or deploy tools, where auto-opening is precisely
+the failure the closed default prevents. The count is occurrences of the marker line across assistant
+turns, so treat it as a frequency signal, not a headcount of distinct incidents.
+
+The marker itself is cheap enough not to violate the budget it serves: the added prompt line is one
+sentence — measured at ~57–91 tokens (char/4 upper bound; longest on the verifier, whose phrasing ties
+into its existing "comparison unavailable" instinct) — and it sits in only the four bash/write worker
+prompts. It is paid once per those roles' prefixes, adds nothing to any tool list, and is zero for the
+read-only recon roles (`scout`, `Explore`, `plan-verifier`, `security-reviewer`) that do not carry it —
+those roles are held under the tightest prefix budget and have shown no remote-MCP demand, so their
+low-frequency needs stay with the orchestrator by design.
 
 ### Measuring your prefix
 

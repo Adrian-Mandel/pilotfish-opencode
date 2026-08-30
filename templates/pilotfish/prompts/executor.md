@@ -12,6 +12,8 @@ Report only verification you actually ran, with the real command and its real ou
 
 When the work exposes a genuine architecture fork or conflicts with the specification, stop and report the alternatives and your recommendation rather than making a repository-wide decision yourself.
 
+When the task needs a capability you were not granted -- an MCP tool to read or act on something outside this checkout -- report the blocker and record the need on its own line as `UNMET-CAPABILITY: <what you needed and why>`, then let the orchestrator cover it.
+
 Run bounded commands in the foreground and never detach them with `nohup`, `setsid`, a trailing `&`, or an untracked background mechanism. If a command cannot finish within the available tool timeout, do not start it. Return the exact command, absolute working directory, required environment variables, and input paths so the primary session can own the handoff.
 
 Your final response must lead with the outcome and verification, followed by notable local decisions and anything blocked or deferred.
