@@ -271,37 +271,23 @@ class PolicyContractTests(unittest.TestCase):
         )
         self.assertIn("Never replace an existing entry during an update", installer)
 
-    def test_installer_update_gate_is_content_based_not_version_based(self) -> None:
-        # `VERSION` read 0.2.0 unchanged from 2026-08-09 through 69 later
-        # commits, 21 of them touching templates/ or install/, so a real install
-        # recording 0.2.0 matched a checkout whose content had moved a long way
-        # from it. The old rule stopped the update on version equality, and on
-        # 2026-08-20 a live install was found still running the pre-#38 router
-        # with its Windows-only case-insensitive Task-permission mirror -- a
-        # merged security fix undelivered behind a runbook reporting "up to
-        # date". This is pinned because the failure is silent and points the
-        # reassuring way, and because the tempting repair (bump VERSION every
-        # change) still fails anyone tracking main between bumps.
+    def test_installer_update_gate_is_content_based(self) -> None:
+        # The update gate compares content, never a recorded label. A label
+        # cannot detect a change to the checkout it points at: on 2026-08-20 a
+        # live install was found still running the pre-#38 router with its
+        # Windows-only case-insensitive Task-permission mirror -- a merged
+        # security fix undelivered behind a runbook that would have reported "up
+        # to date" on a label match. Pinned because the failure is silent and
+        # points the reassuring way.
         installer = text("install/OPENCODE-INSTALL.md")
         for phrase in (
-            "Run preflight regardless of the recorded version",
-            "Version equality is not a stop condition",
-            "It suppresses only the changelog replay; it never suppresses a write",
-            "It does not decide the preset question either, which rule 5 owns",
-            "A version number cannot detect a change that landed inside an unreleased version",
-            "Decide the stop condition from content, not from the version",
+            "Run preflight regardless of what is recorded",
+            "The stop condition is content comparison, never a recorded label",
             "Report that Pilotfish is up to date and stop only when every one of them is "
             "byte-identical to desired",
             "present a write plan covering only the items that differ",
-            "Do not answer this by bumping `VERSION` for every change",
             "Content comparison is the primitive.",
             "pre-#38 `profile-router.mjs`",
-            # A content-identical stop leaves the recorded version behind, so
-            # the changelog replay repeats cumulatively. That is chosen, not
-            # overlooked: a path that promises to write no file must not write
-            # `install-state.json` to tidy one field.
-            "One consequence of stopping is deliberate",
-            "a path promising to write no file must not write `install-state.json` either",
         ):
             self.assertIn(phrase, installer)
 

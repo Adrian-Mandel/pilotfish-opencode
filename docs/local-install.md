@@ -150,7 +150,7 @@ node --test tests/profile-router.test.mjs
 
 ## Updating
 
-Clone the desired tagged release and start OpenCode in that checkout. The runbook, `VERSION`, `CHANGELOG.md`, and templates must all come from this same pinned ref. Updating is simply rerunning install:
+Clone the desired pinned checkout and start OpenCode in it. The runbook, `CHANGELOG.md`, and templates must all come from this same pinned ref. Updating is simply rerunning install:
 
 ```text
 Read install/OPENCODE-INSTALL.md and update my existing Pilotfish installation from this local checkout.
@@ -158,7 +158,7 @@ Use only this checkout. Keep my recorded preset unless I ask to switch it.
 Show the changelog and exact plan, then get my approval before writing anything.
 ```
 
-The installer reports that it is current and stops without asking for a preset or writing anything only when every managed agent, prompt, runtime file, and the plugin tuple is already byte-identical to this checkout. A recorded version equal to `VERSION` is not sufficient: `VERSION` is not bumped per commit, so content can move a long way inside one unreleased version, and a version-only check reports success while leaving merged changes uninstalled. Otherwise it follows the normal install Steps 1–4: identical agents, plugins, runtime files, and prompts skip; changed custom content is shown as a diff and requires a keep-or-replace decision. The original pre-install agent, prompt, plugin, and runtime state remains preserved for uninstall.
+The installer reports that it is current and stops without asking for a preset or writing anything only when every managed agent, prompt, runtime file, and the plugin tuple is already byte-identical to this checkout. The gate is content, not a recorded label, so merged changes are never left uninstalled. Otherwise it follows the normal install Steps 1–4: identical agents, plugins, runtime files, and prompts skip; changed custom content is shown as a diff and requires a keep-or-replace decision. The original pre-install agent, prompt, plugin, and runtime state remains preserved for uninstall.
 
 ## Uninstalling
 

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Pilotfish for OpenCode. Installed versions are recorded in `~/.config/opencode/pilotfish/install-state.json`.
+All notable changes to Pilotfish for OpenCode. The installed commit is recorded in `~/.config/opencode/pilotfish/install-state.json`.
 
 ## v0.2.0 - 2026-08-29
 
