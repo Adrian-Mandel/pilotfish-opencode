@@ -143,20 +143,13 @@ class PolicyContractTests(unittest.TestCase):
         ):
             self.assertIn(phrase, combined)
 
-    def test_install_and_release_docs_have_required_smoke_gates(self) -> None:
+    def test_install_docs_have_required_content(self) -> None:
         local = text("docs/local-install.md")
-        release = text("RELEASING.md")
         self.assertIn("1.18.10", local)
         self.assertIn("profile-router.mjs", local)
         self.assertIn("restart", local)
         for binding in self.profiles["profiles"]["google/antigravity-claude-opus-4-6-thinking"]["workers"].values():
             self.assertIn(binding["model"], local)
-        for phrase in (
-            "node --test tests/profile-router.test.mjs", "isolated/neutral OpenCode context",
-            "no global writes", "Luna/low", "five-minute", "no retries",
-            "release is blocked", "AntiGravity", "before assistant/provider execution",
-        ):
-            self.assertIn(phrase, release)
 
     def test_deviation_ledger_records_router_without_pending_source(self) -> None:
         ledger = text("docs/upstream-deviations.md")
@@ -416,9 +409,8 @@ class PolicyContractTests(unittest.TestCase):
         self.assertIn("Updating", text("docs/local-install.md"))
         self.assertIn("Uninstall", text("docs/local-install.md"))
 
-    def test_ledger_and_release_gate_remain_linked(self) -> None:
+    def test_ledger_is_linked_from_readme(self) -> None:
         self.assertIn("upstream-deviations.md", text("README.md"))
-        self.assertIn("no row may have `Pending` in Source at release", text("RELEASING.md"))
 
     def test_canonical_profile_values_are_exact(self) -> None:
         expected = {
@@ -827,37 +819,6 @@ class PolicyContractTests(unittest.TestCase):
         self.assertIn("issue #11", combined.lower())
         self.assertIn("optional", combined.lower())
         self.assertIn("persisted-history recovery", combined.lower())
-
-    def test_release_and_version_contracts(self) -> None:
-        self.assertEqual(text("VERSION").strip(), "0.2.0")
-        release = text("RELEASING.md")
-        for phrase in (
-            "node --test tests/profile-router.test.mjs",
-            "mandatory isolated smoke", "OPENCODE_DISABLE_PROJECT_CONFIG=1",
-            "no global writes", "Luna/low", "five minutes", "no retries",
-            "AntiGravity provider smoke", "block the release",
-            "no assistant/provider execution",
-            "cross-process resume",
-            "foreground host sequence", "background Task timing is unsupported",
-            "transient marker", "pre-existing sibling", "exact `task_id`", "without marker mutation",
-            "`session.created`", "30 seconds", "after is skipped",
-            "update-failure revocation without unhandled rejection", "manual child-title cleanup",
-            # The host-fact gate's triage taxonomy (issue #39). A releaser acts
-            # on the difference between an environmental failure and a moved
-            # host guarantee, so the marker word, all three inconclusive shapes,
-            # and the standing refusal to relax an assertion are pinned here.
-            "INCONCLUSIVE", "three shapes, not one",
-            "so nothing was observed",
-            "the role the prompt asked for",
-            "refused before execute", "run killed at its cap",
-            "the host asked permission for this call before execute",
-            "the bogus call failed for some reason other than its role",
-            "not this list of exemplars",
-            "not a host verdict", "external_directory",
-            "never relax the assertion instead",
-        ):
-            self.assertIn(phrase, release)
-
 
 if __name__ == "__main__":
     unittest.main()

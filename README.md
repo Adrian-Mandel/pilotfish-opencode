@@ -254,8 +254,9 @@ Manual combinations outside the two presets are supported by OpenCode but are no
 Updating means rerunning the installer from the desired pinned checkout. Use a checkout whose runbook, `VERSION`, `CHANGELOG.md`, and templates are all from the same ref; do not mix a pinned checkout with `main` files.
 
 ```bash
-git clone --branch <RELEASE_TAG> --depth 1 https://github.com/Adrian-Mandel/pilotfish-opencode.git
+git clone https://github.com/Adrian-Mandel/pilotfish-opencode.git
 cd pilotfish-opencode
+git checkout <commit-sha>
 opencode
 ```
 

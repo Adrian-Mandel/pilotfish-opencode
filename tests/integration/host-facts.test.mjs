@@ -81,11 +81,11 @@ const TOOL_RUN_TIMEOUT_MS = 90_000;
 // risk the tool scenarios do not carry.
 const TURN_RUN_TIMEOUT_MS = 300_000;
 
-// A failure the release checklist must not read as a host change. Marked
-// failures mean the scenario's precondition was never reached, so the host
-// claim went untested in either direction; RELEASING.md item 5 sends those back
-// for a repeat rather than blocking the release. Anything unmarked is a real
-// refutation. The prefix is the machine-readable half of that taxonomy: a
+// A failure that must not be read as a host change. Marked failures mean the
+// scenario's precondition was never reached, so the host claim went untested in
+// either direction; those are repeated rather than treated as a finding.
+// Anything unmarked is a real refutation. The prefix is the machine-readable
+// half of that taxonomy: a
 // releaser can grep for it instead of judging each message.
 const INCONCLUSIVE = "INCONCLUSIVE:";
 
