@@ -617,6 +617,15 @@ class PolicyContractTests(unittest.TestCase):
             "After the second `REFUTED` on the same claim",
             "does this claim hold?",
             "its own bounded task with its own stop condition",
+            # #16 P1's budget half. The chain rule above ends a chain on two
+            # refutations; these bound the two ways spend leaks around it — a
+            # widened surface on a re-verification, and an observation treated
+            # as grounds to re-fire the gate on the claim it arrived under. The
+            # numeric ceiling is the backstop for verdicts that alternate, which
+            # the second-`REFUTED` rule alone does not terminate.
+            "Three verifier dispatches against one claim is the ceiling",
+            "the files the change touched and their immediate callers",
+            "An observation does not reopen the claim it arrived under",
         ):
             self.assertIn(phrase, policy)
         for phrase in (
