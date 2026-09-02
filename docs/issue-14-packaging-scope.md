@@ -51,6 +51,12 @@ it keeps the commit-SHA provenance model intact. **This split is the first thing
 to decide, because §2's subtraction list is the same either way but §5's step
 order is not.**
 
+**Decided, after the spike: git ref.** The answer is no, so the release
+machinery stays deleted and this section's "hard prerequisite" does not apply.
+`50c880b` was right and remains right. See [§8.5](#85-the-answer-to-7-q1-a-git-ref-package-decided)
+for the decision and what it does and does not change; one thing it does change
+is that §5's step 2 is now closed rather than pending.
+
 ---
 
 ## 2. Subtractive: what packaging deletes
@@ -444,7 +450,52 @@ calls. Migration must remove the path entry, not merely add the package one.
 Two npm entries naming the same package at different versions do collapse, last
 one winning, which is the ordinary case and is fine.
 
-### 8.5 The answer to §7 Q1: publish a versioned npm package
+### 8.5 The answer to §7 Q1: a git-ref package. Decided.
+
+**Decided: git ref. The owner overruled the recommendation below, and the
+reason is the one this document said would decide it.** §1 framed Q1 as "are we
+now acquiring the consumer that justifies bringing versioning back," and the
+answer is no — not because a version specifier does not work, but because
+publishing to npm means owning a public package name, a public page, and an
+implied maintenance relationship with strangers, and that is not wanted. That is
+a judgement about what this project is for, and no amount of resolution evidence
+speaks to it. The recommendation is left standing below rather than deleted,
+because the technical half of it is still true and someone will ask.
+
+Three consequences follow immediately.
+
+**The release machinery stays deleted.** §1 said that if Q1 went to a versioned
+package, reversing `50c880b` became a hard prerequisite. It did not, so it is
+not. There is no tag-and-publish ceremony to rebuild and §5's step 2 is closed
+without adding work to step 3. `50c880b` was right and stays right: still no
+consumer.
+
+**One tag is still needed, and it is the whole of the release process.** The
+config line has to name something, and `git+https://github.com/Adrian-Mandel/pilotfish-opencode#v0.3.0`
+needs `v0.3.0` to exist. There is no `v0*` tag in this repository today. A tag is
+not the 19-step checklist `50c880b` deleted; it is `git tag`.
+
+**Nothing else in §5 changes.** Steps 3 through 9 are identical either way. The
+package still needs a `package.json` with `exports["./server"]`, because a git
+install packs the repository exactly as npm would; `engines.opencode` still works,
+because the host reads it from the package's own `package.json` and never from a
+registry; and H15's caching, dedup and silent-failure properties all hold
+unchanged, since they key on the specifier string and not on where it resolved
+from. The repository is public and anonymously clonable, so an install needs no
+credentials.
+
+**§7 Q2 is moot.** There is no registry to choose and nothing to publish.
+
+Two costs to accept with eyes open. The config line is a URL rather than a name
+and version, so a user reading their own config cannot tell what they are
+running without resolving the ref. And the host's `sanitize` is a no-op, so the
+cache path becomes nested directories under `packages/` named after the URL's
+scheme and host — ugly, harmless, and worth knowing before someone reports it as
+a bug.
+
+---
+
+*Superseded recommendation, kept for the reasoning:*
 
 **Recommendation: versioned npm package, not a git ref.** Both work — a
 git-ref specifier resolves, tag-pinned, entirely without a registry, so the
