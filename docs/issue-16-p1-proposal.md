@@ -1,10 +1,15 @@
 # Issue #16 P1: a proposal for when the Completion Gate fires, and what it may spend
 
-**Status: draft for review. Nothing here has shipped, nothing has been posted to
-GitHub, and no benchmark was run to produce it.** Every prompt snippet below is
-a proposal quoted inside this document; `templates/pilotfish/prompts/` is
-untouched on this branch. The measurement plan in §5 is written, not executed —
-`tests/bench/verifier-correctness.mjs` was not invoked.
+**Status, 2026-09-01. The recommendation is to close P1's firing half and keep
+its budget half, which has shipped.** §4b landed in `0c9dd8a`. §3 and §4a — the
+firing rule — are recorded as a design and are **not** proposed for
+implementation, because §5.2 evaluated them against every verifier dispatch this
+project has ever made and found they would have skipped none of them.
+
+No benchmark was run to produce any of this: `tests/bench/verifier-correctness.mjs`
+was never invoked, and the 224-run suite this document originally specified is
+withdrawn rather than pending. Prompt snippets in §4a are proposals quoted inside
+this document and are not in `templates/`.
 
 Written against the [#32 Phase 3
 disposition](https://github.com/Adrian-Mandel/pilotfish-opencode/issues/32#issuecomment-5488831930)
@@ -45,9 +50,10 @@ when it would cost more than it could reasonably protect."* That sentence is a
 judgment call handed to the agent that wrote the change, with no criterion in
 it. It is both the entire firing rule and, as §3 argues, the wrong shape of one.
 
-So P1 reduces to two deliverables: **a firing rule** (§3, §4) and **an explicit
-budget** (§4), plus a measurement that the firing rule does not cost catches
-(§5).
+So P1 reduces to two deliverables: **a firing rule** (§3, §4a) and **an explicit
+budget** (§4b). The budget shipped. The firing rule was designed, then evaluated
+against the historical corpus in §5.2 and found to save nothing, so it is
+recorded rather than built.
 
 ---
 
@@ -106,11 +112,12 @@ reasons to prefer this over a trigger list:
    agent feels confident.
 
 The cost, stated as a trade rather than hidden: **this rule skips very little.**
-On the entire existing bench corpus it should skip nothing at all (§5.4). The
-saving it produces is real but small and lives outside the fixtures — prose
-commits, changelog entries, reverts — which is why §5 measures safety on the
-bench and saving from real telemetry, and does not pretend one measures the
-other.
+That was written as a prediction and §5.2 turned it into a measurement — across
+62 historical dispatches it skips nothing, including the one documentation-only
+change, which it refuses by name. The saving it was reaching for lives in prose
+commits, changelog entries and reverts, and the corpus contains none that a
+completion gate ever fired on. This is the paragraph that ends up deciding
+against the rule.
 
 ### The one positive trigger, and why only one
 
@@ -127,7 +134,7 @@ there as a backstop against a future skip condition being added carelessly.
 
 ---
 
-## 4. Proposed rewrite — DRAFT SNIPPETS, NOT SHIPPED
+## 4. Proposed rewrite — §4a NOT SHIPPED AND NOT PROPOSED, §4b SHIPPED IN `0c9dd8a`
 
 Both edits are inside `## Completion Gate` in
 `templates/pilotfish/prompts/pilotfish.md`. Nothing else in the file changes,
@@ -188,7 +195,8 @@ extended:
 >   claim, stop dispatching and take the work into this session. …
 
 **AFTER** — `:63` keeps its existing text and gains a numeric backstop; two new
-bullets follow it:
+bullets join it. This is what shipped in `0c9dd8a`; the wording there is final
+and differs slightly from the draft below, which is left as written:
 
 > - Budget the chain, not only the run. After the second `REFUTED` on the same
 >   claim, stop dispatching and take the work into this session. *[existing text
@@ -213,7 +221,10 @@ bullets follow it:
 `:62`, and the closing paragraph on commissioned adversarial audit are all
 unchanged. So is every prompt other than `pilotfish.md`.
 
-### 4d. One harness prerequisite
+### 4d. A harness prerequisite, now moot for P1 but not for the harness
+
+Moot here, because §5 withdrew the benchmark this was a prerequisite for. Kept
+because its second half is a standing safety gap that nothing else tracks.
 
 `resolveVariant` in `tests/bench/lib/variants.mjs` takes **one** `{replace,
 with}` per file, so a variant cannot express two separate anchors in
@@ -224,192 +235,120 @@ accept an array applied in order, each still failing closed on a missing or
 duplicated anchor. **The array is the better option** — it keeps each anchor
 minimal and is a few lines — and it pairs with §6.5 of the derivation doc, which
 notes the `edits` mechanism has no test at all and names the three cases that
-would cover it (anchor missing, anchor duplicated, mixed line endings). Do both
-in one change, or the fail-closed property that stands between a drive-by reword
-and a silently mispatched arm stays guaranteed only by hand probes.
+would cover it (anchor missing, anchor duplicated, mixed line endings). **Those
+three tests are worth writing whatever happens to P1**: fail-closed resolution is
+what stands between a drive-by reword of a pinned prompt and a silently
+mispatched experimental arm, and today it is guaranteed only by hand probes
+recorded in a document.
 
 ---
 
-## 5. Measurement plan — WRITTEN, NOT RUN
+## 5. Measurement — RESOLVED RETROSPECTIVELY, 2026-09-01
 
-The claim to be defended is a **non-inferiority** claim: the new gate does not
-lower the rate at which a defective change is stopped. That is not the shape
-#53's Phase 1 measured, and sizing it as a superiority test would be wrong.
+**Superseded.** This section originally specified 224 in-situ benchmark runs.
+That design was wrong for the question, and the fields that do this in
+production say so. It is replaced by a retrospective evaluation that cost no GPU
+time and no tokens, and that answers the question the suite was meant to answer.
+The original plan is preserved in git history at `7dbf33f` rather than reprinted.
 
-### 5.1 The constraint that shapes everything: this cannot run in replay
+### 5.1 What the prior art does instead
 
-`--replay` binds `--agent verifier` and runs **no primary at all**
-(`verifier-correctness.mjs:263-268`, `:404-425`). The gate-firing decision lives
-in the primary, so every arm of this measurement has to be **in situ**. That is
-the expensive mode, and it is not negotiable: replaying a stored brief past a
-verifier measures the refutation bar, which already shipped and is not what P1
-changes.
+Deciding which changes deserve an expensive check is a solved problem outside
+agent systems, and none of the mature approaches evaluates a gate by running it
+live.
 
-**And the in-situ brief currently forces the gate.** `briefFor` (`tests/bench/lib/cases.mjs:173`) ends with *"Run your completion gate on this claim
-and report the verdict you get back"*, and its own comment says why — *"a run
-where the primary decides the change is small enough to skip verification
-produces no verdict at all."* That sentence was correct for every measurement so
-far and makes this one impossible. A P1 arm needs a **natural brief** with that
-instruction removed, identical across arms, and it needs the *old* brief left in
-place so no stored result changes meaning. Concretely: a second exported
-function beside `briefFor`, selected by a flag, never a mutation of the existing
-one.
+**Predictive test selection** (Meta, in production since 2018) picks per-change
+which tests to run. Three practices transfer. It reports a **metric pair with
+explicit floors** rather than a single quality verdict — over 95% of individual
+test failures and over 99.9% of faulty changes still caught, stated alongside
+the 2x infrastructure saving. It **validates on held-out recent changes**, not a
+random split, because the change distribution drifts. And it **de-flakes the data
+before training and evaluation**, or the gate learns to predict nondeterminism
+rather than defects. That last one is not academic here: #53 had to rescore
+1,916 stored runs after the throttle detector and `parseVerdict` each mis-graded
+runs, which is this project's flakiness in the same sense.
 
-### 5.2 Variants
+**Effort-aware just-in-time defect prediction** is a large literature on exactly
+"which changes deserve inspection," and it supplies the evaluation instrument. It
+does not grade a gate pass/fail. It uses an **effort–recall curve** — recall at
+k% of effort (PofB20, R@20%) and Popt, the area between the curve and a perfect
+oracle's. Applied here that means plotting catches retained against gate firings
+saved across candidate rules, which says whether *any* rule has a usable
+operating point before one is built.
 
-| arm | what it is | how it resolves |
-|---|---|---|
-| `current` | the shipped `pilotfish.md` and the shipped `verifier.md` | `prompts: {}` — already the baseline in `VARIANTS` |
-| `p1-gate` | `current`, with §4a and §4b substituted into `pilotfish.md` | `edits: { "pilotfish.md": [ … ] }`, needing §4d |
+**Selective verification for LLM reasoning** contributes two findings, with the
+caveat that it is single-turn reasoning work and the transfer to a code-change
+gate is an analogy rather than evidence: cheap observable features perform about
+as well as learned gates, and verification can *hurt* when miscalibrated — which
+is the class-D false-refuse risk in another vocabulary.
 
-Two arms, not three. `pre-severity` and `pre-scope` are about the verifier's
-refutation bar and are held constant here; the whole point of running against
-`current` is that the shipped verifier prompt is identical in both arms, so any
-difference is the gate.
+The common practice is the important part. **Gates are evaluated by replaying
+candidate rules against recorded history.** This project has that history.
 
-### 5.3 Seat, mode, and pairing
+### 5.2 The retrospective evaluation, and its result
 
-- **Local seat only, zero paid tokens.** `bambi/qwen3.8-27b-mtp-pure` as both
-  primary and verifier.
-- **In situ**, per §5.1.
-- **Paired on brief, satisfied by construction.** `briefFor` (and its natural
-  replacement) is a pure function of the case and mentions no fixture path, so
-  both arms receive a byte-identical brief at the same `(case, repeat)` index
-  under one seed. This is tighter pairing than the replay store gives, because
-  there is no brief selection step to drift.
-- **One suite, one seed, one harness commit, order randomized across arms** —
-  the correction #53 already had to make once when two arms ran twenty hours
-  apart and variant was confounded with local-server state.
+The 62 exported historical verifier sessions
+(`tests/bench/data/historical-verifier-sessions.json`) carry the full dispatch
+brief alongside the verdict. So each one can be asked directly: would §4a's skip
+rule have skipped this dispatch? That is the same method §7 of the derivation
+doc used for shapes, applied to firing instead, and it is free.
 
-**Two prerequisites the owner has to clear before this can run at all:**
+Done, with per-session judgements and rationales in
+[`tests/bench/data/gate-firing-classification.json`](../tests/bench/data/gate-firing-classification.json).
 
-1. **`profiles.json` in the repo has no local preset.** The harness resolves
-   `--primary` against `templates/pilotfish/profiles.json`
-   (`lib/routing.mjs:19-21`), which defines only `chatgpt`, `antigravity`, and
-   `openrouter`. The `local` preset and the `bambi/qwen3.8-27b-mtp-pure` profile
-   exist **only in the installed config** at `~/.config/opencode/pilotfish/`,
-   where they are recorded as user-added. So `--preset local` fails today. Either
-   the local profile is promoted into the shipped template, or the harness is
-   taught to read the installed file — and the first has a scope consequence
-   (#30's remnant, profile-naming enforced for templates but not installs)
-   the second does not.
-2. **The installed local profile routes four roles to `omlx/…`.** `scout`,
-   `Explore`, `mech-executor`, and `executor` bind
-   `omlx/peculiar-ragdoll/Nail-Qwen3.6-35B-A3B-MLX`. An in-situ primary can
-   dispatch those, and `docs/issue-53-handoff.md` records that omlx and mtplx
-   need explicit permission where bambi is standing. Either bind all eight
-   worker roles to bambi for the bench profile, or grant omlx for the run. **Do
-   not start the suite without deciding this.**
+| | count |
+|---|---:|
+| dispatches | 62 |
+| completion gates | 57 |
+| read-only reviews (the rule does not govern these) | 5 |
+| **would have been skipped** | **0** |
+| **would have been skipped, among the 44 `REFUTED`** | **0** |
 
-### 5.4 Classes, outcomes, and one scoring change that is load-bearing
+Why each one fires: 31 touch code or host-consumed configuration, 25 touch
+authorization or a trust boundary and hit the always-fire clause, 1 is
+documentation only, and 5 are not gate firings at all.
 
-Classes **B**, **B2**, and **D**, as specified.
+**The saving on the only corpus of real work that exists is nil.**
 
-The scoring change: `summarizeCell` in `lib/scoring.mjs:243-249` excludes
-`not-dispatched` from the denominator, on the stated grounds that it "is not
-evidence either way about detection." That is right for every measurement taken
-so far and **wrong for this one** — under P1 a non-dispatch *is* the outcome
-under test. The plan therefore pre-registers a derived metric rather than
-reinterpreting an existing one:
+Two details worth more than the headline. The single documentation-only
+completion gate in the sample — index 10, README plus walkthrough plus install
+runbook, the brief stating explicitly that no code changed — is the exact case
+§4a refuses to skip, because the prose asserts what the installer does. The rule
+was written to refuse it, and the one chance it had to fire, it refuses. And
+**five dispatches are not completion gates at all**: the verifier was used as a
+read-only reviewer of a document or of repository state. A firing rule does not
+reach that usage, which is a fifth of the pre-scope corpus.
 
-- **Primary outcome (B, B2): end-to-end catch rate** = `caught` ÷ *all valid
-  runs*, with `not-dispatched` counted as a non-catch. This is the number the
-  non-inferiority test runs on.
-- **Secondary (B, B2): skip rate** = `not-dispatched` ÷ valid runs. Reported per
-  arm and per case, and every non-zero cell hand-read.
-- **Guard (B, B2): false `CONFIRMED`** = `missed` ÷ dispatched runs, on the
-  existing denominator. Must not rise. Baseline is 0/30 on B2 for the local
-  seat.
-- **Ship gate (D): false-`REFUTED` floor** = `false-refuted` ÷ dispatched runs.
-  Must not rise above the shipped arm. Baseline is 0/40.
-- **Also on D: skip rate**, where a skip is the *correct* outcome — a clean
-  change is the population the saving should come from.
+### 5.3 What this evaluation does not establish
 
-**Pre-registered prediction, stated before the run because it decides how to
-read it.** Every class B, B2 and D fixture changes files under `src/`, so under
-§4a none of them is skippable. **The predicted skip rate is 0% in every cell of
-this suite.** If that holds, the suite has measured one thing: whether rewriting
-this section of the primary prompt changes the end-to-end catch rate through any
-channel at all — a different brief to the verifier, a different framing of the
-claim — with firing held at 100% by the corpus. If any cell skips, that run is
-the finding and is hand-read before anything else is reported. Either way the
-suite **cannot demonstrate the saving**, and no number from it should be quoted
-as if it had. §5.7 says where the saving is measured instead.
+Stated as limits rather than buried. It is **one classifier pass by one reader**,
+the same standing as §7's shape re-derivation, and the tail there moved by about
+a fifth under a second reader. It reads **briefs, not diffs** — the export
+carries dispatch text and verdicts, not the changes — so a brief that understates
+its own surface is classified from what it says. The 25 security-clause hits are
+counted by **what the change touches**, which is a different question from §7's
+15/44 count of what defect *shape* was found; the two numbers are not in conflict
+and are not comparable. And the corpus is three of this project's own
+repositories over four weeks, one of which was a security sprint.
 
-### 5.5 Pre-registered n and the read rule
+None of those limits moves the result, because the result is not marginal. To
+overturn "zero skipped" a second reader would have to find that a dispatch
+touching executable source touched none.
 
-Non-inferiority against the measured class-B2 baseline of 26/30 = 86.7%, one
-planned interim analysis at the halfway point and no other partial reads —
-#53's standing rule, which has been broken three times on this harness and been
-wrong every time.
+### 5.4 What would still need measuring, if the rule were built
 
-**Margin: 10 points.** `p1-gate` passes only if the lower bound of its 95%
-Wilson interval on end-to-end catch rate sits above **76.7%**. The margin is
-chosen against #16's own line — *"a net win that degrades the REFUTED rate is
-not a win"* — and is deliberately tight rather than conventional.
+Nothing on the bench. The class B, B2 and D fixtures all change files under
+`src/`, so the predicted skip rate there is 0% by construction and a suite would
+re-measure fixture composition — the same failure §3 of the derivation doc
+identified in #53's original Phase 1 design.
 
-At p₀ = 0.867 and δ = 0.10, one-sided 95%: n ≈ 1.645² × 0.867 × 0.133 ÷ 0.01 ≈
-**31 per arm**, rounded up to the corpus's own grid.
-
-| class | fixtures | repeats | per arm | both arms | role |
-|---|---:|---:|---:|---:|---|
-| **B2** | 6 | 6 | 36 | **72** | decisive — the realistic-commit tier |
-| **D** | 4 | 10 | 40 | **80** | ship gate; 40 exactly matches the stored 0/40 |
-| **B** | 6 | 6 | 36 | **72** | confirmatory, run last, droppable |
-
-**Total 224 in-situ runs**, or 152 without class B.
-
-Run order: **B2, then D, then B.** B2 decides; D is the gate; B is corroboration
-on the easier tier and is the first thing to cut if the price comes back high.
-
-**Price it before committing to it.** There is no measured figure for a local
-in-situ run anywhere in the harness — `ESTIMATES` has in-situ only for
-`gpt-5.6-sol` (1.2 min) and `gemini-3.1-pro` (0.5 min), and replay-only for
-bambi (2.9 min). An in-situ bambi run is a full primary orchestration *plus* a
-bambi verifier session, so it is certainly slower than 2.9 minutes and the
-multiple is unknown. **Run six calibration runs first and record the number**,
-the way the harness's own comment insists ("an unmeasured routing must say so
-rather than borrow another one's number"). At a guessed 6–12 min/run the full
-224 is roughly 22–45 hours of local GPU; that guess is not evidence and should
-be replaced before anyone starts.
-
-### 5.6 The gap this plan has, and the fixtures that would close it
-
-Nothing in classes B, B2 or D can ever exercise a *correct* skip, because none
-of them is skippable. So the skip rule is measured only in the negative
-direction — it does not lose catches — and never in the positive one. Closing
-that needs three new fixtures, and I am recommending it rather than
-pre-registering it, because it is net-new work and it is the owner's call:
-
-- **two that must be skipped** — a changelog-only commit, and a README edit that
-  changes prose asserting nothing about behavior;
-- **one that must not be skipped** — a README edit that *does* state what the
-  code does, and states it wrongly. This is the false-skip floor, and it is the
-  exact analogue of class D: the shape where a loosened rule fails silently and
-  in the reassuring direction.
-
-The third is the one worth the money. Without it, "the skip list is narrow" is
-an argument in this document rather than a measured property. Briefs would need
-in-situ capture; #53 Phase 1c established that a free seat (antigravity
-gemini-3.1-pro, 9/9 valid) plus hand-verification of every brief is acceptable
-and costs no gpt quota.
-
-### 5.7 Where the saving is actually measured
-
-Not here. #16's revised success criteria already name the two structural numbers
-that read out of ordinary use, and they are the right instruments for a change
-whose saving is a lower firing rate on real work:
-
-| criterion | target | how it is read |
-|---|---|---|
-| max verifier runs against one claim | ≤ 3 | count `verifier` sessions grouped by parent in `opencode.db` |
-| verifier runs per parent session, p95 | ≤ 4 | same query |
-
-Both need accumulated post-change sessions, and both reset on any prompt edit —
-which this is. Say so when the change lands, and do not read the sample for at
-least a week of real use.
-
----
+What is missing is the **positive** direction: the rule is now shown never to
+skip something it should have caught, and never shown to skip anything at all.
+Demonstrating it skips correctly needs fixtures the corpus does not contain — a
+changelog-only commit, a prose README edit, and, most importantly, a README edit
+that states what the code does and states it wrongly, which is the false-skip
+floor and the analogue of class D. That work is only worth funding if the firing
+rule is being built, and §7 recommends it is not.
 
 ## 6. Decisions I made that are normally yours
 
@@ -429,41 +368,45 @@ and each names what I rejected.
 3. **A three-dispatch numeric cap per claim**, on top of the existing
    second-`REFUTED` rule. Matches #16's revised criterion of ≤3. **Rejected:** ≤2,
    which forbids the ordinary refute→fix→confirm→refute-again sequence.
-4. **Non-inferiority margin of 10 points.** Tight, and chosen against #16's
-   no-degradation line rather than from convention. A looser margin shrinks n
-   substantially and would let a real regression pass.
-5. **Class B demoted to confirmatory and run last.** The calibration review
-   already found class B measures diff-reading; B2 is the tier that decides.
-   **Rejected:** dropping B entirely, since the brief asked for it and it costs
-   only 72 runs at the end of a queue.
-6. **Two arms, not three.** `pre-severity` is about a bar that already shipped
-   and would confound the gate contrast.
-7. **`edits` as an ordered array rather than one contiguous anchor** (§4d).
-   **Rejected:** the single big anchor, which works today with no harness change
-   but swallows the 700-word baseline bullet.
-8. **A second brief function rather than editing `briefFor`.** Editing it in
-   place would silently redefine every stored in-situ result, which is the same
-   trap `variants.mjs` documents for `current`.
+4. **Evaluating the rule retrospectively rather than by benchmark**, once the
+   prior art made clear that is how gates are graded everywhere this problem is
+   already solved. **Rejected:** the 224-run in-situ suite this document
+   originally specified, which would have cost 20–45 hours of local GPU to
+   re-measure fixture composition. That reversal is mine and it is the single
+   most consequential call in this document.
+5. **Counting a read-only review as outside the rule** rather than as a skip. A
+   firing rule governs the Completion Gate; five dispatches gate nothing.
+   Counting them as skips would have manufactured a saving the rule does not
+   produce.
+6. **Classifying the security clause by what the change touches**, not by the
+   defect shape that was found. It is the only way to evaluate a firing rule,
+   which must decide before the defect is known — but it means the 25 here and
+   §7's 15/44 there are different measurements and must not be compared.
+
+Withdrawn with the benchmark, and recorded only so nobody re-derives them: the
+non-inferiority margin, the two-arm variant design, class B's demotion, the
+ordered-array change to `edits`, and the second brief function that would have
+let an in-situ run decline the gate.
 
 ## 7. Open questions for you
 
-1. **Is the small saving worth the change at all?** This is the honest headline.
-   The chain budget already shipped, the derivation located the volume in chain
-   depth rather than gate frequency, and the skip list proposed here skips
-   nothing in the entire bench corpus. P1's original targets — verifier share
-   <12%, verifier:executor <1.2 — were *withdrawn* by #16's own status comment as
-   encoding a refuted premise. **A defensible answer is to close P1's firing half
-   as done-by-other-means and keep only §4b's budget clarifications**, which are
-   cheap and carry no measurement burden. I did not take that answer because the
-   #32 disposition names P1 as next and worth real effort, but it deserves an
-   explicit decision rather than a default.
-2. **Which prerequisite for the local in-situ seat** — promote the local profile
-   into the shipped `profiles.json`, or teach the harness to read the installed
-   file? The first is a shipped-surface change with a #30 consequence; the second
-   makes bench results depend on a machine's private config.
-3. **Bind the bench's local profile's eight workers all to bambi, or grant omlx
-   for the suite?** Nothing should start until this is answered.
-4. **Fund the three prose fixtures in §5.6?** Without the third one, the false-
-   skip floor is an argument rather than a number.
-5. **Class B in or out**, given the price of in-situ runs once §5.5's
-   calibration lands.
+**Answered since this was drafted.** §5.2 settles the one that mattered: the
+firing rule would have skipped zero of 62 historical dispatches, so its saving on
+real work is nil. **The recommendation is to close P1's firing half** — §3 and §4a
+stand as the design, recorded for whoever revisits it, but nothing here argues for
+building it. §4b's budget rules are separable, carry no measurement burden, and
+shipped in `0c9dd8a`.
+
+The questions that only existed to serve the benchmark are withdrawn with it: the
+local-preset prerequisite, the omlx grant, the prose fixtures, and whether class B
+is in or out. None of them has to be answered now.
+
+What remains for you:
+
+1. **Accept closing P1's firing half**, on §5.2 rather than on the prediction this
+   document originally offered.
+2. **Adopt the effort–recall framing** from §5.1 as the standard instrument for any
+   future gate change here, in place of a binary pass/fail on a stored rate.
+3. **Reopen the firing rule only on new evidence** — specifically, if the post-#53
+   corpus starts carrying prose-only or revert commits at a rate the pre-scope
+   sample did not. That is a query against accumulated sessions, not a benchmark.
