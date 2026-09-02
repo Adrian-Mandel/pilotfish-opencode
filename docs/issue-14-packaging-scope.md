@@ -1,8 +1,10 @@
 # Issue #14 packaging: what turning the runbook into an installable plugin actually requires
 
-**Status: draft for review. Planning only — nothing was built, no `package.json`
-was written, no file under `templates/` or `install/` was changed on this
-branch, and nothing was posted to GitHub.**
+**Status: §§1–7 are a draft for review; §8 is a result. Planning only remains
+true of everything but §8 — no `package.json` was written, and no file under
+`templates/`, `install/` or `tests/` has changed. §5 step 1, the host-fact
+spike, has since been carried out; [§8](#8-step-1-results-the-spike-and-the-answer-to-7-q1)
+records what it found, including one thing §3.2 gets wrong, and answers §7 Q1.**
 
 Scope of this document is #14's **first** deliverable only: packaging. The TUI
 profile menu is #14's second deliverable and #14's own sequencing note already
@@ -346,3 +348,166 @@ schedule, not engineering, and their cost is calendar time.
    #14's TUI menu half should be, arriving earlier than planned? The menu already
    promises to validate profiles against the live provider list, which is Step
    1.3's check with a face on it.
+
+---
+
+## 8. Step 1 results: the spike, and the answer to §7 Q1
+
+**Status of this section: done, not planned.** Step 1 of §5 has been carried
+out. Three host facts are recorded as **H15, H16 and H17** in
+[`docs/profile-router-contract.md`](profile-router-contract.md), each naming the
+OpenCode version it was read against. Nothing else in §5 was started: no
+`package.json` exists, no file under `templates/`, `install/` or `tests/`
+changed, and the router is untouched.
+
+Everything below was read from, or driven against, the binary now installed on
+the development host, **OpenCode `1.18.22`** — not the `1.18.18` the contract
+pins. That drift is stated in the contract rather than papered over; H1–H14 have
+not been re-run against `1.18.22` and this spike did not re-run them.
+
+### 8.1 The gate is open
+
+§4 called plugin resolution "unverified in this repository, and it is
+load-bearing," and said the shape of the whole project changes if it does not
+work the way #14 assumes. It works. A config entry of the exact form #14
+proposes — `["<name>@<version>", {…}]` — resolves, loads, and delivers its
+options object to the plugin factory as a second argument.
+
+The strongest single piece of evidence needed no fixture at all: **this project
+already depends on the mechanism it was about to treat as unknown.** The
+owner's own global config carries `"opencode-antigravity-auth@latest"` and
+`"opencode-openai-codex-auth"` beside `"./pilotfish/profile-router.mjs"`, and
+`~/.cache/opencode/packages/` holds both resolved. Every install path this
+repository documents uses the config-relative form, which is what made the
+registry form look unexamined; but the host has been resolving versioned npm
+specifiers on this machine the whole time.
+
+So §5's step 2 is unblocked, and the four properties that turned out to be
+load-bearing are in H15: the package must declare `exports["./server"]`;
+`engines.opencode` is the only version-skew guard the host offers;
+the specifier string *is* the cache key, so a fetched version is thereafter
+immutable and a bare name never updates; and a resolution failure is completely
+silent — no log line at any level, `--log-level DEBUG` included.
+
+### 8.2 One thing §3.2 got wrong, and it fails open
+
+§3.2 says synthesizing nine public agents is "the same call" as the hidden
+clones the router already makes. It is not quite, and the difference is the kind
+that does not announce itself.
+
+An agent definition written by a `config` hook never passes through the
+`AgentConfig` decode transform, because that transform runs while the config
+*file* is read and the hook runs afterwards. The transform is what converts
+`tools: {edit: false}` into `permission: {edit: "deny"}`. A hook that writes
+`tools` therefore writes into the void: the field is dropped without an error,
+and the agent resolves with `edit` and `write` **allowed**. Written as
+`permission: {edit: "deny", write: "deny"}` instead, it resolves identically to
+the persisted form.
+
+The router is not affected today, because `configureProfiles` clones an
+already-decoded record rather than building one. But the nine public workers
+ship a closed scope, and if that scope is carried across as `tools` when they
+stop being persisted, every one of them silently gains `edit` and `write`. On a
+surface whose whole design premise is a closed default, that is the worst
+available failure mode. H17 records it; §3.2 should be read as amended by this
+paragraph.
+
+### 8.3 Two of §3's open verifications are now closed
+
+- **Inline prompts are safe, and they are also the only option.** §3.2 asked for
+  "one verification — that the agent schema accepts an inline prompt string
+  where it accepts a `{file:…}` reference." It does, and the two produce
+  byte-identical agent records. The second half is new: `{file:…}` is a
+  *config-file* expansion, so a `{file:…}` string written by a `config` hook is
+  not expanded and reaches the model as literal text. The alternative §3.2 left
+  open — teaching `{file:…}` to name a path the plugin knows — does not exist.
+  H16.
+- **H11 is narrower than §3.2 assumed.** Driving one `opencode serve` process
+  across three project directories shows the sharing is per agent *record*, not
+  per agent *map*: a write into an existing `config.agent.<name>` is visible to
+  the next directory's hook, but a new key the hook adds is not — every instance
+  starts from a map holding only the config-file agents. So "nine synthesized
+  public agents double the surface of that hazard" is wrong. They add none.
+  Adding a key is idempotent because there is nothing to be idempotent against;
+  the hazard remains exactly where `configureProfiles`'s existing guard already
+  sits. H17.
+
+### 8.4 Migration has a mechanism now, not just a warning
+
+§4 warns that adding the plugin line without removing the persisted agents
+breaks a 0.2.x install. There is a sharper version of that: plugin origins are
+deduplicated **by package name**, and a `file://` path entry and an npm entry
+are different keys. A config carrying both `"./pilotfish/profile-router.mjs"`
+and `"pilotfish-opencode@0.3.0"` loads **both** — two independent router
+instances in one process, each with its own state, each rewriting the same Task
+calls. Migration must remove the path entry, not merely add the package one.
+Two npm entries naming the same package at different versions do collapse, last
+one winning, which is the ordinary case and is fine.
+
+### 8.5 The answer to §7 Q1: publish a versioned npm package
+
+**Recommendation: versioned npm package, not a git ref.** Both work — a
+git-ref specifier resolves, tag-pinned, entirely without a registry, so the
+git-ref option is real and not a fallback. But the version specifier is the
+better fit for three reasons that the spike made concrete rather than
+aesthetic. First, the host's *only* protection against the API skew #14 names is
+`engines.opencode`, read from the package's own `package.json`; that field is
+equally available either way, but it only means anything next to a version a
+user can move deliberately, and a git ref gives them a commit SHA whose
+relationship to a supported OpenCode range is invisible. Second, the cache key
+is the whole specifier and there is no freshness check, so *whatever* form is
+chosen freezes at first fetch — which means the form's real job is to be legible
+in a config file, and `pilotfish-opencode@0.3.0` says what a user is running
+where `git+https://github.com/Adrian-Mandel/pilotfish-opencode#a1b2c3d` does not.
+Third, the git-ref cache path is genuinely bad: the host's `sanitize` is a no-op,
+so a git URL becomes nested directories under `packages/` named after its
+scheme and host. The name `pilotfish-opencode` is unclaimed on npm (`pilotfish`
+is taken). The cost is the one §1 already priced: publishing is an outward-facing
+commitment, and the release machinery `50c880b` removed has to come back — but
+now with the consumer that justifies it, which is precisely the test `50c880b`
+set. If the owner would rather not own a public package name, the git-ref
+option costs nothing technically and this recommendation reverses cleanly; it is
+§7 Q2, not a re-litigation of Q1.
+
+### 8.6 How to repeat any of this
+
+No test file was added, because the handoff scoped `tests/` out of this step.
+Each fact is reproducible from an isolated fixture built by hand:
+
+```bash
+R=$(mktemp -d); mkdir -p $R/config/opencode $R/data/opencode $R/cache/opencode/packages $R/proj
+export XDG_CONFIG_HOME=$R/config XDG_DATA_HOME=$R/data XDG_CACHE_HOME=$R/cache
+```
+
+`XDG_CACHE_HOME` is the important one and the existing `tests/integration/fixture.mjs`
+does not set it: without it a probe installs into the user's real package cache.
+Seed a package at
+`$XDG_CACHE_HOME/opencode/packages/<specifier>/node_modules/<name>/` with a
+`package.json` declaring `exports["./server"]`, name it in `opencode.json`'s
+`plugin` array, and run `opencode debug info --print-logs` from `$R/proj`. Set
+`npm_config_registry=http://127.0.0.1:9/` to prove a case needs no network.
+`opencode debug agent <name>` prints a resolved agent record and is how H16 and
+H17's comparisons were made; `opencode serve --port 0` plus
+`GET /agent?directory=…` for several directories is how the H11 half of H17 was
+driven, following the pattern in `tests/integration/host-fact-config-identity.test.mjs`.
+
+Beware one trap: `opencode debug info` prints the plugin **origins from the
+config**, not the plugins that loaded. It lists a plugin that failed to resolve
+exactly as it lists one that worked. Every load check here is a side effect the
+plugin itself wrote to a log file, never that listing.
+
+### 8.7 Decisions made in this step that are normally yours
+
+1. **Left the contract's pin at `1.18.18`** and stated the drift in place,
+   rather than moving it to `1.18.22`. Moving it would claim a re-verification of
+   H1–H14 that nobody performed.
+2. **Recorded H15–H17 in the contract even though they bind no guarantee yet.**
+   They are host behaviour with the same shelf life as the rest of that table,
+   and whoever builds the package will look for them beside H11. The preamble to
+   the table says explicitly that they hold nothing up today.
+3. **Added no test file.** The handoff scoped `tests/` out of step 1, so §8.6 is
+   the reproduction path instead. A permanent test for H17 belongs with §5 step
+   4, where it can assert against the real synthesis rather than a probe.
+4. **Recommended npm over git-ref** (§8.5) rather than leaving Q1 open, since the
+   handoff asked for a recommendation. The reversal is cheap if Q2 goes the other
+   way.
